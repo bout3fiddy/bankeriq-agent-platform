@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bankeriq-agent-platform"
+version = "0.1.0"
+description = "Azure banking agent architecture and development scaffold"
+requires-python = ">=3.14"
+dependencies = []
+
+[dependency-groups]
+dev = ["basedpyright>=1.40.2", "pre-commit>=4", "pytest>=8", "ruff>=0.11"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bankeriq_agent_platform"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.basedpyright]
+include = ["src", "scripts", "tests"]
+typeCheckingMode = "basic"
+pythonVersion = "3.14"
