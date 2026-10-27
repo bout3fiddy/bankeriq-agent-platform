@@ -4,10 +4,11 @@ A design and development scaffold for an Azure-hosted banking assistant. This is
 an exploratory design inspired by the role discussion, not Rabobank's confirmed
 architecture.
 
-The coordinator uses Microsoft Foundry Agent Service. A separate specialist with
-an internally hosted model handles sensitive customer data. Business tools enforce
-user permissions; approved output returns to the coordinator, while sensitive
-reports reach the user through an authenticated download.
+The proposed general-purpose external coordinator runs an application-owned loop
+in Microsoft Foundry Hosted Agents and discovers tools allowed by the user's
+permissions. Visible tool outputs return to the coordinator. Restricted outputs
+stay with an internal specialist or containerised application, with reports
+delivered directly to the user through authenticated downloads.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the diagram and security boundaries.
 
@@ -34,6 +35,7 @@ exist. Pre-commit runs static checks. See [STYLEGUIDE.md](STYLEGUIDE.md).
 
 ## Next step
 
-Define one synthetic-data workflow: authenticated request, authorised tool call,
-internal specialist, policy-approved return, and protected report download.
-Decide the Foundry agent type and durable workflow ownership before implementation.
+Define a synthetic-data workflow covering permission-based discovery, authorised
+execution, visible and restricted outputs, and protected report delivery. Resolve
+raw chat-input policy and validate Hosted Agents and durable workflow ownership
+before implementation.
