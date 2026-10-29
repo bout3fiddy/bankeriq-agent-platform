@@ -16,6 +16,8 @@
 - Add what-and-why comments around meaningful behaviour and non-obvious decisions.
 - Keep parsing, credentials, network access and scheduling separate from core logic.
 - Pass explicit inputs and dependencies; avoid catch-all mutable state.
+- Avoid repetitive defensive checks in internal typed code. Validate external
+  inputs at boundaries and retain checks for meaningful domain invariants.
 - Fail explicitly for unsupported options and invalid inputs.
 - Preserve unrelated work, supplied fixtures and reference outputs.
 - Keep documentation aligned with implemented behaviour and label unfinished work.

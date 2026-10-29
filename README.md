@@ -4,6 +4,9 @@ A design and development scaffold for an Azure-hosted banking assistant. This is
 an exploratory design inspired by the role discussion, not Rabobank's confirmed
 architecture.
 
+The interface will be a dedicated authenticated browser chat app, with React a
+candidate frontend. Teams is outside the proposed delivery boundary.
+
 The proposed general-purpose external coordinator runs an application-owned loop
 in Microsoft Foundry Hosted Agents and discovers tools allowed by the user's
 permissions. Visible tool outputs return to the coordinator. Restricted outputs
@@ -11,11 +14,13 @@ stay with an internal specialist or containerised application, with reports
 delivered directly to the user through authenticated downloads.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the diagram and security boundaries.
+See [components.md](components.md) for logical responsibilities and initial scope.
 
 ## Current scope
 
-This repository contains design documentation, an empty Python package and local
-quality checks. No agent, API, Azure resources or model integration is implemented.
+This repository contains design documentation, core runtime data types and local
+quality checks with behavioural tests. No agent loop, API, Azure resources or
+model integration is implemented.
 Python 3.14 is the local tooling baseline copied from MONKI; deployment runtime
 compatibility must be checked before selecting an Azure hosting target.
 

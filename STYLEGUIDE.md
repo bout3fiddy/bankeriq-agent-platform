@@ -17,6 +17,7 @@ uv run ruff format src scripts tests
 uv run python scripts/verify.py
 ```
 
-Keep runtime code under `src/bankeriq_agent_platform/`, checks under `scripts/`,
+Keep core runtime code under `src/agent_runtime/`, platform code under
+`src/bankeriq_agent_platform/`, checks under `scripts/`,
 and behavioural tests under `tests/`. Add cloud dependencies only when needed
 for an implemented component.

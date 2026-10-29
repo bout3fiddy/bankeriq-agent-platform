@@ -1,6 +1,6 @@
 # Proposed architecture
 
-Design snapshot: 27 October 2026. This is a proposed design, not implemented
+Design snapshot: 28 October 2026. This is a proposed design, not implemented
 behaviour or Rabobank's confirmed architecture. No services are deployed.
 
 ## Runtime and model roles
@@ -11,19 +11,41 @@ owns the agent loop and selects model-visible tools per request. The proposed
 hosting target is Microsoft Foundry Hosted Agents; framework, SDK and deployment
 compatibility remain to be validated.
 
-A smaller, self-hosted open-weights model handles bounded tasks involving restricted
-data. Its intended benefit is lower hosting cost; capability and cost require
+A smaller, self-hosted open-weights model is deferred to a later phase for bounded
+tasks involving restricted data. Its intended benefit is lower hosting cost; capability and cost require
 measurement. Deterministic applications perform well-defined work and calculations
 without requiring a model. The external coordinator remains useful for general
 reasoning, but cannot interpret or refine restricted findings it never receives.
 Such reasoning must happen internally or through the user's interaction with the
 protected result.
 
+Initially, restricted processing uses deterministic applications; workloads that
+require the specialist remain unsupported. See [components.md](components.md) for
+logical responsibilities, including durable execution and persisted state.
+
+## Browser chat interface
+
+The user interface is a dedicated, authenticated browser chat application backed
+by our own backend. React is a candidate frontend framework, not a settled
+implementation choice. Teams is excluded from this design's approved delivery
+boundary; this is a project constraint, not a general claim about Teams security.
+
+The backend binds enterprise identity to sessions and conversations and enforces
+permissions on messages, approvals, job status and report downloads. The browser
+does not hold tool-service credentials or call the model and business tools
+directly. Restricted reports use a separate authenticated view and are not copied
+into coordinator conversation history.
+
+Owning the interface does not itself establish security. Session protection,
+safe rendering of untrusted content, browser storage/cache policy and telemetry
+controls require implementation and validation. Raw chat-input handling remains
+an open decision; changing the chat transport does not resolve that boundary.
+
 ## Request and result flow
 
 ```mermaid
 flowchart TD
-    U["User · Teams / Web chat"] --> A["Chat backend<br/>Verified user and conversation"]
+    U["User · Authenticated browser chat"] --> A["Application backend<br/>Verified user and conversation"]
     A --> I["Input handling boundary<br/>Raw chat policy still unresolved"]
     I -->|"Only permitted model input"| C["Application-owned agent loop<br/>External coordinator model"]
     C <-->|"Discover authorised tool definitions"| D["Tool registry<br/>Filter by user permissions"]
@@ -32,7 +54,7 @@ flowchart TD
     V --> O["Runtime output enforcement"]
     O -->|"Permitted payload"| C
     G -->|"Restricted-output tool"| J["Internal job execution"]
-    J --> S["Self-hosted specialist<br/>Bounded analysis with internal tools"]
+    J -.-> S["Deferred: self-hosted specialist<br/>Bounded analysis with internal tools"]
     J --> K["Containerised application<br/>Defined processing workflow"]
     S --> R["Private Blob Storage<br/>Protected report artifacts"]
     K --> R
@@ -87,7 +109,7 @@ read through a visible-output tool to bypass their policy.
 
 Restricted operations have two execution options behind the same interface:
 
-1. **Internal specialist:** a smaller self-hosted open-weights model uses bounded,
+1. **Internal specialist (deferred):** a smaller self-hosted open-weights model uses bounded,
    authorised internal tools to analyse data, with code performing calculations
    where appropriate. It writes results to private storage for report generation.
 2. **Containerised application:** a defined application performs the processing
