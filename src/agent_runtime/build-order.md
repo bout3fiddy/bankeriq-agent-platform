@@ -5,7 +5,7 @@ planned except where marked implemented. Keep external I/O mocked until the adap
 
 1. **Core data types (implemented)** — Run context, messages, tool definitions, calls, results,
    output policies and run statuses.
-2. **Tool registry** — Register versioned definitions and schemas; discover tools
+2. **Tool registry (implemented)** — Register versioned definitions and schemas; discover tools
    filtered by permissions.
 3. **Output enforcement** — Produce model-visible results or restricted receipts;
    sanitise failures and route artifact references separately.

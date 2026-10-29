@@ -3,9 +3,9 @@
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
-from ._json import _freeze_object
+from ..types._json import _freeze_object
+from ..types.json_value import JsonValue
 from .enums import OutputPolicy
-from .json_value import JsonValue
 
 
 # Registration groups policy, version and schema for the gateway's execution checks.

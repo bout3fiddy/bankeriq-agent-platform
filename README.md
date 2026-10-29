@@ -18,7 +18,8 @@ See [components.md](components.md) for logical responsibilities and initial scop
 
 ## Current scope
 
-This repository contains design documentation, core runtime data types and local
+This repository contains design documentation, core runtime data types, a
+permission-filtered tool registry and local
 quality checks with behavioural tests. No agent loop, API, Azure resources or
 model integration is implemented.
 Python 3.14 is the local tooling baseline copied from MONKI; deployment runtime

@@ -2,9 +2,9 @@
 
 from dataclasses import dataclass, field
 
-from ._json import _freeze_json
+from ..types._json import _freeze_json
+from ..types.json_value import JsonValue
 from .enums import ToolErrorCode, WaitReason
-from .json_value import JsonValue
 
 
 # This class identifies payloads admitted to model context by output enforcement.

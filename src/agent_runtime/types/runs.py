@@ -2,8 +2,8 @@
 
 from dataclasses import dataclass
 
+from ..tools.results import PendingToolCall
 from .enums import RunStatus
-from .results import PendingToolCall
 
 
 # Dataclasses provide explicit fields, equality and constructors for these values.
