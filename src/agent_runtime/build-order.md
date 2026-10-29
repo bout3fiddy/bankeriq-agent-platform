@@ -7,7 +7,7 @@ planned except where marked implemented. Keep external I/O mocked until the adap
    output policies and run statuses.
 2. **Tool registry (implemented)** — Register versioned definitions and schemas; discover tools
    filtered by permissions.
-3. **Output enforcement** — Produce model-visible results or restricted receipts;
+3. **Output enforcement (completed outputs implemented)** — Produce model-visible results or restricted receipts;
    sanitise failures and route artifact references separately.
 4. **Tool gateway** — Validate calls, check permissions and approvals, dispatch
    through a mock executor, and enforce output policy.

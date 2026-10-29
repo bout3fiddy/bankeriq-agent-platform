@@ -1,6 +1,7 @@
 # Agent runtime workshop
 
-Workshop and implementation workspace for the core agent runtime. Core data types and tool registry
+Workshop and implementation workspace for the core agent runtime. Core data types,
+tool registry and completed-output enforcement
 are implemented; the coordinator, gateway and external APIs are not yet implemented.
 Microsoft Foundry remains the initial coordinator target;
 the self-hosted specialist is deferred.
@@ -55,6 +56,26 @@ Registration checks names, versions, duplicate names and the object schema root;
 complete JSON Schema validation remains future work. Version updates use a new
 registry snapshot with explicit version selection.
 
+## Implemented output enforcement
+
+`policy/output.py` handles completed tool outputs. `enforce_output()` uses the
+registered output policy and runtime-supplied call ID. Restricted operations
+produce a `RestrictedReceipt`; their payload bypasses the visible filter and is
+discarded from the return value. Artifact references use the separate `artifact`
+field for authenticated delivery. Only `model_result` enters model context.
+
+Visible operations require a trusted per-operation `visible_filter`. The filter
+validates or projects approved fields, and the resulting JSON is snapshotted.
+Missing filters, unsupported policies and filter failures produce a fixed
+`EXECUTION_FAILED` result. `enforce_failure()` constructs the same outward failure
+using the call ID alone; exception details stay with the execution boundary.
+
+Filters are injected dependencies; domain-specific filters and gateway wiring
+remain to be built. These functions do not classify sensitive data. The gateway
+must bind definitions, filters, call IDs and artifact IDs from trusted context.
+Artifact access checks belong to delivery. Pending jobs, approvals and streaming
+will be integrated as those execution paths are implemented.
+
 ## Workshop questions
 
 For each component, define its inputs and outputs, ownership of state, calls to
@@ -78,6 +99,8 @@ See [components.md](../../components.md) for the full component catalogue and
 
 ```text
 agent_runtime/
+  policy/
+    output.py         # Completed-output enforcement and separate delivery metadata
   tools/
     definitions.py    # ToolDefinition and ToolCall
     enums.py          # Output policies, error codes and waiting reasons
