@@ -21,7 +21,9 @@ See [components.md](components.md) for logical responsibilities and initial scop
 This repository contains design documentation, core runtime data types, a
 permission-filtered tool registry, completed-output enforcement, a synchronous
 tool gateway, conversation/run state, an in-memory store with atomic checkpoint
-updates and a bounded coordinator loop tested with scripted model replies.
+updates, a bounded coordinator loop and a `src/agent_runtime/durable/` scaffold
+for mocked job and approval events. Scripted model replies exercise repeated
+tool calls and resumption.
 Local quality checks include behavioural tests. External APIs, Azure resources
 and live model integration remain unimplemented.
 Python 3.14 is the local tooling baseline copied from MONKI; deployment runtime
@@ -37,8 +39,8 @@ uv run python scripts/verify.py
 uv run pre-commit install
 ```
 
-The verification command checks the lockfile, formatting, lint, paragraph spacing
-and types. It runs pytest when test files exist and explicitly reports when none
+The verification command checks the lockfile, formatting, lint, paragraph and
+comment spacing, and types. It runs pytest when test files exist and explicitly reports when none
 exist. Pre-commit runs static checks. See [STYLEGUIDE.md](STYLEGUIDE.md).
 
 ## Next step

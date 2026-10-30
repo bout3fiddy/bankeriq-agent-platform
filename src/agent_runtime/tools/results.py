@@ -59,7 +59,7 @@ class ToolFailure:
 # The opaque reference lets a later event identify the outstanding approval/job.
 @dataclass(frozen=True, slots=True)
 class PendingToolCall:
-    """Reference to an approval or job; matching and replay checks come later."""
+    """Opaque approval/job reference matched by the durable continuation handler."""
 
     call_id: str
     reason: WaitReason

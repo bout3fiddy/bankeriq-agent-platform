@@ -2,7 +2,8 @@
 
 Workshop and implementation workspace for the core agent runtime. Core data types,
 tool registry, completed-output enforcement, synchronous tool gateway, in-memory
-state storage and coordinator loop are implemented. External APIs remain pending.
+state storage, coordinator loop and mocked event continuation under `durable/` are implemented.
+External APIs remain pending.
 Microsoft Foundry remains the initial coordinator target;
 the self-hosted specialist is deferred.
 
@@ -134,13 +135,15 @@ updated = store.save_checkpoint(
 )
 ```
 
-The caller must match the completion event to outstanding work before making
-this write. Event matching, duplicate-event handling and approval consumption
-are separate integration steps. Pending records currently store opaque approval
-or job references; no approval database or job worker is implemented.
+The caller must match and claim the outstanding work before making this write.
+`ContinuationHandler.resume()` implements matching and duplicate-event rejection.
+Pending records store opaque approval or job references; the trusted resolver owns lookup
+of their original call/version and current outcome. Approval storage and job
+workers remain mocked.
 
 Lifecycle transitions are checked before saving. Waiting runs require unique
-pending calls; finished runs release the conversation for a new run. Stored
+pending calls. A continuation temporarily retains them while marked running,
+until it saves the resolution. Finished runs release the conversation for a new run. Stored
 snapshots are immutable, and a lock prevents partial updates across threads
 using the same store instance. Tests exercise competing writers and unchanged
 state after rejected updates. `load_run()` returns the requested run together
@@ -154,8 +157,10 @@ cross-process coordination, crash recovery or durable side-effect guarantees.
 ## Implemented coordinator loop
 
 `coordinator/runner.py` provides `Coordinator.start()` to create and execute a new
-run, and `run()` to execute an existing queued run. Startup injects the model
-client, gateway, registry, store and a current-permissions callable. Tests use
+run, and `run()` to execute an existing queued run. `continue_run()` accepts a
+claimed checkpoint from the durable layer after pending work has resolved.
+Startup injects the model client, gateway, registry, store and a current-permissions
+callable. Tests use
 scripted model replies and local tool handlers. For example:
 
 ```python
@@ -184,7 +189,9 @@ The main loop keeps those decisions together. `_request_model()` builds each
 request, `reply_validation.py` checks the reply, and `_execute_tools()` checkpoints
 one batch and collects its results. The next iteration uses the updated history.
 
-Model-step and tool-call budgets bound the invocation. An optional cancellation
+Model-step and tool-call budgets are stored with the run and survive waits and
+continuations. Model attempts and tool batches reserve their budget before
+execution. An optional cancellation
 callable is checked around model calls and between tools. It cannot interrupt a
 blocking dependency call. Provider failures produce a failed run with no raw
 exception text in history. Storage conflicts propagate to the caller without
@@ -206,11 +213,64 @@ verify configuration propagation with a scripted client. See Microsoft's
 for model-dependent settings and opaque reasoning state.
 
 A fake dispatcher can return pending approval/job receipts. The runner saves
-them, marks the run waiting and returns. Resume/event matching belongs to the
-next build step. Running, waiting and terminal runs cannot be replayed through
+them, marks the run waiting and returns. The durable continuation handler accepts
+their completion notifications. Running, waiting and terminal runs cannot be replayed through
 `run()`. Checkpointing does not make side effects durable: a crash during tool
-execution still requires reconciliation. Delivery callbacks, persisted artifact
-metadata and Foundry adapters remain future integrations.
+execution still requires reconciliation.
+
+## Durable execution scaffolding
+
+`durable/continuation.py` owns event definitions, matching and the resolver
+interface. `durable/handler.py` owns `ContinuationHandler`, which claims waiting
+runs, resolves events and invokes the coordinator when their results are ready.
+The coordinator has no dependency on `durable/`.
+
+Startup gives the handler the shared store, coordinator and a trusted
+`ContinuationResolver`; tests supply local job and approval fakes. A notification
+contains the call ID, wait reason and opaque provider reference:
+
+```python
+from agent_runtime.durable.continuation import ContinuationEvent
+from agent_runtime.durable.handler import ContinuationHandler
+
+continuations = ContinuationHandler(store, coordinator, resolver)
+result = continuations.resume(
+    context,
+    ContinuationEvent("call-2", WaitReason.JOB, "job-17"),
+)
+```
+
+The transport supplies verified `context`. The continuation handler checks ownership,
+matches the notification to the run's pending calls, then claims the waiting run
+using its stored revisions before invoking the resolver. A second consumer cannot
+claim the same snapshot. After resolution, that pending reference is removed;
+duplicate, mismatched and late notifications are rejected with `StateConflictError`.
+Concurrent notifications for different jobs may conflict too; the caller can
+retry the unresolved event after the current consumer releases the run.
+
+The event carries no approval decision or result payload. For an approval, the
+resolver loads the original call and pinned version and uses the gateway, which
+checks current permissions and consumes the bound approval. For a completed job,
+the resolver rechecks current access and applies output policy before returning
+`EnforcedOutput`. These provider responsibilities remain mocked; production
+authentication, approval storage, job lookup and policy wiring are still required.
+
+An approval may return a new job receipt, keeping the run waiting. With several
+pending jobs, each completion saves its result and the last completion resumes
+the model loop. The next request includes all saved permitted results and current
+tool discovery. Adapter exceptions or mismatched output IDs produce a fixed tool
+failure. Cancellation is checked before and after resolution.
+
+Each invocation returns its newly produced artifact references separately from
+model history. The application must retain them for authenticated delivery;
+persisted delivery metadata remains future work. Tests exercise out-of-order
+completion, duplicate consumers, approval denial, permission revocation, output
+separation and budget limits across resumed runs.
+
+Execution remains synchronous. Async dependencies, concurrent tool dispatch,
+Kafka transport and durable recovery remain unimplemented. A crash after claiming
+a wait can leave the run running, and a crash after execution still needs
+side-effect reconciliation. No automatic recovery or replay of such runs is provided.
 
 ## Workshop questions
 
@@ -240,6 +300,9 @@ agent_runtime/
     reply_validation.py # Reply shape and tool-call ID checks
     control.py        # Execution budgets and application-facing outcome
     runner.py         # Run entry point and bounded model/tool loop
+  durable/
+    continuation.py   # Completion events, matching and trusted resolver interface
+    handler.py        # Claim waiting runs, resolve events and resume the coordinator
   conversations/
     conversation.py   # Owned conversation record and history item union
     messages.py       # Conversation text and message roles

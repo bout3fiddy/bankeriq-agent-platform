@@ -23,17 +23,24 @@ class RunStatus(StrEnum):
 # step to request several tools.
 @dataclass(frozen=True, slots=True)
 class RunState:
-    """Lifecycle snapshot; storage and transition enforcement are separate work."""
+    """Stored progress and budgets for a run, including its waits and resumptions."""
 
     context: RunContext
     status: RunStatus
     pending_calls: tuple[PendingToolCall, ...] = ()
     revision: int = 0
+    model_steps: int = 0
+    tool_calls: int = 0
 
     def __post_init__(self) -> None:
 
-        if (self.status is RunStatus.WAITING) != bool(self.pending_calls):
-            raise ValueError("only waiting runs must have pending calls")
+        if self.status is RunStatus.WAITING and not self.pending_calls:
+            raise ValueError("waiting runs must have pending calls")
+
+        # A continuation claims WAITING -> RUNNING before resolving an approval
+        # or job. Keep its pending references until the outcome has been saved.
+        if self.pending_calls and self.status not in (RunStatus.WAITING, RunStatus.RUNNING):
+            raise ValueError("pending calls require a waiting or running run")
 
         # Duplicate IDs would make a completion event ambiguous within this run.
         if len({call.call_id for call in self.pending_calls}) != len(self.pending_calls):

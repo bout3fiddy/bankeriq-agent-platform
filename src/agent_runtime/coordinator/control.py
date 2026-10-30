@@ -8,12 +8,13 @@ from ..tools.results import ArtifactReference
 
 @dataclass(frozen=True, slots=True)
 class RunLimits:
-    """Maximum model steps and dispatched calls in a single runner invocation."""
+    """Maximum model steps and requested tool calls across a run and its continuations."""
 
     model_steps: int = 8
     tool_calls: int = 16
 
     def __post_init__(self) -> None:
+
         # Zero tool calls permits a text-only run. At least one model step is
         # needed to answer; negative budgets indicate invalid configuration.
         if self.model_steps < 1 or self.tool_calls < 0:

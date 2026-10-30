@@ -61,6 +61,7 @@ def enforce_output(
         permitted_payload = visible_filter(payload)
         visible_result = VisibleResult(call_id, permitted_payload)
     except Exception:
+
         # Filters can raise errors containing sensitive input. Collapse filter and
         # JSON snapshot failures here without formatting or logging their details.
         return enforce_failure(call_id)

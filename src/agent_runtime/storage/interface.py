@@ -71,7 +71,9 @@ class StateStore(Protocol):
         status: RunStatus,
         items: tuple[ConversationItem, ...] = (),
         pending_calls: tuple[PendingToolCall, ...] = (),
+        model_steps: int | None = None,
+        tool_calls: int | None = None,
     ) -> Checkpoint:
-        """Atomically append history and update progress, preserving existing records on failure."""
+        """Atomically save progress; omitted budget counters retain their stored values."""
 
         ...

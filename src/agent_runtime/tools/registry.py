@@ -15,6 +15,7 @@ class ToolRegistry:
     """Snapshot selected tool versions; callers supply current trusted permissions."""
 
     def __init__(self, definitions: Iterable[ToolDefinition]) -> None:
+
         # One selected version per name makes model-generated names unambiguous.
         # Updating versions creates a new registry snapshot for subsequent runs.
         tools: dict[str, ToolDefinition] = {}

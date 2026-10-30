@@ -21,6 +21,7 @@ class ToolGateway:
         bindings: Mapping[tuple[str, str], ToolBinding],
         access: AccessPolicy,
     ) -> None:
+
         # Startup binds ("calculate", "1") to its handler, argument validator and
         # visible filter. The model supplies the tool name and arguments; the
         # coordinator supplies the selected version and verified run context.
@@ -34,6 +35,7 @@ class ToolGateway:
         try:
             return self._dispatch(call, version, context)
         except Exception:
+
             # Provider and handler exceptions may contain private inputs. Keep
             # their text out of the model response and ordinary application logs.
             return enforce_failure(call.call_id)

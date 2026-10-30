@@ -1,6 +1,8 @@
 """Enforce paragraph boundaries; adapted from MONKI's Python readability check."""
 
 import ast
+import tokenize
+from io import StringIO
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -12,8 +14,8 @@ def findings(source: str) -> list[tuple[int, str]]:
     """Require space between logical stages in authored Python source."""
 
     tree = ast.parse(source)
-    lines = source.splitlines()
-    problems = []
+    lines = StringIO(source).readlines()
+    problems = _comment_spacing_findings(source)
 
     for node in ast.walk(tree):
         if (
@@ -48,6 +50,47 @@ def findings(source: str) -> list[tuple[int, str]]:
                     problems.append((after.lineno, "add a blank line between logical stages"))
 
     return sorted(set(problems))
+
+
+def add_comment_spacing(source: str) -> str:
+    """Insert the missing blank lines while preserving comment and string contents."""
+
+    lines = StringIO(source).readlines()
+    line_ending = "\r\n" if "\r\n" in source else "\n"
+
+    # Work from the bottom so each diagnostic still points to its original line.
+    for line_number, _ in reversed(_comment_spacing_findings(source)):
+        lines.insert(line_number - 1, line_ending)
+
+    return "".join(lines)
+
+
+def _comment_spacing_findings(source: str) -> list[tuple[int, str]]:
+    """Require a blank line before the first line of each standalone comment block."""
+
+    lines = StringIO(source).readlines()
+
+    # Tokenization identifies actual comments even when a multiline string
+    # contains text such as "# report heading". Inline comments have code before #.
+    comment_lines = {
+        token.start[0]
+        for token in tokenize.generate_tokens(StringIO(source).readline)
+        if token.type == tokenize.COMMENT and not token.line[: token.start[1]].strip()
+    }
+    problems = []
+
+    for line_number in sorted(comment_lines):
+        if line_number == 1:
+            continue
+
+        # Adjacent comment-only lines form one paragraph, including a bare # line.
+        if line_number - 1 in comment_lines:
+            continue
+
+        if lines[line_number - 2].strip():
+            problems.append((line_number, "add a blank line before a standalone comment block"))
+
+    return problems
 
 
 def main() -> int:

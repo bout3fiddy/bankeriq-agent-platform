@@ -72,18 +72,39 @@ class Coordinator:
         # retrieves the conversation history and execution state for this context.
         checkpoint = self._store.load_run(context)
 
-        # Re-entering a run could repeat side effects. Waiting runs will need a
-        # continuation handler that matches incoming job/approval events.
+        # Re-entering a run could repeat side effects. The durable layer owns
+        # matching and resolving events for waiting runs.
         if checkpoint.run.status is not RunStatus.QUEUED:
             raise StateConflictError("coordinator requires a queued run")
 
         # The revision check allows only one caller to claim this queued run.
         checkpoint = self._save(checkpoint, RunStatus.RUNNING)
-        artifacts: list[ArtifactReference] = []
+        return self._run_loop(checkpoint, [], is_cancelled)
+
+    def continue_run(
+        self,
+        checkpoint: Checkpoint,
+        *,
+        artifacts: tuple[ArtifactReference, ...] = (),
+        is_cancelled: Callable[[], bool] | None = None,
+    ) -> CoordinatorResult:
+        """Continue a running checkpoint whose pending work was resolved by its owner."""
+
+        # For example, the durable handler saved job-17's receipt in history and
+        # now hands us its claimed checkpoint for the next model/tool iteration.
+        return self._run_loop(checkpoint, list(artifacts), is_cancelled)
+
+    def _run_loop(
+        self,
+        checkpoint: Checkpoint,
+        artifacts: list[ArtifactReference],
+        is_cancelled: Callable[[], bool] | None,
+    ) -> CoordinatorResult:
+        """Drive a claimed run, using its stored history and remaining budgets."""
+
         seen_call_ids = {
             item.call_id for item in checkpoint.conversation.items if isinstance(item, ToolCall)
         }
-        dispatched = 0
 
         # Each model step uses the history saved by the previous step:
         #
@@ -96,14 +117,22 @@ class Coordinator:
         # Example: calculate(count=2) -> {"total": 2} -> model uses that result
         # to request another tool or answer "The total is 2". The step budget
         # includes the model call that produces the answer.
-        for _ in range(self._limits.model_steps):
+        for _ in range(self._limits.model_steps - checkpoint.run.model_steps):
+
             # Example callback: is_cancelled=lambda: cancel_event.is_set().
             if is_cancelled is not None and is_cancelled():
                 return self._finish(checkpoint, RunStatus.CANCELLED, artifacts)
 
+            # Count the attempt before calling the provider. A wait/resume keeps
+            # this count, so repeated job events cannot reset the model budget.
+            checkpoint = self._save(
+                checkpoint, RunStatus.RUNNING, model_steps=checkpoint.run.model_steps + 1
+            )
+
             try:
                 reply, definitions = self._request_model(checkpoint)
             except Exception:
+
                 # Provider exceptions may contain private context; save status only.
                 return self._finish(checkpoint, RunStatus.FAILED, artifacts)
 
@@ -114,7 +143,12 @@ class Coordinator:
             if not is_valid_reply(reply, seen_call_ids):
                 return self._finish(checkpoint, RunStatus.FAILED, artifacts)
 
+            # `is not None` is true when answer contains a value. For example,
+            # ModelReply(answer="Total is 2") completes the run here.
+            # ModelReply(calls=(calculate_call,)) has answer=None, so execution
+            # continues below to run tools and feed their results back to the model.
             if reply.answer is not None:
+
                 # Save the answer and completion together before returning them.
                 checkpoint = self._save(
                     checkpoint, RunStatus.COMPLETED, (Message(MessageRole.ASSISTANT, reply.answer),)
@@ -122,14 +156,13 @@ class Coordinator:
                 return CoordinatorResult(checkpoint.run, reply.answer, tuple(artifacts))
 
             # With two calls left, a three-call batch stops before any execution.
-            if dispatched + len(reply.calls) > self._limits.tool_calls:
+            if checkpoint.run.tool_calls + len(reply.calls) > self._limits.tool_calls:
                 return self._finish(checkpoint, RunStatus.LIMIT_REACHED, artifacts)
 
             checkpoint, batch_artifacts = self._execute_tools(
                 checkpoint, reply.calls, definitions, is_cancelled
             )
             artifacts.extend(batch_artifacts)
-            dispatched += len(reply.calls)
             seen_call_ids.update(call.call_id for call in reply.calls)
 
             if checkpoint.run.status in (RunStatus.WAITING, RunStatus.CANCELLED):
@@ -150,6 +183,7 @@ class Coordinator:
         model_tools = tuple(
             ModelTool(tool.name, tool.description, tool.argument_schema) for tool in definitions
         )
+
         # Full history includes the last batch's permitted results, e.g. {"total": 2}.
         # Future context management will select/compact history here.
         request = ModelRequest(
@@ -168,7 +202,9 @@ class Coordinator:
 
         # Save intent before execution. A crash after a side effect still needs
         # future durable recovery to reconcile the missing result.
-        checkpoint = self._save(checkpoint, RunStatus.RUNNING, calls)
+        checkpoint = self._save(
+            checkpoint, RunStatus.RUNNING, calls, tool_calls=checkpoint.run.tool_calls + len(calls)
+        )
         selected_tools = {tool.name: tool for tool in definitions}
         outputs: list[ConversationItem] = []
         artifacts: list[ArtifactReference] = []
@@ -182,6 +218,7 @@ class Coordinator:
             output = self._dispatch_tool(
                 checkpoint.run.context, call, selected_tools.get(call.tool_name)
             )
+
             # Example: a restricted report contributes a receipt to history and
             # an artifact ID to authenticated delivery through CoordinatorResult.
             outputs.append(output.model_result)
@@ -192,8 +229,8 @@ class Coordinator:
             if isinstance(output.model_result, PendingToolCall):
                 pending.append(output.model_result)
 
-        # Pending job/approval receipts pause the run. Tests currently supply
-        # these through a fake dispatcher; completion-event resume is still pending.
+        # Pending job/approval receipts pause the run. The durable layer handles
+        # their completion events and returns the updated checkpoint to this loop.
         status = RunStatus.WAITING if pending else RunStatus.RUNNING
         checkpoint = self._save(checkpoint, status, tuple(outputs), tuple(pending))
         return checkpoint, tuple(artifacts)
@@ -219,6 +256,9 @@ class Coordinator:
         status: RunStatus,
         items: tuple[ConversationItem, ...] = (),
         pending: tuple[PendingToolCall, ...] = (),
+        *,
+        model_steps: int | None = None,
+        tool_calls: int | None = None,
     ) -> Checkpoint:
         return self._store.save_checkpoint(
             checkpoint.run.context,
@@ -227,6 +267,8 @@ class Coordinator:
             status=status,
             items=items,
             pending_calls=pending,
+            model_steps=model_steps,
+            tool_calls=tool_calls,
         )
 
     def _finish(

@@ -37,6 +37,7 @@ class ModelRequest:
 
     history: tuple[ConversationItem, ...] = field(repr=False)
     tools: tuple[ModelTool, ...]
+
     # Example: HIGH maps to reasoning={"effort": "high"} in a Responses adapter.
     # Python None leaves the provider default unchanged. ReasoningEffort.NONE
     # explicitly requests disabled reasoning where the deployed model supports it.

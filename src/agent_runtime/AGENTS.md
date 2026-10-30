@@ -4,7 +4,6 @@
   Use descriptive methods when operator overloads obscure the meaning; for
   example, use `required_permissions.issubset(granted_permissions)` for a set
   inclusion check.
-
 - Keep `types/` limited to shared, logic-free definitions. Place behaviour and
   validation with the component that owns them.
 - Use concrete examples in comments to explain unfamiliar interfaces and

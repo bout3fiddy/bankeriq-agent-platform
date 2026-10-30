@@ -101,6 +101,7 @@ class InMemoryStateStore:
             revision=conversation.revision + 1,
             active_run_id=context.run_id,
         )
+
         # The decorator holds the lock across all checks and both writes. Readers
         # therefore see the appended input, reservation and run record together.
         self._conversations[(context.tenant_id, context.conversation_id)] = conversation
@@ -131,7 +132,10 @@ class InMemoryStateStore:
         status: RunStatus,
         items: tuple[ConversationItem, ...] = (),
         pending_calls: tuple[PendingToolCall, ...] = (),
+        model_steps: int | None = None,
+        tool_calls: int | None = None,
     ) -> Checkpoint:
+
         # Example: append a restricted completion receipt and change WAITING to
         # RUNNING in one write. Both revisions must still match the loaded values.
         # The lock covers validation and both replacements, so competing threads
@@ -146,7 +150,17 @@ class InMemoryStateStore:
             raise StateConflictError("checkpoint changed or run is inactive")
 
         validate_transition(current.run.status, status)
-        run = RunState(context, status, tuple(pending_calls), current.run.revision + 1)
+
+        # Waiting and continuation writes retain usage. For example, a run that
+        # paused after two model calls resumes with those two calls still counted.
+        run = replace(
+            current.run,
+            status=status,
+            pending_calls=tuple(pending_calls),
+            revision=current.run.revision + 1,
+            model_steps=current.run.model_steps if model_steps is None else model_steps,
+            tool_calls=current.run.tool_calls if tool_calls is None else tool_calls,
+        )
         conversation = replace(
             current.conversation,
             items=current.conversation.items + snapshot_items(items),

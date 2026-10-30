@@ -2,18 +2,25 @@
 
 - Use descriptive variable and parameter names; expand opaque abbreviations.
 - Separate logical stages with blank lines, including after function docstrings.
+- Put a blank line before each standalone comment block. Consecutive comment-only
+  lines form one block. File-start comments and inline comments are exempt.
 - Keep public entry points before helpers and describe their inputs and outputs.
 - Explain what meaningful blocks do and why; avoid narrating assignments.
 - Keep side effects and credentials behind explicit interfaces.
 - Use typed inputs and return values, with explicit failure behaviour.
 
 Python tooling targets 3.14 and a 100-column limit. Ruff checks E/F/I/UP/B/SIM
-rules and formatting; Basedpyright checks types. The AST readability checker
-enforces paragraph spacing and rejects future annotations. This tooling is
-adapted from the local MONKI GPU project, without its native/scientific checks.
+rules and formatting; Basedpyright checks types. The readability checker uses
+AST and token checks to enforce paragraph and comment spacing and reject future
+annotations. This tooling is adapted from the local MONKI GPU project, without
+its native/scientific checks.
+
+The project formatter runs Ruff and then inserts the required comment spacing.
+Verification and pre-commit check this combined format, including comment blocks
+immediately after loop headers or inside parentheses.
 
 ```sh
-uv run ruff format src scripts tests
+uv run python -m scripts.format_python
 uv run python scripts/verify.py
 ```
 
