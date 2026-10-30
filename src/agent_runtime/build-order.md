@@ -20,9 +20,10 @@ planned except where marked implemented. Keep external I/O mocked until the adap
    reject duplicates and resume after
    all outstanding calls resolve. Preserve budgets across waits. Durable recovery
    remains future work.
-8. **End-to-end test harness** — Exercise visible and restricted outputs, denied
-   calls, failures, cancellation, waiting and continuation; verify restricted data
-   never reaches model context.
+8. **End-to-end test harness (implemented with synthetic I/O)** — `tests/integration/`
+   connects the runtime components through visible and restricted outputs, denied
+   calls, failures, cancellation, waiting and continuation. Checks actual model
+   request fields and stored history for synthetic restricted payloads and artifact IDs.
 9. **Foundry model adapter** — Replace the mock model with real inference calls
    behind the same interface.
 10. **Hosted-agent adapter** — Expose the coordinator through Foundry's

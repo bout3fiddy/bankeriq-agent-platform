@@ -1,8 +1,9 @@
 # Logical components
 
-Proposed design, 28 October 2026. These components are not implemented yet.
-They describe responsibilities, not separate deployments. Several can share an
-application. Cloud services and deployment choices will be documented separately
+Proposed design, 28 October 2026. This catalogue describes target responsibilities.
+Current runtime implementation and test coverage are tracked in the
+[runtime build order](src/agent_runtime/build-order.md). Several components can
+share an application. Cloud services and deployment choices will be documented separately
 in `services.md`; that document is not created yet.
 
 The initial platform uses Microsoft Foundry for the coordinator and a dedicated

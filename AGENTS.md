@@ -9,8 +9,9 @@
 
 ## Implementation
 
-- Read README.md for current scope, ARCHITECTURE.md for the proposed design, and
-  STYLEGUIDE.md before changing code.
+- Read README.md for current scope, ARCHITECTURE.md for the proposed design,
+  components.md for logical component responsibilities, and STYLEGUIDE.md before
+  changing code.
 - Prefer focused, incremental changes and justify additional abstractions.
 - Use descriptive names and blank lines between logical stages.
 - Add what-and-why comments around meaningful behaviour and non-obvious decisions.

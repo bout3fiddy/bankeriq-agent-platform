@@ -272,6 +272,27 @@ Kafka transport and durable recovery remain unimplemented. A crash after claimin
 a wait can leave the run running, and a crash after execution still needs
 side-effect reconciliation. No automatic recovery or replay of such runs is provided.
 
+## End-to-end integration harness
+
+`tests/integration/` connects the real registry, gateway, output enforcement,
+in-memory store, coordinator and durable continuation handler. Synthetic providers
+supply model replies, permissions, approval decisions, delayed job results and
+report delivery. See the [harness guide](../../tests/integration/README.md) for its
+scope and commands.
+
+The main workflow uses a visible calculation result to request a restricted
+report, waits for approval, resolves a job notification and produces the final
+reply. Additional scenarios exercise denied calls, permission/resource changes,
+failure sanitisation, cancellation, mixed pending calls and interleaved sessions.
+Every scenario inspects actual model-request fields and stored history, including
+fields hidden by `repr=False`, for the synthetic restricted-payload marker and
+artifact identifiers. Report content is read separately through a fake delivery
+boundary that checks ownership and current access.
+
+These are local tests with scripted inference and immediate execution whose
+result delivery can be delayed. Live Foundry inference, async dispatch, Kafka,
+persistent storage and production authentication remain untested.
+
 ## Workshop questions
 
 For each component, define its inputs and outputs, ownership of state, calls to
