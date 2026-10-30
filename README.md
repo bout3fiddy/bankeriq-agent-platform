@@ -20,8 +20,8 @@ See [components.md](components.md) for logical responsibilities and initial scop
 
 This repository contains design documentation, core runtime data types, a
 permission-filtered tool registry, completed-output enforcement, a synchronous
-tool gateway and local
-quality checks with behavioural tests. No agent loop, API, Azure resources or
+tool gateway, conversation/run state and an in-memory store with atomic checkpoint
+updates. Local quality checks include behavioural tests. No agent loop, API, Azure resources or
 model integration is implemented.
 Python 3.14 is the local tooling baseline copied from MONKI; deployment runtime
 compatibility must be checked before selecting an Azure hosting target.

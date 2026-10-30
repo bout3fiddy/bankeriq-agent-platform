@@ -1,10 +1,26 @@
 """Model-facing outcomes and internal artifact delivery references."""
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 
-from ..types._json import _freeze_json
+from ..helpers.json_snapshot import _freeze_json
 from ..types.json_value import JsonValue
-from .enums import ToolErrorCode, WaitReason
+
+
+# Approval replies and job completions need different continuation checks.
+class WaitReason(StrEnum):
+    APPROVAL = "approval"
+    JOB = "job"
+
+
+# Fixed codes let the model handle failures without receiving exception details
+# that could contain records, credentials or internal endpoint names.
+class ToolErrorCode(StrEnum):
+    DENIED = "denied"
+    INVALID_ARGUMENTS = "invalid_arguments"
+    UNAVAILABLE = "unavailable"
+    EXECUTION_FAILED = "execution_failed"
+    CANCELLED = "cancelled"
 
 
 # This class identifies payloads admitted to model context by output enforcement.

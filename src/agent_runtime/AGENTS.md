@@ -14,8 +14,3 @@
   `{"total": payload["total"]}`, passed as `visible_filter=public_total`, turning
   `{"total": 42, "private_notes": "..."}` into `{"total": 42}`. Keep examples
   concise and aligned with the code's behaviour.
-- Temporary migration instruction: as the components are built, move run state
-  into `runs/`, messages and conversation history into `conversations/`, and JSON
-  snapshot helpers out of `types/` into an appropriate helper module. Update
-  imports, tests and documentation, then remove this temporary instruction once
-  all these moves are complete.

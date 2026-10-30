@@ -4,8 +4,8 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 
 from ..policy.output import VisibleOutputFilter
+from ..runs.context import RunContext
 from ..types.json_value import JsonValue
-from ..types.runs import RunContext
 
 
 @dataclass(frozen=True, slots=True)

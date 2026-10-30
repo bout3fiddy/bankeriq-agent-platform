@@ -2,8 +2,8 @@
 
 from typing import Protocol
 
+from ..runs.context import RunContext
 from ..tools.definitions import ToolCall, ToolDefinition
-from ..types.runs import RunContext
 
 
 class AccessPolicy(Protocol):

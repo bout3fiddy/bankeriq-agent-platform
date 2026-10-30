@@ -1,7 +1,7 @@
 # Agent runtime workshop
 
 Workshop and implementation workspace for the core agent runtime. Core data types,
-tool registry, completed-output enforcement and synchronous tool gateway
+tool registry, completed-output enforcement, synchronous tool gateway and in-memory state storage
 are implemented; the coordinator and external APIs are not yet implemented.
 Microsoft Foundry remains the initial coordinator target;
 the self-hosted specialist is deferred.
@@ -25,8 +25,8 @@ See [build-order.md](build-order.md) for the implementation sequence.
 
 ## Implemented data types
 
-`types/` defines shared JSON values, trusted run identity, text messages,
-conversation items and lifecycle snapshots. `tools/` defines versioned tool
+`types/` defines shared JSON values. `runs/` owns trusted run context and lifecycle
+snapshots; `conversations/` owns messages and conversation records. `tools/` defines versioned tool
 definitions, calls, output policies, visible results, restricted completion
 receipts, fixed error codes and pending calls. Artifact
 references are separate from the tool-result union. JSON values are copied into
@@ -35,7 +35,7 @@ immutable mappings and tuples; adapters must explicitly encode them for transpor
 Constructors preserve immutable JSON snapshots and consistent waiting states.
 Typed callers supply valid identities, enum members and field types. Future input
 adapters and registry/gateway boundaries must validate external data, schemas and
-permissions. Lifecycle transition enforcement remains separate work.
+permissions. `runs/state.py` enforces lifecycle transitions when checkpoints are saved.
 The `VisibleResult` type must only be populated after output enforcement; its name
 does not establish that arbitrary content is safe. No SDK-specific messages or
 serialization format are fixed yet.
@@ -102,9 +102,54 @@ a general JSON Schema engine is still pending. Provider and handler exceptions
 produce a fixed failure without exposing exception text.
 
 Missing or mismatched approvals return `DENIED`. Approval requests and pending-job
-continuations will be added with state handling. Execution is synchronous and has
+event handling remain future work. Execution is synchronous and has
 no retry or duplicate-call recovery; repeated authorised calls can repeat side
 effects. Durable execution and replay prevention remain future work.
+
+## Implemented conversation and run storage
+
+`storage/interface.py` defines `StateStore`. Its in-memory implementation stores
+owned conversation history and run snapshots. Identifiers are tenant-scoped;
+reads and updates check user ownership and the run's full context. Callers supply
+identity verified by the application backend.
+
+`create_run()` appends initial input and claims the conversation for one queued
+run. `save_checkpoint()` appends permitted history and updates status and pending
+calls atomically. Both operations require the expected conversation revision;
+checkpoint updates also require the expected run revision. Each write advances
+revisions. A stale writer receives `StateConflictError` and must reload before
+deciding how to proceed.
+
+For example, a waiting job can record its restricted receipt and resume the run
+in one storage operation:
+
+```python
+checkpoint = store.load_run(context)
+updated = store.save_checkpoint(
+    context,
+    expected_conversation_revision=checkpoint.conversation.revision,
+    expected_run_revision=checkpoint.run.revision,
+    status=RunStatus.RUNNING,
+    items=(RestrictedReceipt(call_id),),
+)
+```
+
+The caller must match the completion event to outstanding work before making
+this write. Event matching, duplicate-event handling and approval consumption
+are separate integration steps. Pending records currently store opaque approval
+or job references; no approval database or job worker is implemented.
+
+Lifecycle transitions are checked before saving. Waiting runs require unique
+pending calls; finished runs release the conversation for a new run. Stored
+snapshots are immutable, and a lock prevents partial updates across threads
+using the same store instance. Tests exercise competing writers and unchanged
+state after rejected updates. `load_run()` returns the requested run together
+with the conversation's current history.
+
+History accepts message, call and model-result records. Raw execution results
+and artifact delivery references are rejected. Content admission remains the
+input/output policy's responsibility. The store has no database connection,
+cross-process coordination, crash recovery or durable side-effect guarantees.
 
 ## Workshop questions
 
@@ -129,24 +174,30 @@ See [components.md](../../components.md) for the full component catalogue and
 
 ```text
 agent_runtime/
+  conversations/
+    conversation.py   # Owned conversation record and history item union
+    messages.py       # Conversation text and message roles
+    history.py        # History admission checks
+  runs/
+    context.py        # Trusted tenant, user, conversation and run identity
+    state.py          # Run statuses, snapshots and transition rules
+  storage/
+    interface.py      # Atomic storage operations and checkpoint snapshots
+    memory.py         # In-memory store with revision checks and a lock
+  helpers/
+    json_snapshot.py  # Immutable JSON conversion
   policy/
     access.py         # Permission, resource-access and approval provider interface
     output.py         # Completed-output enforcement and separate delivery metadata
   tools/
-    definitions.py    # ToolDefinition and ToolCall
+    definitions.py    # ToolDefinition, ToolCall and output policy
     bindings.py       # Per-version handlers, argument validators and output filters
-    enums.py          # Output policies, error codes and waiting reasons
-    results.py        # Tool outcomes and artifact references
+    results.py        # Tool outcomes, status codes and artifact references
     registry.py       # Permission-filtered discovery and version lookup
     gateway.py        # Authorisation, synchronous dispatch and output enforcement
     _registration.py  # Registration validation helper
   types/
-    conversation.py   # ConversationItem union
-    enums.py          # Message roles and run statuses
     json_value.py     # Recursive JSON value alias
-    messages.py       # Conversation text
-    runs.py           # Run context and lifecycle snapshots
-    _json.py          # JSON snapshot helpers
 ```
 
 Import values from their defining modules, for example

@@ -1,8 +1,14 @@
 """Conversation text admitted through input policy."""
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 
-from .enums import MessageRole
+
+# Tool calls/results have their own types. The runtime supplies trusted system
+# instructions separately from conversation text.
+class MessageRole(StrEnum):
+    USER = "user"
+    ASSISTANT = "assistant"
 
 
 # Hide text from default repr to reduce accidental logging. Explicit serialization

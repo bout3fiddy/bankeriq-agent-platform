@@ -3,9 +3,14 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from ..tools.definitions import ToolDefinition
-from ..tools.enums import OutputPolicy, ToolErrorCode
-from ..tools.results import ArtifactReference, RestrictedReceipt, ToolFailure, VisibleResult
+from ..tools.definitions import OutputPolicy, ToolDefinition
+from ..tools.results import (
+    ArtifactReference,
+    RestrictedReceipt,
+    ToolErrorCode,
+    ToolFailure,
+    VisibleResult,
+)
 from ..types.json_value import JsonValue
 
 # A trusted per-operation filter validates or projects the fields approved for

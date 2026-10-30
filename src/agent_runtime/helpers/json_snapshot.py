@@ -4,7 +4,7 @@ import math
 from collections.abc import Mapping
 from types import MappingProxyType
 
-from .json_value import JsonValue
+from ..types.json_value import JsonValue
 
 
 def _freeze_object(value: Mapping[str, JsonValue]) -> Mapping[str, JsonValue]:

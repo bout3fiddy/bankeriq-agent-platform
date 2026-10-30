@@ -5,18 +5,18 @@ from typing import cast
 
 import pytest
 
-from agent_runtime.tools.definitions import ToolCall, ToolDefinition
-from agent_runtime.tools.enums import OutputPolicy, WaitReason
+from agent_runtime.runs.context import RunContext
+from agent_runtime.runs.state import RunState, RunStatus
+from agent_runtime.tools.definitions import OutputPolicy, ToolCall, ToolDefinition
 from agent_runtime.tools.results import (
     ArtifactReference,
     PendingToolCall,
     RestrictedReceipt,
     ToolFailure,
     VisibleResult,
+    WaitReason,
 )
-from agent_runtime.types.enums import RunStatus
 from agent_runtime.types.json_value import JsonValue
-from agent_runtime.types.runs import RunContext, RunState
 
 
 def test_call_snapshots_nested_arguments() -> None:

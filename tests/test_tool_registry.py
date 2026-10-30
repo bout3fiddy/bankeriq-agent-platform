@@ -2,8 +2,7 @@
 
 import pytest
 
-from agent_runtime.tools.definitions import ToolDefinition
-from agent_runtime.tools.enums import OutputPolicy
+from agent_runtime.tools.definitions import OutputPolicy, ToolDefinition
 from agent_runtime.tools.registry import ToolRegistry, ToolUnavailableError
 
 

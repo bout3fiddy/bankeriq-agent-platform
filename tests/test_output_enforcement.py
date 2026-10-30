@@ -6,11 +6,11 @@ from typing import cast
 import pytest
 
 from agent_runtime.policy.output import enforce_failure, enforce_output
-from agent_runtime.tools.definitions import ToolDefinition
-from agent_runtime.tools.enums import OutputPolicy, ToolErrorCode
+from agent_runtime.tools.definitions import OutputPolicy, ToolDefinition
 from agent_runtime.tools.results import (
     ArtifactReference,
     RestrictedReceipt,
+    ToolErrorCode,
     ToolFailure,
     VisibleResult,
 )

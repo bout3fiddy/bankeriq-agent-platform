@@ -2,10 +2,17 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from enum import StrEnum
 
-from ..types._json import _freeze_object
+from ..helpers.json_snapshot import _freeze_object
 from ..types.json_value import JsonValue
-from .enums import OutputPolicy
+
+
+# String enums give policies explicit choices with readable transport values.
+# The registered operation supplies the policy enforced by the gateway.
+class OutputPolicy(StrEnum):
+    VISIBLE = "visible"
+    RESTRICTED = "restricted"
 
 
 # Registration groups policy, version and schema for the gateway's execution checks.

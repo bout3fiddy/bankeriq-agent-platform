@@ -11,7 +11,7 @@ planned except where marked implemented. Keep external I/O mocked until the adap
    sanitise failures and route artifact references separately.
 4. **Tool gateway (synchronous dispatch implemented)** — Validate calls, check permissions and approvals, dispatch
    through a mock executor, and enforce output policy.
-5. **Conversation and run state** — Define storage interfaces and an in-memory
+5. **Conversation and run state (implemented)** — Define storage interfaces and an in-memory
    implementation for history, pending calls, checkpoints and waiting states.
 6. **Coordinator loop** — Assemble context, call a scripted mock model, handle tool
    requests and finish or suspend within execution limits.
