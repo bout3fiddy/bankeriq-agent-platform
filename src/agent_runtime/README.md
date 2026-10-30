@@ -1,8 +1,8 @@
 # Agent runtime workshop
 
 Workshop and implementation workspace for the core agent runtime. Core data types,
-tool registry and completed-output enforcement
-are implemented; the coordinator, gateway and external APIs are not yet implemented.
+tool registry, completed-output enforcement and synchronous tool gateway
+are implemented; the coordinator and external APIs are not yet implemented.
 Microsoft Foundry remains the initial coordinator target;
 the self-hosted specialist is deferred.
 
@@ -51,7 +51,8 @@ produce the same `ToolUnavailableError`.
 
 Callers obtain current permissions from a trusted provider. Registry results are
 internal definitions; the model adapter will select the fields sent to the model.
-Resource access, approval checks and output enforcement remain gateway work.
+The gateway delegates resource access and approval decisions to an injected provider
+and applies output enforcement after execution.
 Registration checks names, versions, duplicate names and the object schema root;
 complete JSON Schema validation remains future work. Version updates use a new
 registry snapshot with explicit version selection.
@@ -70,11 +71,40 @@ Missing filters, unsupported policies and filter failures produce a fixed
 `EXECUTION_FAILED` result. `enforce_failure()` constructs the same outward failure
 using the call ID alone; exception details stay with the execution boundary.
 
-Filters are injected dependencies; domain-specific filters and gateway wiring
+Filters are injected dependencies bound through `ToolBinding`; production filters
 remain to be built. These functions do not classify sensitive data. The gateway
 must bind definitions, filters, call IDs and artifact IDs from trusted context.
 Artifact access checks belong to delivery. Pending jobs, approvals and streaming
 will be integrated as those execution paths are implemented.
+
+## Implemented tool gateway
+
+`tools/gateway.py` provides synchronous `ToolGateway.dispatch()`. Application
+startup supplies a registry, a mapping from `(tool_name, version)` to `ToolBinding`,
+and an `AccessPolicy` provider. Tests supply local handlers and a fake provider.
+Each binding contains a handler, an argument validator and an optional visible
+output filter. This is the execution binding for the selected tool version.
+
+For each call, the gateway:
+
+1. Fetches current permissions and resolves the exact registered version.
+2. Finds the binding and checks output-policy configuration before execution.
+3. Calls the operation's argument validator; `ValueError` produces a fixed
+   `INVALID_ARGUMENTS` result.
+4. Checks resource access and consumes approval when the definition requires it.
+5. Invokes the handler with trusted run context and immutable arguments.
+6. Enforces output policy and returns model output and artifact metadata separately.
+
+The access provider owns entitlement lookup, resource decisions and atomic
+approval consumption bound to identity, run, call, version and arguments.
+Argument validators supplied by tool developers own schema and domain checks;
+a general JSON Schema engine is still pending. Provider and handler exceptions
+produce a fixed failure without exposing exception text.
+
+Missing or mismatched approvals return `DENIED`. Approval requests and pending-job
+continuations will be added with state handling. Execution is synchronous and has
+no retry or duplicate-call recovery; repeated authorised calls can repeat side
+effects. Durable execution and replay prevention remain future work.
 
 ## Workshop questions
 
@@ -100,12 +130,15 @@ See [components.md](../../components.md) for the full component catalogue and
 ```text
 agent_runtime/
   policy/
+    access.py         # Permission, resource-access and approval provider interface
     output.py         # Completed-output enforcement and separate delivery metadata
   tools/
     definitions.py    # ToolDefinition and ToolCall
+    bindings.py       # Per-version handlers, argument validators and output filters
     enums.py          # Output policies, error codes and waiting reasons
     results.py        # Tool outcomes and artifact references
     registry.py       # Permission-filtered discovery and version lookup
+    gateway.py        # Authorisation, synchronous dispatch and output enforcement
     _registration.py  # Registration validation helper
   types/
     conversation.py   # ConversationItem union

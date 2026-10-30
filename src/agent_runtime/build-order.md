@@ -9,7 +9,7 @@ planned except where marked implemented. Keep external I/O mocked until the adap
    filtered by permissions.
 3. **Output enforcement (completed outputs implemented)** — Produce model-visible results or restricted receipts;
    sanitise failures and route artifact references separately.
-4. **Tool gateway** — Validate calls, check permissions and approvals, dispatch
+4. **Tool gateway (synchronous dispatch implemented)** — Validate calls, check permissions and approvals, dispatch
    through a mock executor, and enforce output policy.
 5. **Conversation and run state** — Define storage interfaces and an in-memory
    implementation for history, pending calls, checkpoints and waiting states.
