@@ -9,6 +9,7 @@ from ..tools.results import (
     RestrictedReceipt,
     ToolErrorCode,
     ToolFailure,
+    ToolResult,
     VisibleResult,
 )
 from ..types.json_value import JsonValue
@@ -22,7 +23,7 @@ type VisibleOutputFilter = Callable[[JsonValue], JsonValue]
 class EnforcedOutput:
     """Separate destinations for model context and authenticated artifact delivery."""
 
-    model_result: VisibleResult | RestrictedReceipt | ToolFailure
+    model_result: ToolResult
     artifact: ArtifactReference | None = None
 
 

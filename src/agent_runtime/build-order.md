@@ -13,7 +13,7 @@ planned except where marked implemented. Keep external I/O mocked until the adap
    through a mock executor, and enforce output policy.
 5. **Conversation and run state (implemented)** — Define storage interfaces and an in-memory
    implementation for history, pending calls, checkpoints and waiting states.
-6. **Coordinator loop** — Assemble context, call a scripted mock model, handle tool
+6. **Coordinator loop (implemented)** — Assemble context, call a scripted mock model, handle tool
    requests and finish or suspend within execution limits.
 7. **Continuation handling** — Accept mock approval/job events, match them to
    pending work, reject duplicates and resume the coordinator. This does not

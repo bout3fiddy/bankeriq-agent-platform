@@ -1,8 +1,8 @@
 # Agent runtime workshop
 
 Workshop and implementation workspace for the core agent runtime. Core data types,
-tool registry, completed-output enforcement, synchronous tool gateway and in-memory state storage
-are implemented; the coordinator and external APIs are not yet implemented.
+tool registry, completed-output enforcement, synchronous tool gateway, in-memory
+state storage and coordinator loop are implemented. External APIs remain pending.
 Microsoft Foundry remains the initial coordinator target;
 the self-hosted specialist is deferred.
 
@@ -151,6 +151,67 @@ and artifact delivery references are rejected. Content admission remains the
 input/output policy's responsibility. The store has no database connection,
 cross-process coordination, crash recovery or durable side-effect guarantees.
 
+## Implemented coordinator loop
+
+`coordinator/runner.py` provides `Coordinator.start()` to create and execute a new
+run, and `run()` to execute an existing queued run. Startup injects the model
+client, gateway, registry, store and a current-permissions callable. Tests use
+scripted model replies and local tool handlers. For example:
+
+```python
+result = coordinator.start(
+    context,
+    Message(MessageRole.USER, "Calculate the total"),
+    expected_conversation_revision=conversation.revision,
+)
+```
+
+Input must already be admitted by the application's input policy. The runner
+claims a queued run through a revision-checked transition before invoking the
+model. Each model request includes current history and permission-filtered tool
+names, descriptions and argument schemas. The runtime retains version, execution
+and policy metadata.
+
+The model returns either a final answer or a batch of tool calls. The runner
+checks reply shape, unique call IDs and budgets, checkpoints the calls, dispatches
+them sequentially through the gateway using the selected versions, then saves
+their enforced results. Visible results and restricted receipts enter history;
+artifact references remain in `CoordinatorResult.artifacts` for user delivery.
+Current permissions are read again on subsequent model steps, and the gateway
+independently checks each execution.
+
+The main loop keeps those decisions together. `_request_model()` builds each
+request, `reply_validation.py` checks the reply, and `_execute_tools()` checkpoints
+one batch and collects its results. The next iteration uses the updated history.
+
+Model-step and tool-call budgets bound the invocation. An optional cancellation
+callable is checked around model calls and between tools. It cannot interrupt a
+blocking dependency call. Provider failures produce a failed run with no raw
+exception text in history. Storage conflicts propagate to the caller without
+automatic retry.
+
+The coordinator accepts `reasoning_effort=ReasoningEffort.HIGH` and forwards it
+on every model request, including requests after tool results. The available
+settings are `none`, `minimal`, `low`, `medium`, `high`, `xhigh` and `max`;
+support depends on the deployed model. The default Python `None` leaves the
+provider's default unchanged. `ReasoningEffort.NONE` requests disabled reasoning.
+The future adapter must reject unsupported combinations and map the setting to
+the API, for example `reasoning={"effort": "high"}` for Responses.
+
+This controls provider-managed reasoning effort. Opaque reasoning continuation
+items or response references will be managed by the model adapter; their
+conversation/run scoping and persistence remain future work. The current tests
+verify configuration propagation with a scripted client. See Microsoft's
+[reasoning model documentation](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/reasoning)
+for model-dependent settings and opaque reasoning state.
+
+A fake dispatcher can return pending approval/job receipts. The runner saves
+them, marks the run waiting and returns. Resume/event matching belongs to the
+next build step. Running, waiting and terminal runs cannot be replayed through
+`run()`. Checkpointing does not make side effects durable: a crash during tool
+execution still requires reconciliation. Delivery callbacks, persisted artifact
+metadata and Foundry adapters remain future integrations.
+
 ## Workshop questions
 
 For each component, define its inputs and outputs, ownership of state, calls to
@@ -174,6 +235,11 @@ See [components.md](../../components.md) for the full component catalogue and
 
 ```text
 agent_runtime/
+  coordinator/
+    model.py          # Model request/reply values and client interface
+    reply_validation.py # Reply shape and tool-call ID checks
+    control.py        # Execution budgets and application-facing outcome
+    runner.py         # Run entry point and bounded model/tool loop
   conversations/
     conversation.py   # Owned conversation record and history item union
     messages.py       # Conversation text and message roles
