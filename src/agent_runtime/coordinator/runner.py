@@ -58,9 +58,29 @@ class Coordinator:
     ) -> CoordinatorResult:
         """Create and execute a run using a message already admitted by input policy."""
 
-        self._store.create_run(
+        checkpoint = self._store.create_run(
             context, expected_conversation_revision=expected_conversation_revision, items=(message,)
         )
+
+        if (
+            checkpoint.conversation.active_run_id != context.run_id
+            or checkpoint.run.status is not RunStatus.QUEUED
+        ):
+            answer = next(
+                (
+                    item.text
+                    for item in reversed(checkpoint.conversation.items)
+                    if isinstance(item, Message) and item.role is MessageRole.ASSISTANT
+                ),
+                None,
+            )
+            return CoordinatorResult(
+                checkpoint.run,
+                answer if checkpoint.run.status is RunStatus.COMPLETED else None,
+                self._store.deliveries(context),
+                conversation_revision=checkpoint.conversation.revision,
+            )
+
         return self.run(context, is_cancelled=is_cancelled)
 
     def run(
@@ -221,7 +241,9 @@ class Coordinator:
 
         for call in calls:
             if is_cancelled is not None and is_cancelled():
-                checkpoint = self._save(checkpoint, RunStatus.CANCELLED, tuple(outputs))
+                checkpoint = self._save(
+                    checkpoint, RunStatus.CANCELLED, tuple(outputs), artifacts=tuple(artifacts)
+                )
                 return checkpoint, tuple(artifacts)
 
             output = self._dispatch_tool(
@@ -241,7 +263,9 @@ class Coordinator:
         # Pending job/approval receipts pause the run. The durable layer handles
         # their completion events and returns the updated checkpoint to this loop.
         status = RunStatus.WAITING if pending else RunStatus.RUNNING
-        checkpoint = self._save(checkpoint, status, tuple(outputs), tuple(pending))
+        checkpoint = self._save(
+            checkpoint, status, tuple(outputs), tuple(pending), artifacts=tuple(artifacts)
+        )
         return checkpoint, tuple(artifacts)
 
     def _dispatch_tool(
@@ -268,6 +292,7 @@ class Coordinator:
         *,
         model_steps: int | None = None,
         tool_calls: int | None = None,
+        artifacts: tuple[ArtifactReference, ...] = (),
     ) -> Checkpoint:
         return self._store.save_checkpoint(
             checkpoint.run.context,
@@ -278,6 +303,9 @@ class Coordinator:
             pending_calls=pending,
             model_steps=model_steps,
             tool_calls=tool_calls,
+            artifacts=artifacts,
+            expected_recovery_id=checkpoint.conversation.recovery_id,
+            expected_deletion_generation=checkpoint.conversation.deletion_generation,
         )
 
     def _finish(

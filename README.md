@@ -81,8 +81,11 @@ with Redis serving active conversation views and ephemeral progress. Accepted tu
 and checkpoints use small durable journal writes; large history snapshots are
 materialised asynchronously and on idle. Independent tool calls run through worker
 queues while the coordinator releases its execution slot. These integrations are
-planned on `codex/runtime-infrastructure`; the executable still uses in-memory state
-and synthetic jobs. PostgreSQL persistence is next. See the
+being added on `codex/runtime-infrastructure`. The
+[PostgreSQL journal adapter](src/bankeriq_agent_platform/storage/README.md) now persists
+ordered admission, checkpoints, synthetic job records, results and approvals,
+with local PostgreSQL failure tests. The default executable retains in-memory
+state; application composition can inject the adapter. Shared system prompts are next. See the
 [state ownership and session lifecycle](ARCHITECTURE.md#selected-state-and-execution-services).
 
 The planned [shared prompt architecture](ARCHITECTURE.md#shared-system-prompts-and-live-updates)

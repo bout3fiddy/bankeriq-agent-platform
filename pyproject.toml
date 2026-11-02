@@ -26,6 +26,9 @@ foundry-hosting = [
 demo = [
     "httpx2>=2.16.0",
 ]
+postgres = [
+    "psycopg[binary]>=3.2",
+]
 
 [dependency-groups]
 dev = [
@@ -35,6 +38,7 @@ dev = [
     "httpx2>=2.16.0",
     "openai>=3.41.0",
     "pre-commit>=4",
+    "psycopg[binary]>=3.2",
     "pytest>=8",
     "ruff>=0.11",
 ]

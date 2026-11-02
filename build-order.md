@@ -11,7 +11,7 @@ Task groups run in this order: initial runtime → containerisation → PostgreS
 journal and job records → shared system prompts → Redis sessions and asynchronous
 history → durable workers → asynchronous coordinator and tools → recovery and
 scaling validation → Azure runtime deployment. Each group has its own task
-numbering. PostgreSQL is next.
+numbering. Shared system prompts are next.
 
 The selected stack is PostgreSQL plus ephemeral Redis. PostgreSQL contains durable
 conversation deltas, history snapshots and the message queue. Redis serves active
@@ -20,8 +20,8 @@ Accepted work always has a recoverable PostgreSQL input record. See the
 [full system design](ARCHITECTURE.md#selected-state-and-execution-services).
 The [transaction and replication boundaries](ARCHITECTURE.md#transaction-and-replication-boundaries)
 define atomic writes, primary-only reads and recovery requirements for the groups
-below. These are design decisions; database implementations and failure tests
-remain pending.
+below. The PostgreSQL journal adapter and its local failure tests are implemented;
+later worker, cache and deployment guarantees remain pending.
 DTS and separate brokers are outside this sequence. Tools own confidential Blob
 reports and authenticated downloads. Container Apps is proposed for worker hosting;
 the earlier Foundry Hosted Agents target remains a separate compatibility decision.
@@ -102,7 +102,7 @@ Other architectures and Azure execution remain unvalidated. See the
 
 ## PostgreSQL journal and job records
 
-Status: planned; next group. Depends on containerisation.
+Status: implemented and validated locally on PostgreSQL 17.11. Depends on containerisation.
 
 1. **Map existing storage operations** — Review `StateStore`, run transitions and
    `open_runtime()` before adding focused transactional queue methods. Define
@@ -131,8 +131,21 @@ Status: planned; next group. Depends on containerisation.
    and after commit before acknowledgement. Resolve retries by ID on the primary;
    check cross-tenant denial and output isolation.
 
-Completion requires accepted input and queued work to survive a process restart
-atomically. Job execution remains synthetic until the durable worker group.
+Completed: accepted input and queued work survive a process restart together.
+Job execution remains synthetic until the durable worker group. The
+[storage guide](src/bankeriq_agent_platform/storage/README.md) maps implemented
+transactions, bounds, retention prerequisites, generation fences and limitations.
+Versioned migrations and the adapter live under `src/bankeriq_agent_platform/storage/`;
+`open_runtime()` accepts the adapter through its existing store dependency.
+The default executable remains in-memory.
+
+Evidence: all 257 Python tests and static checks passed with PostgreSQL enabled,
+including 13 PostgreSQL integration tests covering write-boundary rollback,
+independent process admission/recovery, lost commit acknowledgements, duplicate
+and conflicting IDs, stale revisions, ordered context, approvals, tombstones,
+recovery generations and restricted-output isolation. Run the reproducible Docker
+commands in the storage guide. Automatic recovery of running execution, worker
+ownership, projection and production HA remain later groups.
 
 ## Shared system prompts
 

@@ -43,3 +43,12 @@ uv run python -m pytest tests/integration -q
 uv run python -m pytest tests/architecture -q
 uv run python -m pytest tests/tooling -q
 ```
+
+## PostgreSQL persistence
+
+`integration/test_postgres.py` uses a real local PostgreSQL container when
+`BANKERIQ_TEST_POSTGRES_DSN` is set. See the
+[storage guide](../src/bankeriq_agent_platform/storage/README.md) for reproducible
+Docker commands, transaction/failure coverage and explicit validation limits.
+Use a dedicated disposable database: tests apply migrations and advance its
+recovery generation. Without that environment variable these tests skip.

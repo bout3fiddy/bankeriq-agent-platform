@@ -4,7 +4,9 @@ Terraform configuration and provisioning inventory for the Foundry deployment.
 The existing configuration defines the local-inference environment. PostgreSQL
 conversation/job storage and Redis active sessions are selected for the next phase;
 Container Apps is the proposed worker host. Their Terraform resources and
-application adapters are not implemented yet.
+Redis/worker adapters remain unimplemented. The
+[PostgreSQL application adapter](../../src/bankeriq_agent_platform/storage/README.md)
+is locally validated; no PostgreSQL cloud resource has been provisioned.
 Create resources through Terraform as required by [AGENTS.md](../../AGENTS.md).
 
 The first milestone is a local coordinator calling a deployed Foundry model.
@@ -181,8 +183,8 @@ the journal still reconstructs accepted turns. The
 [architecture](../../ARCHITECTURE.md#selected-state-and-execution-services) specifies
 ownership, async execution, proposed sizing and failure gates; the
 [build order](../../build-order.md) tracks each integration separately.
-The self-hosted specialist is deferred. Current tests still use synthetic tools,
-in-memory state and mocked continuations. No additional resources are provisioned
+The self-hosted specialist is deferred. Current tests use synthetic tools and
+mocked continuations, with both in-memory and real local PostgreSQL storage. No additional resources are provisioned
 by this design selection. Terraform state Blob storage remains a separate
 infrastructure responsibility from tool-owned report storage.
 

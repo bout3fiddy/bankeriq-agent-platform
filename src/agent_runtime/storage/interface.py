@@ -6,7 +6,7 @@ from typing import Protocol
 from ..conversations.conversation import Conversation, ConversationItem
 from ..runs.context import RunContext
 from ..runs.state import RunState, RunStatus
-from ..tools.results import PendingToolCall
+from ..tools.results import ArtifactReference, PendingToolCall
 
 
 class StateNotFoundError(LookupError):
@@ -19,17 +19,28 @@ class StateConflictError(RuntimeError):
 
 @dataclass(frozen=True, slots=True)
 class Checkpoint:
-    """Conversation and run snapshots read or written together."""
+    """Run-specific conversation context and progress read or written together."""
 
     conversation: Conversation
     run: RunState
 
 
+@dataclass(frozen=True, slots=True)
+class HistoryPage:
+    """Bounded journal items with a resume cursor, including metadata-only changes."""
+
+    items: tuple[ConversationItem, ...]
+    next_cursor: int
+    durable_cursor: int
+    deletion_generation: int
+    recovery_id: str
+
+
 class StateStore(Protocol):
     """Trusted callers supply verified identity and policy-approved history items.
 
-    Writes must be atomic and reject stale revisions. A database adapter will
-    implement these guarantees with transactions and concurrency controls.
+    Execution writes are atomic and reject stale revisions. Durable admission
+    may queue later turns without changing the active execution revision.
     """
 
     def create_conversation(
@@ -53,12 +64,12 @@ class StateStore(Protocol):
         expected_conversation_revision: int,
         items: tuple[ConversationItem, ...] = (),
     ) -> Checkpoint:
-        """Atomically append input and create a queued run as the conversation's active run."""
+        """Admit input and a queued run; durable stores may retain an earlier active run."""
 
         ...
 
     def load_run(self, context: RunContext) -> Checkpoint:
-        """Read run state and current conversation history under the supplied ownership."""
+        """Read run state and its permitted history under the supplied ownership."""
 
         ...
 
@@ -73,7 +84,15 @@ class StateStore(Protocol):
         pending_calls: tuple[PendingToolCall, ...] = (),
         model_steps: int | None = None,
         tool_calls: int | None = None,
+        artifacts: tuple[ArtifactReference, ...] = (),
+        expected_recovery_id: str | None = None,
+        expected_deletion_generation: int = 0,
     ) -> Checkpoint:
         """Atomically save progress; omitted budget counters retain their stored values."""
+
+        ...
+
+    def deliveries(self, context: RunContext) -> tuple[ArtifactReference, ...]:
+        """Return permitted opaque delivery metadata after checking ownership."""
 
         ...

@@ -2,8 +2,10 @@
 
 Design updated: 2 November 2026. PostgreSQL conversations and durable queues,
 with Redis for active sessions, replace the earlier Durable Task Scheduler choice.
-This document specifies the proposed implementation; persistence, queued execution
-and horizontal scaling remain unimplemented. The completed runtime milestone at
+This document specifies the target design. The
+[PostgreSQL journal and synthetic job-record adapter](src/bankeriq_agent_platform/storage/README.md)
+is implemented and locally validated; queued execution, Redis and horizontal
+scaling remain future work. The completed runtime milestone at
 `2fa515b` and local container evidence remain in [build-order.md](build-order.md).
 
 ## Runtime and model roles
@@ -114,8 +116,11 @@ loss can delay progress but cannot remove queued work.
 
 ### Storage layout and consistency
 
-The following are proposed record groups, not final SQL migrations. Start with
-one PostgreSQL database so related writes can commit together.
+The following are target record groups. Versioned journal, checkpoint, synthetic
+job, result, approval and bounded history-page migrations now exist in the
+[storage adapter](src/bankeriq_agent_platform/storage/README.md); shared prompts,
+history materialisation and worker lifecycle remain later groups. Related writes
+use one PostgreSQL database.
 
 | Records | Contents and invariants |
 | --- | --- |
@@ -155,7 +160,7 @@ cannot be passed directly to the model.
 
 ### Transaction and replication boundaries
 
-These are implementation requirements for the planned PostgreSQL adapter. The
+These are transaction requirements for the PostgreSQL adapter and later workers. The
 initial deployment has one writable primary. Every conversation transition commits
 within that database; adding API or worker replicas preserves the same boundary.
 The application never dual-writes a transition to database replicas.
@@ -651,8 +656,8 @@ and continuation handler through explicit dependencies. Preserve those policy an
 provider boundaries. The current coordinator loops synchronously, dispatches tool
 calls sequentially and saves results after a batch; continuations use local fakes.
 
-First implement PostgreSQL storage and transactional job operations, then shared
-prompt publication and request-scoped resolution. Extract one resumable model-step
+PostgreSQL storage and transactional synthetic job records are implemented. Next
+add shared prompt publication and request-scoped resolution. Extract one resumable model-step
 boundary from `Coordinator._run_loop`, preserving existing behaviour with the
 in-memory profile. Add an async model adapter and queued tool
 dispatcher, and adapt `ContinuationHandler` to durable result groups. Do not create

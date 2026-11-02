@@ -19,3 +19,5 @@ class Conversation:
     items: tuple[ConversationItem, ...] = field(default=(), repr=False)
     revision: int = 0
     active_run_id: str | None = None
+    deletion_generation: int = 0
+    recovery_id: str | None = None

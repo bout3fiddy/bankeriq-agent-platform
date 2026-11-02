@@ -7,7 +7,7 @@ from ..conversations.conversation import Conversation, ConversationItem
 from ..conversations.history import snapshot_items
 from ..runs.context import RunContext
 from ..runs.state import TERMINAL_STATUSES, RunState, RunStatus, validate_transition
-from ..tools.results import PendingToolCall
+from ..tools.results import ArtifactReference, PendingToolCall
 from ._locking import synchronized
 from .interface import Checkpoint, StateConflictError, StateNotFoundError
 
@@ -18,6 +18,7 @@ class InMemoryStateStore:
     def __init__(self) -> None:
         self._conversations: dict[tuple[str, str], Conversation] = {}
         self._runs: dict[tuple[str, str], RunState] = {}
+        self._artifacts: dict[tuple[str, str], tuple[ArtifactReference, ...]] = {}
         self._lock = RLock()
 
     @synchronized
@@ -134,6 +135,9 @@ class InMemoryStateStore:
         pending_calls: tuple[PendingToolCall, ...] = (),
         model_steps: int | None = None,
         tool_calls: int | None = None,
+        artifacts: tuple[ArtifactReference, ...] = (),
+        expected_recovery_id: str | None = None,
+        expected_deletion_generation: int = 0,
     ) -> Checkpoint:
 
         # Example: append a restricted completion receipt and change WAITING to
@@ -171,4 +175,11 @@ class InMemoryStateStore:
         # Construct and validate both records before mutating either index.
         self._conversations[(context.tenant_id, context.conversation_id)] = conversation
         self._runs[(context.tenant_id, context.run_id)] = run
+        key = (context.tenant_id, context.run_id)
+        self._artifacts[key] = self._artifacts.get(key, ()) + artifacts
         return Checkpoint(conversation, run)
+
+    @synchronized
+    def deliveries(self, context: RunContext) -> tuple[ArtifactReference, ...]:
+        self.load_run(context)
+        return self._artifacts.get((context.tenant_id, context.run_id), ())

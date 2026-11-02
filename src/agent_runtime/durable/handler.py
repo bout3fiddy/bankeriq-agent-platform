@@ -61,7 +61,9 @@ class ContinuationHandler:
             artifacts.append(output.artifact)
 
         status = RunStatus.WAITING if remaining else RunStatus.RUNNING
-        checkpoint = self._save(checkpoint, status, (output.model_result,), remaining)
+        checkpoint = self._save(
+            checkpoint, status, (output.model_result,), remaining, artifacts=tuple(artifacts)
+        )
 
         if is_cancelled is not None and is_cancelled():
             return self._cancel(checkpoint, artifacts)
@@ -85,6 +87,8 @@ class ContinuationHandler:
         status: RunStatus,
         items: tuple[ConversationItem, ...] = (),
         pending: tuple[PendingToolCall, ...] = (),
+        *,
+        artifacts: tuple[ArtifactReference, ...] = (),
     ) -> Checkpoint:
         return self._store.save_checkpoint(
             checkpoint.run.context,
@@ -93,6 +97,9 @@ class ContinuationHandler:
             status=status,
             items=items,
             pending_calls=pending,
+            artifacts=artifacts,
+            expected_recovery_id=checkpoint.conversation.recovery_id,
+            expected_deletion_generation=checkpoint.conversation.deletion_generation,
         )
 
     def _cancel(
