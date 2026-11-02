@@ -1,8 +1,10 @@
 # Azure infrastructure
 
 Terraform configuration and provisioning inventory for the Foundry deployment.
-The initial configuration defines the local-inference environment. Hosted-agent
-resources and shared state storage remain later phases.
+The existing configuration defines the local-inference environment. PostgreSQL
+conversation/job storage and Redis active sessions are selected for the next phase;
+Container Apps is the proposed worker host. Their Terraform resources and
+application adapters are not implemented yet.
 Create resources through Terraform as required by [AGENTS.md](../../AGENTS.md).
 
 The first milestone is a local coordinator calling a deployed Foundry model.
@@ -127,7 +129,12 @@ this single-developer validation; migration to shared storage remains pending.
 
 ## Hosted coordinator phase
 
-Once local inference works and the container is ready, add:
+The earlier Foundry Hosted Agents target remains an unvalidated deployment path.
+The asynchronous design now proposes Container Apps workers connected to Foundry
+inference; settle that hosting choice before implementation/deployment. Preserve
+the existing hosted-agent adapter and its tests. If Foundry hosting is retained,
+validate queue polling, private connectivity, shutdown and PostgreSQL recovery
+ownership before adding the following resources:
 
 | Resource | Purpose |
 | --- | --- |
@@ -146,21 +153,66 @@ describes the resource dependencies and deployment sequence.
 Live identity propagation, input admission, networking and Python/container
 compatibility still need validation before hosting this runtime.
 
-## Later platform phases
+## Selected runtime infrastructure
 
-These resources become necessary as their corresponding components are built:
+Selected on 2 November 2026. Add provider-managed resources alongside their
+application integrations, reviewing plans before authorised applies. Regional
+availability, SKU, capacity, network reachability and SDK compatibility require
+verification before provisioning.
 
 | Component | Resources or decisions still needed |
 | --- | --- |
-| Conversation, run and approval state | A database with atomic updates; service selection and persistence adapter remain open. |
-| Tool workers and durable execution | Worker compute and, if required, a queue/orchestrator. Transport and recovery design remain open. |
-| Reports | Private Blob storage, worker/delivery identities and an authenticated backend that rechecks access on each download. |
+| Durable persistence and queue | PostgreSQL Flexible Server, database and scoped application roles. Application migrations define journal, history pages, checkpoints, jobs, leases, retries, approvals and projection cursors. Admission and next-job creation commit together. |
+| Ephemeral sessions | Azure Managed Redis, private endpoint and scoped access. Main API read path for active context, cursor-aware updates, provisional streams and idle expiry. Rebuild from PostgreSQL journal/snapshots after loss. |
+| Shared system prompts | Versioned application records and active bindings in the same PostgreSQL database; Redis caches immutable prompt bodies. Separate admin publication permissions from worker read access. No additional Azure prompt service is required. |
+| API and workers, proposed | Container Apps workload-profiles environment with Consumption compute; separate API, coordinator and tool applications, identities and bounded replica counts. Maintenance initially shares a worker role. |
+| Runtime transport | PostgreSQL job rows and short transactional claims. LISTEN/NOTIFY is a wake-up optimisation with polling fallback. No DTS, Kafka or Service Bus resource in this design. |
+| Autoscaling | HTTP rules for the API; due-job metrics for workers. Validate Container Apps support/authentication for the KEDA PostgreSQL scaler; begin with fixed bounded replicas if unavailable. |
+| Images and release | Container Registry, managed image-pull identity, immutable digests and compatible worker revisions during drain/migration. |
+| Tool-owned reports | Private Blob storage, producing-tool identity and authenticated report endpoint belong to each tool's implementation. Runtime forwards opaque links without report-read permission; report resources are outside this phase. |
 | Browser application | Frontend/backend hosting and enterprise identity integration; hosting choices remain open. |
-| Network and secret management | Network boundaries, private endpoints/DNS and Key Vault where required by the chosen services and credential flow. |
+| Network and secret management | VNet/subnets, private PostgreSQL connectivity, Redis private endpoint/DNS, egress controls and Key Vault where required. User-facing API ingress authenticates with Entra; queues and storage are internal. |
+| Monitoring and recovery | Azure Monitor/Log Analytics with approved fields, DB backups/PITR, retention settings and restore drills. General Purpose zone-redundant PostgreSQL HA is a production sizing decision; Burstable is for the synthetic pilot. |
 
-The self-hosted specialist is deferred. Current tests use synthetic tools,
-in-memory state and mocked continuations. Provision each later service alongside
-its implementation and validation.
+PostgreSQL owns accepted data and execution state. Redis serves active interaction;
+large history snapshots are materialised asynchronously and on idle from a small
+durable journal. Idle cleanup can discard Redis before snapshot completion because
+the journal still reconstructs accepted turns. The
+[architecture](../../ARCHITECTURE.md#selected-state-and-execution-services) specifies
+ownership, async execution, proposed sizing and failure gates; the
+[build order](../../build-order.md) tracks each integration separately.
+The self-hosted specialist is deferred. Current tests still use synthetic tools,
+in-memory state and mocked continuations. No additional resources are provisioned
+by this design selection. Terraform state Blob storage remains a separate
+infrastructure responsibility from tool-owned report storage.
+
+Use application connection pools for the pilot. Azure's built-in PgBouncer is
+available on General Purpose/Memory Optimized tiers; LISTEN needs a session
+connection. Managed identity is preferred, with scaler authentication and token
+refresh verified against the actual deployed versions. Do not assume upstream
+KEDA feature support establishes Container Apps support.
+
+The planned [transaction and replication boundaries](../../ARCHITECTURE.md#transaction-and-replication-boundaries)
+use one writable PostgreSQL primary. All state/queue writes, unknown-commit lookups,
+job ownership and active prompt resolution use its writer endpoint. Optional read
+replicas are asynchronous and serve only explicitly lag-tolerant history/reporting;
+current access/deletion checks still use the primary. Azure's HA standby supports
+managed failover and is a separate role from those read replicas.
+
+Before production provisioning, select recovery-point/time targets, HA failure
+domains and restore procedures. Test writer reconnection and unknown commits during
+HA failover. A restore or promotion that may lose commits must pause dispatch,
+fence old workers, advance the recovery generation, rebuild Redis and reconcile
+external effects before queues reopen. Define any HA/read replicas through
+Terraform and review their plan and cost. The synthetic pilot provisions neither
+through this design; sharding and broker resources remain deferred.
+[Azure HA](https://learn.microsoft.com/en-us/azure/postgresql/high-availability/concepts-high-availability),
+[read replicas](https://learn.microsoft.com/en-us/azure/postgresql/read-replica/concepts-read-replicas)
+
+Service references: [PostgreSQL](https://learn.microsoft.com/en-us/azure/postgresql/overview),
+[Azure Managed Redis](https://learn.microsoft.com/en-us/azure/redis/overview),
+[Container Apps scaling](https://learn.microsoft.com/en-us/azure/container-apps/scale-app) and
+[PostgreSQL scaler](https://keda.sh/docs/2.21/scalers/postgresql/).
 
 ## Provisioning workflow
 

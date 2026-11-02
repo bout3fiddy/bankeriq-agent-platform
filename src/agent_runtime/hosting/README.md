@@ -113,8 +113,8 @@ returns HTTP 200 with its run status, which may itself be failed or waiting.
 The async HTTP handler offloads synchronous coordinator work to Starlette's
 worker pool. Independent sessions can proceed concurrently; revision checks
 reserve one active run per conversation. Model calls and tool dispatch within
-each run remain synchronous. This adds no Kafka transport, durable recovery,
-streaming or request-disconnect cancellation.
+each run remain synchronous. PostgreSQL job transport, durable recovery,
+streaming and request-disconnect cancellation remain unimplemented.
 
 Microsoft's SDK supplies `/readiness`, server startup and platform integration.
 SDK-managed observability is disabled in this wrapper because its automatic

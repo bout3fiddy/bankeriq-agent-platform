@@ -8,8 +8,10 @@ The interface will be a dedicated authenticated browser chat app, with React a
 candidate frontend. Teams is outside the proposed delivery boundary.
 
 The proposed general-purpose external coordinator runs an application-owned loop
-in Microsoft Foundry Hosted Agents and discovers tools allowed by the user's
-permissions. Visible tool outputs return to the coordinator. Restricted outputs
+using Microsoft Foundry inference and discovers tools allowed by the user's
+permissions. Azure Container Apps is proposed for independently scalable queue
+workers; the earlier Foundry Hosted Agents target remains a hosting compatibility
+decision. Visible tool outputs return to the coordinator. Restricted outputs
 stay with an internal specialist or containerised application, with reports
 delivered directly to the user through authenticated downloads.
 
@@ -23,7 +25,7 @@ startup settings and optional SDK dependencies.
 
 The initial runtime scope is complete as of 2 November 2026, including live
 Foundry inference with synthetic tools and in-memory state. The
-[build order](src/agent_runtime/build-order.md) separates this completed milestone
+[build order](build-order.md) separates this completed milestone
 from the planned infrastructure phase and later runtime features.
 
 This repository contains design documentation, core runtime data types, a
@@ -74,8 +76,22 @@ The [synthetic container](src/bankeriq_agent_platform/demo/README.md#container-v
 packages the existing composition with locked dependencies and non-root execution.
 Local Docker checks cover readiness, two HTTP turns and graceful shutdown.
 
-The `codex/runtime-infrastructure` branch covers containerisation, persistent
-state and durable execution, message passing, private Blob storage and report
-delivery, and hosted runtime validation in Azure. Infrastructure remains managed
-through Terraform. Production identity and input admission require integration;
-the browser app and self-hosted specialist remain separate work.
+The selected infrastructure is PostgreSQL for conversations and durable job queues,
+with Redis serving active conversation views and ephemeral progress. Accepted turns
+and checkpoints use small durable journal writes; large history snapshots are
+materialised asynchronously and on idle. Independent tool calls run through worker
+queues while the coordinator releases its execution slot. These integrations are
+planned on `codex/runtime-infrastructure`; the executable still uses in-memory state
+and synthetic jobs. PostgreSQL persistence is next. See the
+[state ownership and session lifecycle](ARCHITECTURE.md#selected-state-and-execution-services).
+
+The planned [shared prompt architecture](ARCHITECTURE.md#shared-system-prompts-and-live-updates)
+lets every session inherit a globally published prompt, updated at each new model
+step. Versions are recorded for recovery; business-specific overlays remain later
+work. The current adapter still uses instructions fixed at startup.
+
+Tools own private Blob reports and authenticated download endpoints. The runtime
+forwards opaque links to the user without reading report contents. Tool-specific
+storage and delivery implementations remain separate work. Infrastructure is
+managed through Terraform; hosted runtime validation, production identity and input
+admission are pending. The browser app and self-hosted specialist remain deferred.

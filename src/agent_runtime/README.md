@@ -25,7 +25,7 @@ These are logical boundaries, not a decision to deploy separate services.
 Durability requires both persisted state and execution/recovery logic.
 
 For this branch, tool execution and durable recovery are mocked dependencies.
-See [build-order.md](build-order.md) for the implementation sequence.
+See the root [build order](../../build-order.md) for the implementation sequence.
 
 ## Implemented data types
 
@@ -303,7 +303,7 @@ separation and budget limits across resumed runs.
 
 The coordinator remains synchronous; the HTTP hosting adapter runs it in a
 worker pool so separate sessions can overlap. Async dependencies, concurrent tool dispatch,
-Kafka transport and durable recovery remain unimplemented. A crash after claiming
+PostgreSQL job transport and durable recovery remain unimplemented. A crash after claiming
 a wait can leave the run running, and a crash after execution still needs
 side-effect reconciliation. No automatic recovery or replay of such runs is provided.
 
@@ -325,8 +325,9 @@ artifact identifiers. Report content is read separately through a fake delivery
 boundary that checks ownership and current access.
 
 These are local tests with scripted inference and immediate execution whose
-result delivery can be delayed. Live Foundry inference, async dispatch, Kafka,
-persistent storage and production authentication remain untested.
+result delivery can be delayed. Async dispatch, PostgreSQL job transport,
+persistent storage and production authentication remain untested. Separate live
+Foundry inference evidence is recorded in the [Azure guide](../../infra/azure/README.md#validation-evidence).
 
 ## Workshop questions
 
