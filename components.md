@@ -42,6 +42,11 @@ restricted-job receipts. Bounds tool calls and execution, handles cancellation
 requests and publishes progress. It cannot reason over restricted content it does
 not receive. Tool configuration is scoped to each run rather than mutated globally.
 
+The coordinator consumes provider-neutral model requests and replies. Model and
+hosting adapters live under `providers/`; application startup selects them
+independently through trusted configuration. SDK credentials and API response
+formats remain within those adapters. Foundry is the initial implementation.
+
 ## Tool registry and discovery
 
 Stores versioned tool definitions, argument schemas, required permissions,

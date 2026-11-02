@@ -1,5 +1,10 @@
 # Foundry model adapter
 
+This provider is selected by application startup through `MODEL_PROVIDER=foundry`.
+See the [provider guide](../README.md) for shared configuration, independent
+hosting selection, SDK extras and connection lifetime. The direct SDK wiring
+below is also available for focused integration tests and custom credential wiring.
+
 `FoundryModelClient` implements `ModelClient.complete()` using the OpenAI Python
 SDK and Foundry's v1 Chat Completions endpoint:
 

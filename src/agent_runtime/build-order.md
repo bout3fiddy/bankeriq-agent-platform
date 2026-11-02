@@ -33,6 +33,11 @@ planned except where marked implemented. Keep external I/O mocked until the adap
     Microsoft's Invocations SDK. Authentication and input admission are required
     injected dependencies, supplied by local fakes in tests. Azure identity
     integration, deployment and lifecycle validation remain pending.
+11. **Provider selection (implemented; local tests)** — Keep SDK integrations
+    under `providers/`; select model and hosting factories independently at
+    application startup. Foundry is the initial implementation. Architecture
+    tests enforce import boundaries, and provider SDKs are optional dependencies.
+
 Add meaningful component tests alongside each step; step 8 brings those components
 together for end-to-end validation.
 

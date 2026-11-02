@@ -5,7 +5,7 @@ tests/
   unit/
     coordinator/   # Model/tool loop and execution budgets
     durable/       # Continuation matching, claims and resumption
-    providers/     # Provider-specific tests
+    providers/     # Configuration, selection and provider-specific tests
       foundry/     # API translation and SDK calls through a local HTTP transport
     hosting/       # External request schemas and authority-field rejection
     policy/        # Output filtering and restricted receipts
@@ -13,6 +13,7 @@ tests/
     storage/       # Ownership, checkpoints and concurrent updates
     tools/         # Definitions, results, registry and gateway
   integration/     # Complete synthetic workflows and their shared harness
+  architecture/    # Core/provider import boundaries and SDK-free startup
   tooling/         # Readability checks and Python formatting
 ```
 
@@ -33,5 +34,6 @@ Run a particular group:
 uv run python -m pytest tests/unit -q
 uv run python -m pytest tests/unit/tools -q
 uv run python -m pytest tests/integration -q
+uv run python -m pytest tests/architecture -q
 uv run python -m pytest tests/tooling -q
 ```

@@ -15,6 +15,10 @@ delivered directly to the user through authenticated downloads.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the diagram and security boundaries.
 See [components.md](components.md) for logical responsibilities and initial scope.
+Foundry remains the current provider. [Provider selection](src/agent_runtime/providers/README.md)
+keeps model access and hosting independent of the core runtime, with separate
+startup settings and optional SDK dependencies.
+
 ## Current scope
 
 This repository contains design documentation, core runtime data types, a

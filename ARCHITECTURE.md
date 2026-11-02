@@ -23,6 +23,25 @@ Initially, restricted processing uses deterministic applications; workloads that
 require the specialist remain unsupported. See [components.md](components.md) for
 logical responsibilities, including durable execution and persisted state.
 
+## Provider boundaries
+
+Microsoft Foundry remains the initial model and hosting provider. Core runtime
+components depend on `ModelClient`, `StateStore` and execution/policy interfaces.
+Provider SDKs, credentials and wire formats belong under
+`src/agent_runtime/providers/<provider>/`.
+
+Application startup selects model access and hosting independently through trusted
+configuration. A registered model factory supplies `ModelClient`; a hosting
+factory exposes `RuntimeEndpoint`. The model and request payloads cannot expand
+the registered provider choices. Unsupported choices fail explicitly, and the
+runtime does not automatically fall back to another data-processing provider.
+
+Foundry is currently the only real implementation. Another provider adds an
+adapter and startup registration while reusing the coordinator, tool registry,
+gateway and output policy. See the
+[provider guide](src/agent_runtime/providers/README.md) for implemented selection,
+optional SDK dependencies and local validation evidence.
+
 ## Browser chat interface
 
 The user interface is a dedicated, authenticated browser chat application backed

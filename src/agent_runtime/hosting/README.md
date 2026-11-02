@@ -71,6 +71,10 @@ persisted delivery metadata and retrieval of lost responses remain future work.
 
 ## Wiring
 
+Application startup can select this host independently from model inference
+through `HOSTING_PROVIDER=foundry`; see the [provider guide](../providers/README.md).
+The direct construction below is useful when supplying an already-built runtime.
+
 Application startup supplies the configured runtime and two required dependencies:
 
 ```python

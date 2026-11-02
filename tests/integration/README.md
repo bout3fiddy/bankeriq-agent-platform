@@ -46,6 +46,12 @@ fixed errors, revision conflicts and simultaneous model calls from two sessions.
 Authentication uses fake tokens, and input policy and inference are synthetic.
 No server is deployed and no cloud identity is verified by these tests.
 
+`test_provider_selection.py` selects two synthetic model factories through
+application configuration while retaining the Foundry host, permissions, output
+enforcement and approval/job continuation. It also checks model-client cleanup
+when host startup fails. These fakes establish the selection boundary; other
+cloud providers still need their own adapters and live compatibility checks.
+
 The fake job provider delays delivery of an already-enforced gateway result;
 execution itself is synchronous. This suite does not establish production
 durability, authentication, network isolation or model behaviour. Those depend on

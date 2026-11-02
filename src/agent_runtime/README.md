@@ -223,6 +223,12 @@ execution still requires reconciliation.
 
 ## Implemented Foundry model adapter
 
+Provider implementations live under `providers/`. The application selects model
+and hosting providers independently, then injects their implementations into the
+runtime. SDK dependencies are optional outside development. See the
+[provider guide](providers/README.md) and
+[startup wiring](../bankeriq_agent_platform/runtime.py).
+
 `providers/foundry/model.py` implements the model interface using Foundry's v1 Chat
 Completions API through the OpenAI SDK. `connection.py` constructs the client
 from application-supplied credentials; `messages.py` encodes permitted history
@@ -351,7 +357,10 @@ agent_runtime/
     control.py        # Execution budgets and application-facing outcome
     runner.py         # Run entry point and bounded model/tool loop
   providers/
+    models.py         # Common model settings and factory selection
+    hosts.py          # Independent hosting factory selection
     foundry/
+      factory.py      # Foundry configuration, lazy imports and client lifetime
       connection.py   # SDK connection and supplied credentials
       model.py        # One Foundry inference call per coordinator step
       messages.py     # Permitted history and tool results to API messages
