@@ -1,0 +1,15 @@
+{
+  "prompt": {
+    "schema_version": 1,
+    "id": "demo.input",
+    "version": "1.0.0",
+    "kind": "fragment",
+    "title": "Synthetic user input",
+    "description": "The only accepted user input in the demo executable.",
+    "owner": "BankerIQ runtime maintainers",
+    "change_summary": "Initial versioned JSON definition.",
+    "paragraphs": [
+      "Load the synthetic sample, calculate its total using tools, then prepare a report and return the total."
+    ]
+  }
+}

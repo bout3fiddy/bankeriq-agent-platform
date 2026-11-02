@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "defaults": {
+    "runtime": {
+      "id": "bankeriq.runtime",
+      "version": "1.0.0"
+    },
+    "system": {
+      "id": "bankeriq.system",
+      "version": "1.0.0"
+    },
+    "demo": {
+      "id": "demo.instructions",
+      "version": "1.0.0"
+    },
+    "demo_input": {
+      "id": "demo.input",
+      "version": "1.0.0"
+    }
+  },
+  "documents": [
+    {
+      "id": "rules.authority",
+      "version": "1.0.0",
+      "path": "rules/authority/1.0.0.json",
+      "sha256": "d8fec2b03fcd414d5a29b8be20fd60382b74605ba21aa8018973c93001540ac7"
+    },
+    {
+      "id": "rules.data-boundaries",
+      "version": "1.0.0",
+      "path": "rules/data-boundaries/1.0.0.json",
+      "sha256": "b3453796e9ecc4e19d0205c0481f8b394901e4c5a8a28863cae3075f8e007960"
+    },
+    {
+      "id": "rules.actions",
+      "version": "1.0.0",
+      "path": "rules/actions/1.0.0.json",
+      "sha256": "63ff885a877b24a823cebfcf33aef313884098a8becb89b14f6ca36a1bac8f8b"
+    },
+    {
+      "id": "runtime.tool-protocol",
+      "version": "1.0.0",
+      "path": "runtime/tool-protocol/1.0.0.json",
+      "sha256": "6eccea2d27b668e58091738f711ba4e33114987ea4caf6d55d8393a77b6d8456"
+    },
+    {
+      "id": "bankeriq.runtime",
+      "version": "1.0.0",
+      "path": "runtime/1.0.0.json",
+      "sha256": "f93f28c5a2071e3dd246f8e98680ec87546e1d260cf0829cec7a759c526d8dd1"
+    },
+    {
+      "id": "system.role",
+      "version": "1.0.0",
+      "path": "system/role/1.0.0.json",
+      "sha256": "0686063d992472307b4882e3170f9fa61b163de10b4d3528dd0430168320aafd"
+    },
+    {
+      "id": "guidelines.evidence",
+      "version": "1.0.0",
+      "path": "guidelines/evidence/1.0.0.json",
+      "sha256": "ee0a92822a3c1031c16216dedcfe59cf447d1733a4e75809e72529fd7236c350"
+    },
+    {
+      "id": "guidelines.responses",
+      "version": "1.0.0",
+      "path": "guidelines/responses/1.0.0.json",
+      "sha256": "2fd683e5a1dc116152ff62de439dc73a90d5be9c08127df66b89295cc8287eb6"
+    },
+    {
+      "id": "bankeriq.system",
+      "version": "1.0.0",
+      "path": "system/1.0.0.json",
+      "sha256": "77fdd8e27cab2820863c7c17a97a41529911a2d5ed88b01a89cd1de04498c8c2"
+    },
+    {
+      "id": "legacy.runtime-text",
+      "version": "1.0.0",
+      "path": "legacy/runtime-text/1.0.0.json",
+      "sha256": "33cd7269355147a2f171d2f1c1618dd3990a0d974919aeca2a645d3583a0056f"
+    },
+    {
+      "id": "legacy.runtime",
+      "version": "1.0.0",
+      "path": "legacy/runtime/1.0.0.json",
+      "sha256": "7f3cd1f3bd5f4f6dd83047fb4ed983c86b90c1bbe974f226327e284852df1998"
+    },
+    {
+      "id": "demo.instructions",
+      "version": "1.0.0",
+      "path": "demo/instructions/1.0.0.json",
+      "sha256": "63650668c97209c7d3eefff3be3509a37a31aa929bfe6b0c33e03dab891d272f"
+    },
+    {
+      "id": "demo.input",
+      "version": "1.0.0",
+      "path": "demo/input/1.0.0.json",
+      "sha256": "632d7726742a98c15a1b8d2b79efdc97015b1af97500e80542c3c67eb40d2b1a"
+    }
+  ]
+}

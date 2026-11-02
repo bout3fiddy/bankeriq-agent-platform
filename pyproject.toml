@@ -60,3 +60,6 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 include = ["src", "scripts", "tests"]
 typeCheckingMode = "basic"
 pythonVersion = "3.14"
+
+[tool.hatch.build.targets.wheel.force-include]
+"prompts" = "bankeriq_agent_platform/prompt_data"

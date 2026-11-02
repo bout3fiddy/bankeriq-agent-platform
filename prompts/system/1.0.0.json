@@ -1,0 +1,26 @@
+{
+  "prompt": {
+    "schema_version": 1,
+    "id": "bankeriq.system",
+    "version": "1.0.0",
+    "kind": "system",
+    "title": "BankerIQ system guidance",
+    "description": "Project role, evidence standards and communication guidance under the runtime security rules.",
+    "owner": "BankerIQ runtime maintainers",
+    "change_summary": "Initial versioned JSON definition.",
+    "includes": [
+      {
+        "id": "system.role",
+        "version": "1.0.0"
+      },
+      {
+        "id": "guidelines.evidence",
+        "version": "1.0.0"
+      },
+      {
+        "id": "guidelines.responses",
+        "version": "1.0.0"
+      }
+    ]
+  }
+}

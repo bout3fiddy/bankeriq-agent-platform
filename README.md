@@ -101,3 +101,7 @@ forwards opaque links to the user without reading report contents. Tool-specific
 storage and delivery implementations remain separate work. Infrastructure is
 managed through Terraform; hosted runtime validation, production identity and input
 admission are pending. The browser app and self-hosted specialist remain deferred.
+
+Prompt authoring uses [versioned JSON definitions](prompts/README.md), with separate
+runtime and BankerIQ system roots composed from reusable rules and guidelines.
+Validate them with `uv run python -m bankeriq_agent_platform.prompt_files validate`.

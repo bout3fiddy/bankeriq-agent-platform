@@ -72,6 +72,8 @@ def open_runtime(
             reasoning_effort=settings.model.reasoning_effort,
             prompts=prompts
             if prompts is not None
+            else settings.prompts
+            if settings.prompts is not None
             else FixedPromptResolver(settings.model.instructions),
         )
         continuations = ContinuationHandler(store, coordinator, continuation_resolver)

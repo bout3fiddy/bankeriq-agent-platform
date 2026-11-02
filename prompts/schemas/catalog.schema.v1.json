@@ -1,0 +1,114 @@
+{
+  "$defs": {
+    "Defaults": {
+      "additionalProperties": false,
+      "properties": {
+        "runtime": {
+          "$ref": "#/$defs/Reference"
+        },
+        "system": {
+          "$ref": "#/$defs/Reference"
+        },
+        "demo": {
+          "$ref": "#/$defs/Reference"
+        },
+        "demo_input": {
+          "$ref": "#/$defs/Reference"
+        }
+      },
+      "required": [
+        "runtime",
+        "system",
+        "demo",
+        "demo_input"
+      ],
+      "title": "Defaults",
+      "type": "object"
+    },
+    "Pin": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9.-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "title": "Version",
+          "type": "string"
+        },
+        "path": {
+          "maxLength": 256,
+          "pattern": "^[a-zA-Z0-9_./-]+\\.json$",
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "path",
+        "sha256"
+      ],
+      "title": "Pin",
+      "type": "object"
+    },
+    "Reference": {
+      "additionalProperties": false,
+      "description": "Select an exact component; latest/range references would break old-step recovery.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9.-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "title": "Reference",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "defaults": {
+      "$ref": "#/$defs/Defaults"
+    },
+    "documents": {
+      "items": {
+        "$ref": "#/$defs/Pin"
+      },
+      "maxItems": 256,
+      "minItems": 1,
+      "title": "Documents",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "defaults",
+    "documents"
+  ],
+  "title": "Catalog",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bankeriq.invalid/prompts/catalog.schema.v1.json"
+}

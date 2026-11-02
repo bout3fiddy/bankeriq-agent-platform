@@ -216,3 +216,11 @@ this component is introduced.
    schedule the next model step after settlement.
 5. Visible results return to the coordinator. Restricted results stay internal,
    with status returned to the coordinator and protected reports sent to the user.
+
+### Prompt file authoring
+
+`prompts/` owns versioned instruction text and exact composition references.
+`bankeriq_agent_platform.prompt_files` validates bounded JSON assets at startup
+and supplies immutable definitions to core. Shared publication stores rendered
+system bodies and source provenance; retained runtime assets support old steps.
+See the [authoring workflow](prompts/README.md).

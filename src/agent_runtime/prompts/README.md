@@ -17,12 +17,13 @@ guidance. Runtime instructions describe independent and repeated tool calls,
 dependent-call ordering, restricted receipts and application-controlled permissions.
 Actual tool dispatch remains synchronous in this phase.
 
-`FixedPromptResolver` preserves the synthetic profile's exact startup text.
-`open_runtime()` supplies it from `ModelSettings.instructions` unless a shared
-resolver is injected. Direct coordinator construction defaults to the versioned
-runtime guidance. `FoundryModelClient` no longer accepts startup instructions;
-direct model callers supply `ModelRequest.instructions`. No provider adapter owns
-an active prompt binding.
+Instruction text is authored in [versioned JSON compositions](../../../prompts/README.md).
+Application startup loads the pinned runtime/system defaults; the core receives
+immutable definitions and requires an explicit resolver. `FixedPromptResolver`
+preserves explicit trusted startup text and the synthetic demo's JSON-loaded text.
+`open_runtime()` uses an injected shared resolver, configured file resolver, or
+explicit `ModelSettings.instructions`, in that order. `FoundryModelClient` receives
+instructions through each `ModelRequest`; no provider adapter owns a binding.
 
 A prepared step stores its manifest with the model-step budget reservation,
 checkpoint, context cursor and synthetic next-work records in one transaction.
@@ -47,7 +48,8 @@ claiming and retry orchestration remain a later group.
 Apply the existing numbered migrations with `migrate(writer_dsn)` during release
 setup. Migration 004 adds version records, scoped bindings, publication/activation
 audit records, withdrawals and prepared-step references. Existing checkpoint JSON
-without a manifest remains readable; subsequent preparations add one.
+without a manifest remains readable; subsequent preparations add one. Migration
+005 adds source provenance for JSON publications.
 
 The management API is separate from chat requests and tool registration:
 
@@ -64,18 +66,16 @@ management = PromptAdministration(
     scope,
     authorize=can_manage_prompts,  # Server-owned policy: (verified Principal, scope) -> bool.
 )
-management.publish(
+management.publish_definition(
     authenticated_admin,
     request_id="publish-guidance-v1",
-    version="guidance-v1",
-    body="Explain results clearly and concisely.",
     validation_reference="review-and-synthetic-evaluation-123",
 )
 _, expected_revision = management.active_binding(authenticated_admin)
 revision = management.activate(
     authenticated_admin,
     request_id="activate-guidance-v1",
-    version="guidance-v1",
+    version="bankeriq.system@1.0.0",
     expected_revision=expected_revision,
 )
 prompts = PostgresPromptResolver(prompt_reader_dsn, scope)
@@ -125,7 +125,8 @@ already dispatched model calls retain their supplied instructions. Emergency
 interruption still requires run cancellation.
 
 Keep old runtime/composer implementations available while recoverable manifests
-reference them. The current release supports `runtime-v1` / `runtime-global-v1`
+reference them. The current release supports JSON-defined `bankeriq.runtime@1.0.0` /
+`runtime-system-v1`, retained `runtime-v1` / `runtime-global-v1`,
 and the fixed-profile format; incompatible versions fail explicitly. Keep prompt
 versions, activation records and prepared-step references for the full run/audit/
 replay retention window. Physical prompt deletion is disabled. A database restore
@@ -153,9 +154,10 @@ versions, read-only database access and denied administration. Concurrent calls
 through one Foundry SDK client retain separate instructions. Adversarial global
 text does not expand tool discovery or bypass gateway/output enforcement.
 
-Executed on 2 November 2026 against local PostgreSQL 17.11: all 275 tests and
-static checks passed with the database enabled, including 15 shared-prompt
-PostgreSQL scenarios, two fixed-profile tests and the concurrent Foundry wire test.
+Executed on 3 November 2026 against local PostgreSQL 17.11: all 292 tests and
+static checks passed with the database enabled, including JSON source provenance,
+legacy recovery, file validation and the existing shared-prompt scenarios. The
+packaged container passed its offline and HTTP verification.
 
 This evidence checks composition, storage and authorization behavior with scripted
 models and local HTTP transports. Live model adherence, production admin identity,

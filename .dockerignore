@@ -6,5 +6,7 @@
 !uv.lock
 !src/
 !src/**
+!prompts/
+!prompts/**
 **/__pycache__/
 **/*.pyc

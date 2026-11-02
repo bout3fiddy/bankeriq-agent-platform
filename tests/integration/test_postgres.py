@@ -15,6 +15,7 @@ from agent_runtime.conversations.messages import Message, MessageRole
 from agent_runtime.coordinator.model import ModelReply
 from agent_runtime.coordinator.runner import Coordinator
 from agent_runtime.durable.handler import ContinuationHandler
+from agent_runtime.prompts.resolution import FixedPromptResolver
 from agent_runtime.runs.context import RunContext
 from agent_runtime.runs.state import RunStatus
 from agent_runtime.storage.interface import Checkpoint, StateConflictError, StateNotFoundError
@@ -371,7 +372,12 @@ def test_real_coordinator_continuation_output_isolation(dsn: str) -> None:
     ]
     runtime.access.datasets[(tenant, context.user_id)] = frozenset({"sample"})
     coordinator = Coordinator(
-        store, runtime.registry, runtime.events, runtime.model, runtime.access.permissions_for
+        store,
+        runtime.registry,
+        runtime.events,
+        runtime.model,
+        runtime.access.permissions_for,
+        prompts=FixedPromptResolver("Synthetic test instructions"),
     )
     handler = ContinuationHandler(store, coordinator, runtime.events)
     runtime.model.replies = [
@@ -559,7 +565,12 @@ def test_coordinator_queues_later_input_and_reuses_finished_outcome(
 ) -> None:
     runtime = RuntimeHarness()
     coordinator = Coordinator(
-        store, runtime.registry, runtime.events, runtime.model, runtime.access.permissions_for
+        store,
+        runtime.registry,
+        runtime.events,
+        runtime.model,
+        runtime.access.permissions_for,
+        prompts=FixedPromptResolver("Synthetic test instructions"),
     )
     first = store.admit(context, request_id=context.run_id, items=INPUT)
     later = replace(context, run_id="later")

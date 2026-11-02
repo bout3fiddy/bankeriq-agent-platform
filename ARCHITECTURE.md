@@ -498,7 +498,8 @@ metadata; full prompt bodies belong in the access-controlled prompt store.
 The Foundry adapter now reads explicit instructions and a prompt manifest from
 `ModelRequest`. It translates request-scoped instructions into the system role
 without mutating shared client state. `open_runtime()` accepts a prompt resolver;
-the default fixed resolver retains the synthetic startup instructions. Shared
+application defaults load pinned JSON runtime/system definitions, and the synthetic
+demo retains its exact JSON-loaded text through a fixed resolver. Shared
 resolution and publication clients live in the application storage adapter,
 while core prompt types and composition have no database or SDK dependencies.
 
@@ -840,3 +841,13 @@ retention and report verification belong to the tool and user.
 Feature availability, deployment regions and SDK compatibility must be verified
 when implementation begins. No security, reliability or cost claims have been
 validated by this scaffold.
+
+### Implemented JSON prompt authoring
+
+[Prompt assets](prompts/README.md) now define runtime, system, reusable rules and
+guidelines in immutable versioned JSON. Exact references and file hashes determine
+composition. Application startup parses the catalog; core receives immutable text.
+Migration 005 records source provenance when publishing composed system definitions.
+Runtime assets must reach every reader before activation and remain available for
+old manifests. Existing runtime-v1 steps retain their original rendering. Local
+file profiles use startup snapshots; PostgreSQL profiles retain live activation.

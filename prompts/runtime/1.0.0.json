@@ -1,0 +1,33 @@
+{
+  "prompt": {
+    "schema_version": 1,
+    "id": "bankeriq.runtime",
+    "version": "1.0.0",
+    "kind": "runtime",
+    "title": "BankerIQ runtime protocol",
+    "description": "Runtime-level tool protocol and security boundaries shared across system prompts.",
+    "owner": "BankerIQ runtime maintainers",
+    "change_summary": "Initial versioned JSON definition.",
+    "includes": [
+      {
+        "id": "rules.authority",
+        "version": "1.0.0"
+      },
+      {
+        "id": "runtime.tool-protocol",
+        "version": "1.0.0"
+      },
+      {
+        "id": "rules.data-boundaries",
+        "version": "1.0.0"
+      },
+      {
+        "id": "rules.actions",
+        "version": "1.0.0"
+      }
+    ],
+    "runtime_version": "bankeriq.runtime@1.0.0",
+    "composer_version": "runtime-system-v1",
+    "renderer": "sections-v1"
+  }
+}

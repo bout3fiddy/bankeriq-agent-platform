@@ -8,6 +8,7 @@ from openai import OpenAI
 
 from agent_runtime.coordinator.runner import Coordinator
 from agent_runtime.durable.handler import ContinuationHandler
+from agent_runtime.prompts.resolution import FixedPromptResolver
 from agent_runtime.providers.foundry.model import FoundryModelClient
 from agent_runtime.runs.state import RunStatus
 
@@ -54,7 +55,12 @@ def test_http_tool_cycles_approval_and_report_delivery() -> None:
     ) as client:
         model = FoundryModelClient(client, deployment="coordinator")
         runtime.coordinator = Coordinator(
-            runtime.store, runtime.registry, runtime.events, model, runtime.access.permissions_for
+            runtime.store,
+            runtime.registry,
+            runtime.events,
+            model,
+            runtime.access.permissions_for,
+            prompts=FixedPromptResolver("Synthetic test instructions"),
         )
         runtime.continuations = ContinuationHandler(
             runtime.store, runtime.coordinator, runtime.events
@@ -119,7 +125,12 @@ def test_provider_failures_end_the_run_before_tool_execution(failure: str) -> No
     ) as client:
         model = FoundryModelClient(client, deployment="coordinator")
         runtime.coordinator = Coordinator(
-            runtime.store, runtime.registry, runtime.events, model, runtime.access.permissions_for
+            runtime.store,
+            runtime.registry,
+            runtime.events,
+            model,
+            runtime.access.permissions_for,
+            prompts=FixedPromptResolver("Synthetic test instructions"),
         )
         result = runtime.start()
 

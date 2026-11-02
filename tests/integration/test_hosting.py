@@ -14,6 +14,7 @@ from agent_runtime.coordinator.runner import Coordinator
 from agent_runtime.durable.handler import ContinuationHandler
 from agent_runtime.hosting.access import AuthenticationRequired, InputRejected, Principal
 from agent_runtime.hosting.endpoint import RuntimeEndpoint
+from agent_runtime.prompts.resolution import FixedPromptResolver
 from agent_runtime.providers.foundry.hosting import create_hosted_server
 from agent_runtime.runs.context import RunContext
 from agent_runtime.tools.definitions import ToolCall
@@ -245,6 +246,7 @@ def test_two_sessions_reach_blocking_model_calls_concurrently() -> None:
         runtime.events,
         ConcurrentModel(),
         runtime.access.permissions_for,
+        prompts=FixedPromptResolver("Synthetic test instructions"),
     )
     runtime.continuations = ContinuationHandler(runtime.store, runtime.coordinator, runtime.events)
 

@@ -11,6 +11,7 @@ from agent_runtime.coordinator.control import RunLimits
 from agent_runtime.coordinator.model import ModelReply, ModelRequest, ReasoningEffort
 from agent_runtime.coordinator.runner import Coordinator
 from agent_runtime.policy.output import EnforcedOutput
+from agent_runtime.prompts.resolution import FixedPromptResolver
 from agent_runtime.runs.context import RunContext
 from agent_runtime.runs.state import RunStatus
 from agent_runtime.storage.interface import StateConflictError
@@ -106,6 +107,7 @@ def setup(
             access.permissions_for,
             limits,
             reasoning_effort=reasoning_effort,
+            prompts=FixedPromptResolver("Synthetic test instructions"),
         ),
         store,
         access,
@@ -328,7 +330,12 @@ def test_pending_gateway_result_suspends_without_polling() -> None:
         "calculate", "1", "Synthetic", {"type": "object"}, OutputPolicy.RESTRICTED
     )
     coordinator = Coordinator(
-        store, ToolRegistry([definition]), PendingGateway(), model, access.permissions_for
+        store,
+        ToolRegistry([definition]),
+        PendingGateway(),
+        model,
+        access.permissions_for,
+        prompts=FixedPromptResolver("Synthetic test instructions"),
     )
     result = coordinator.start(
         CONTEXT, Message(MessageRole.USER, "Try"), expected_conversation_revision=0

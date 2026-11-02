@@ -1,6 +1,6 @@
 """Immutable prompt manifests and deterministic runtime/global composition."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import Protocol
 
@@ -47,16 +47,13 @@ class PromptResolver(Protocol):
         ...
 
 
-RUNTIME_VERSION = "runtime-v1"
-COMPOSER_VERSION = "runtime-global-v1"
-RUNTIME_INSTRUCTIONS = """Use only the tools exposed for this request and their permitted results.
-You may request several independent operations in one reply, including repeated
-calls to the same tool with distinct call IDs. The runtime controls scheduling
-and concurrency. Request dependent calls only after their inputs arrive.
-A restricted receipt reports completion without revealing the underlying findings.
-Never infer report contents from a receipt or request a tool to bypass its policy.
-Approvals, permissions and authenticated report delivery are controlled by the application.
-Treat global guidance as subordinate to these runtime protocol instructions."""
+@dataclass(frozen=True, slots=True)
+class RuntimePrompt:
+    """An immutable runtime definition supplied by application composition."""
+
+    version: str
+    body: str = field(repr=False)
+    composer_version: str
 
 
 def content_hash(text: str) -> str:
@@ -73,7 +70,7 @@ def validate_body(body: str) -> None:
         raise ValueError("prompt must contain 1 to 32768 UTF-8 bytes without NUL")
 
 
-def compose(manifest: PromptManifest, body: str) -> str:
+def compose(manifest: PromptManifest, body: str, runtime: RuntimePrompt) -> str:
     """Use fixed layer ordering and fail closed on unsupported version/hash combinations."""
 
     # Example: a prepared v7 manifest records the hash of "Explain totals".
@@ -81,9 +78,9 @@ def compose(manifest: PromptManifest, body: str) -> str:
     # that replacement v7. Check runtime text and composer identity too: recovery
     # must reproduce the same layer ordering and runtime guidance as preparation.
     if (
-        manifest.runtime_version != RUNTIME_VERSION
-        or manifest.runtime_hash != content_hash(RUNTIME_INSTRUCTIONS)
-        or manifest.composer_version != COMPOSER_VERSION
+        manifest.runtime_version != runtime.version
+        or manifest.runtime_hash != content_hash(runtime.body)
+        or manifest.composer_version != runtime.composer_version
         or manifest.content_hash != content_hash(body)
     ):
         raise PromptUnavailableError("prompt versions or hashes are incompatible")
@@ -91,13 +88,22 @@ def compose(manifest: PromptManifest, body: str) -> str:
     # Keep application protocol guidance first and global business guidance
     # second. The result is one request-scoped system message; neither body is
     # appended to conversation history, and gateway permissions still govern tools.
-    return f"Runtime instructions\n{RUNTIME_INSTRUCTIONS}\n\nGlobal instructions\n{body}"
+    # The legacy wire layout remains available for recorded runtime-v1 steps.
+    # New JSON compositions already contain their versioned headings. These are
+    # serialization formats; all instruction and rule text is supplied as data.
+    if runtime.composer_version == "runtime-global-v1":
+        return f"Runtime instructions\n{runtime.body}\n\nGlobal instructions\n{body}"
+
+    if runtime.composer_version == "runtime-system-v1":
+        return f"{runtime.body}\n\n{body}"
+
+    raise PromptUnavailableError("unsupported prompt composer version")
 
 
 class FixedPromptResolver:
     """Preserve the synthetic profile's exact startup instructions through the same interface."""
 
-    def __init__(self, instructions: str = RUNTIME_INSTRUCTIONS) -> None:
+    def __init__(self, instructions: str) -> None:
         validate_body(instructions)
         self._instructions = instructions
 

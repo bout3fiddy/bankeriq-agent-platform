@@ -7,6 +7,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-dev --extra foundry-hosting --extra demo --no-install-project
 COPY src/ src/
+COPY prompts/ prompts/
 RUN uv sync --locked --no-dev --extra foundry-hosting --extra demo --no-editable
 
 FROM python:3.14-slim-bookworm@sha256:a70519002c49552ea0a853de47599cf40479b001bd7a624f1112eaf44dcaccc7 AS runtime

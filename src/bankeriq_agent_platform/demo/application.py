@@ -14,22 +14,18 @@ from agent_runtime.hosting.endpoint import RuntimeEndpoint
 from agent_runtime.providers.hosts import Authenticator
 
 from ..configuration import load_settings
+from ..prompt_files.loader import load_catalog
 from ..providers import model_providers
 from ..runtime import open_runtime
 from .model import open_demo_model
 from .tools import DemoDependencies
 
-PROMPT = (
-    "Load the synthetic sample, calculate its total using tools, "
-    "then prepare a report and return the total."
-)
-INSTRUCTIONS = (
-    "You are validating a synthetic agent runtime. First call sample_values. "
-    "After reading its result, call calculate with those values. After reading the "
-    "calculation result, call build_report with that total. Wait for its receipt, "
-    "then answer with the total and report status. Use each returned result before "
-    "choosing the next call. Never invent tool results."
-)
+# The synthetic user input and instruction sequence are versioned alongside the
+# runtime/system definitions. Keep these exports for the admission/transcript
+# helpers; both now obtain their exact text from pinned JSON assets.
+_DEMO_CATALOG = load_catalog()
+PROMPT = _DEMO_CATALOG.compile(_DEMO_CATALOG.catalog.defaults.demo_input).body
+INSTRUCTIONS = _DEMO_CATALOG.compile(_DEMO_CATALOG.catalog.defaults.demo).body
 PRINCIPAL = Principal("demo", "local")
 
 

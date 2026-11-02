@@ -191,6 +191,20 @@ verify concurrent request-scoped instructions through one Foundry client. Tool
 permissions and restricted-output boundaries remain enforced by application code.
 Live model behavior, production admin authentication and Redis remain later work.
 
+JSON authoring follow-up completed on 3 November 2026: [prompt definitions](prompts/README.md)
+now separate runtime/system roots, security rules, guidelines and synthetic demo
+text into versioned JSON compositions. Catalogs pin exact component versions and
+file hashes. Migration 005 preserves publication source provenance; runtime-v1
+remains available for existing steps. Application startup performs file parsing;
+core receives immutable prompt values. Offline authoring commands validate, render
+and register new versions. Wheels and containers package the assets.
+
+Follow-up evidence: all 292 tests and static checks passed with local PostgreSQL
+17.11 enabled. The rebuilt synthetic container passed offline workflow, token,
+readiness, non-root HTTP, two-turn and shutdown checks; packaged prompt loading
+also passed without repository files. Live-model adherence to the new wording
+has not been evaluated.
+
 ## Redis sessions and asynchronous history
 
 Status: planned. Depends on PostgreSQL records and shared system prompts.

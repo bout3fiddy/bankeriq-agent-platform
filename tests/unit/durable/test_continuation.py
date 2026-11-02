@@ -13,6 +13,7 @@ from agent_runtime.coordinator.runner import Coordinator
 from agent_runtime.durable.continuation import ContinuationEvent
 from agent_runtime.durable.handler import ContinuationHandler
 from agent_runtime.policy.output import EnforcedOutput, enforce_output
+from agent_runtime.prompts.resolution import FixedPromptResolver
 from agent_runtime.runs.context import RunContext
 from agent_runtime.runs.state import RunStatus
 from agent_runtime.storage.interface import StateConflictError, StateNotFoundError
@@ -86,6 +87,7 @@ def coordinator_for(
         model,
         lambda context: frozenset(),
         limits,
+        prompts=FixedPromptResolver("Synthetic test instructions"),
     )
 
 
@@ -331,7 +333,14 @@ def test_approval_resolution_uses_gateway_and_current_access(
     model = ScriptedModel([ModelReply(calls=(CALL,)), ModelReply(answer="Request resolved")])
     store = InMemoryStateStore()
     store.create_conversation(tenant_id="tenant", user_id="user", conversation_id="chat")
-    coordinator = Coordinator(store, registry, tools, model, access.permissions_for)
+    coordinator = Coordinator(
+        store,
+        registry,
+        tools,
+        model,
+        access.permissions_for,
+        prompts=FixedPromptResolver("Synthetic test instructions"),
+    )
     continuations = ContinuationHandler(store, coordinator, tools)
     waiting = coordinator.start(
         CONTEXT, Message(MessageRole.USER, "Prepare report"), expected_conversation_revision=0

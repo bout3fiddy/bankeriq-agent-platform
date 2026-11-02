@@ -12,6 +12,7 @@ from agent_runtime.coordinator.runner import Coordinator
 from agent_runtime.durable.continuation import ContinuationEvent
 from agent_runtime.durable.handler import ContinuationHandler
 from agent_runtime.policy.output import EnforcedOutput
+from agent_runtime.prompts.resolution import FixedPromptResolver
 from agent_runtime.runs.context import RunContext
 from agent_runtime.storage.memory import InMemoryStateStore
 from agent_runtime.tools.bindings import ExecutionOutput, ToolBinding
@@ -233,7 +234,12 @@ class RuntimeHarness:
         )
         self.events = FakeEvents(self.gateway, self.registry, self.access)
         self.coordinator = Coordinator(
-            self.store, self.registry, self.events, self.model, self.access.permissions_for
+            self.store,
+            self.registry,
+            self.events,
+            self.model,
+            self.access.permissions_for,
+            prompts=FixedPromptResolver("Synthetic test instructions"),
         )
         self.continuations = ContinuationHandler(self.store, self.coordinator, self.events)
 

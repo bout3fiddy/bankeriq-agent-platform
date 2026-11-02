@@ -72,5 +72,5 @@ def test_pending_work_cannot_be_skipped_by_prompt_preparation() -> None:
             expected_run_revision=checkpoint.run.revision,
             status=RunStatus.RUNNING,
             model_steps=1,
-            prompt_resolver=FixedPromptResolver(),
+            prompt_resolver=FixedPromptResolver("Synthetic test instructions"),
         )

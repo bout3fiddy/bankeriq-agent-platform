@@ -1,0 +1,21 @@
+{
+  "prompt": {
+    "schema_version": 1,
+    "id": "legacy.runtime",
+    "version": "1.0.0",
+    "kind": "runtime",
+    "title": "Legacy runtime",
+    "description": "Retained compatibility definition; do not modify while checkpoints reference it.",
+    "owner": "BankerIQ runtime maintainers",
+    "change_summary": "Initial versioned JSON definition.",
+    "includes": [
+      {
+        "id": "legacy.runtime-text",
+        "version": "1.0.0"
+      }
+    ],
+    "runtime_version": "runtime-v1",
+    "composer_version": "runtime-global-v1",
+    "renderer": "verbatim-v1"
+  }
+}

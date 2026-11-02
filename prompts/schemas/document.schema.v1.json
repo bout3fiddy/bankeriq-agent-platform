@@ -1,0 +1,303 @@
+{
+  "$defs": {
+    "Fragment": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9.-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "title": "Version",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "title": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "owner": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Owner",
+          "type": "string"
+        },
+        "change_summary": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Change Summary",
+          "type": "string"
+        },
+        "kind": {
+          "const": "fragment",
+          "title": "Kind",
+          "type": "string"
+        },
+        "paragraphs": {
+          "items": {
+            "maxLength": 32768,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Paragraphs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "schema_version",
+        "title",
+        "description",
+        "owner",
+        "change_summary",
+        "kind",
+        "paragraphs"
+      ],
+      "title": "Fragment",
+      "type": "object"
+    },
+    "Reference": {
+      "additionalProperties": false,
+      "description": "Select an exact component; latest/range references would break old-step recovery.",
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9.-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "title": "Reference",
+      "type": "object"
+    },
+    "Runtime": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9.-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "title": "Version",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "title": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "owner": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Owner",
+          "type": "string"
+        },
+        "change_summary": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Change Summary",
+          "type": "string"
+        },
+        "kind": {
+          "const": "runtime",
+          "title": "Kind",
+          "type": "string"
+        },
+        "includes": {
+          "items": {
+            "$ref": "#/$defs/Reference"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Includes",
+          "type": "array"
+        },
+        "runtime_version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Runtime Version",
+          "type": "string"
+        },
+        "composer_version": {
+          "enum": [
+            "runtime-global-v1",
+            "runtime-system-v1"
+          ],
+          "title": "Composer Version",
+          "type": "string"
+        },
+        "renderer": {
+          "default": "sections-v1",
+          "enum": [
+            "sections-v1",
+            "verbatim-v1"
+          ],
+          "title": "Renderer",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "schema_version",
+        "title",
+        "description",
+        "owner",
+        "change_summary",
+        "kind",
+        "includes",
+        "runtime_version",
+        "composer_version"
+      ],
+      "title": "Runtime",
+      "type": "object"
+    },
+    "Section": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9.-]{0,95}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "title": "Version",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "title": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "owner": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Owner",
+          "type": "string"
+        },
+        "change_summary": {
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Change Summary",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "section",
+            "system"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "includes": {
+          "items": {
+            "$ref": "#/$defs/Reference"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Includes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "schema_version",
+        "title",
+        "description",
+        "owner",
+        "change_summary",
+        "kind",
+        "includes"
+      ],
+      "title": "Section",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A document contains exactly one versioned fragment or composition definition.",
+  "properties": {
+    "prompt": {
+      "discriminator": {
+        "mapping": {
+          "fragment": "#/$defs/Fragment",
+          "runtime": "#/$defs/Runtime",
+          "section": "#/$defs/Section",
+          "system": "#/$defs/Section"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Fragment"
+        },
+        {
+          "$ref": "#/$defs/Section"
+        },
+        {
+          "$ref": "#/$defs/Runtime"
+        }
+      ],
+      "title": "Prompt"
+    }
+  },
+  "required": [
+    "prompt"
+  ],
+  "title": "Document",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bankeriq.invalid/prompts/document.schema.v1.json"
+}

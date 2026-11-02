@@ -6,7 +6,7 @@ from typing import Protocol
 from ..conversations.conversation import ConversationItem
 from ..conversations.messages import Message, MessageRole
 from ..policy.output import EnforcedOutput, enforce_failure
-from ..prompts.resolution import FixedPromptResolver, PromptResolver, PromptUnavailableError
+from ..prompts.resolution import PromptResolver, PromptUnavailableError
 from ..runs.context import RunContext
 from ..runs.state import RunStatus
 from ..storage.interface import Checkpoint, StateConflictError, StateStore
@@ -40,7 +40,7 @@ class Coordinator:
         limits: RunLimits | None = None,
         *,
         reasoning_effort: ReasoningEffort | None = None,
-        prompts: PromptResolver | None = None,
+        prompts: PromptResolver,
     ) -> None:
         self._store = store
         self._registry = registry
@@ -49,7 +49,7 @@ class Coordinator:
         self._permissions_for = permissions_for
         self._limits = limits if limits is not None else RunLimits()
         self._reasoning_effort = reasoning_effort
-        self._prompts = prompts if prompts is not None else FixedPromptResolver()
+        self._prompts = prompts
 
     def start(
         self,

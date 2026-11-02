@@ -10,12 +10,10 @@ import psycopg
 from psycopg import Connection
 from psycopg.errors import UniqueViolation
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 
 from agent_runtime.hosting.access import Principal
 from agent_runtime.prompts.resolution import (
-    COMPOSER_VERSION,
-    RUNTIME_INSTRUCTIONS,
-    RUNTIME_VERSION,
     PromptManifest,
     PromptScope,
     PromptUnavailableError,
@@ -25,6 +23,8 @@ from agent_runtime.prompts.resolution import (
 )
 from agent_runtime.storage.interface import StateConflictError
 
+from ..prompt_files.loader import PromptCatalog, load_catalog
+from ..prompt_files.schema import Reference
 from .codec import fingerprint
 from .postgres import CommitUnknownError, Database
 
@@ -32,13 +32,16 @@ from .postgres import CommitUnknownError, Database
 class _PromptDatabase:
     """Keep writer routing and recovery fencing common to admin and read-only APIs."""
 
-    def __init__(self, dsn: str, scope: PromptScope) -> None:
+    def __init__(
+        self, dsn: str, scope: PromptScope, *, catalog: PromptCatalog | None = None
+    ) -> None:
         if not scope.application or not scope.environment:
             raise ValueError("prompt application and environment are required")
 
         # PromptScope("bankeriq", "development") selects one global binding.
         # A production resolver uses a different scope even when both deployment
         # environments share the same database. The DSN comes from trusted startup.
+        self._catalog = catalog if catalog is not None else load_catalog()
         self._dsn = dsn
         self.scope = scope
 
@@ -93,8 +96,10 @@ class _PromptDatabase:
 class PostgresPromptResolver(_PromptDatabase):
     """Read current bindings on every resolution; cache at most 64 immutable version bodies."""
 
-    def __init__(self, dsn: str, scope: PromptScope) -> None:
-        super().__init__(dsn, scope)
+    def __init__(
+        self, dsn: str, scope: PromptScope, *, catalog: PromptCatalog | None = None
+    ) -> None:
+        super().__init__(dsn, scope, catalog=catalog)
         self._bodies: OrderedDict[tuple[str, str], str] = OrderedDict()
         self._lock = RLock()
 
@@ -198,7 +203,7 @@ class PostgresPromptResolver(_PromptDatabase):
         # Composition verifies the saved hashes and places runtime guidance
         # before global guidance. No composed instructions or active binding is
         # cached, so the body cache cannot select a version for a new model step.
-        return compose(manifest, body)
+        return compose(manifest, body, self._catalog.runtime(manifest.runtime_version))
 
 
 class PromptAdministration(_PromptDatabase):
@@ -222,8 +227,9 @@ class PromptAdministration(_PromptDatabase):
         *,
         authorize: Callable[[Principal, PromptScope], bool],
         fault: Callable[[str], None] | None = None,
+        catalog: PromptCatalog | None = None,
     ) -> None:
-        super().__init__(dsn, scope)
+        super().__init__(dsn, scope, catalog=catalog)
         self._authorize = authorize
         self._fault = fault or (lambda phase: None)
 
@@ -253,8 +259,9 @@ class PromptAdministration(_PromptDatabase):
         version: str,
         body: str,
         validation_reference: str,
-        runtime_version: str = RUNTIME_VERSION,
-        composer_version: str = COMPOSER_VERSION,
+        runtime_version: str | None = None,
+        composer_version: str | None = None,
+        source_manifest: dict[str, Any] | None = None,
     ) -> str:
         """Publish a reviewed immutable body; activation is an explicit CAS operation."""
 
@@ -269,7 +276,17 @@ class PromptAdministration(_PromptDatabase):
         if not version or not validation_reference or len(validation_reference) > 1024:
             raise ValueError("version and bounded validation evidence are required")
 
-        if runtime_version != RUNTIME_VERSION or composer_version != COMPOSER_VERSION:
+        try:
+            runtime = self._catalog.runtime(runtime_version)
+        except PromptUnavailableError:
+            raise ValueError("unsupported runtime prompt version") from None
+
+        runtime_version = runtime.version
+        composer_version = (
+            runtime.composer_version if composer_version is None else composer_version
+        )
+
+        if composer_version != runtime.composer_version:
             raise ValueError("unsupported runtime or composer version")
 
         # The hash identifies the exact body; compatibility fields identify the
@@ -281,9 +298,9 @@ class PromptAdministration(_PromptDatabase):
             digest,
             validation_reference,
             runtime_version,
-            content_hash(RUNTIME_INSTRUCTIONS),
+            content_hash(runtime.body),
             composer_version,
-        ]
+        ] + ([source_manifest] if source_manifest is not None else [])
 
         # _operation passes this callable its locked connection and current
         # binding revision. Publishing v8 writes a version row and returns that
@@ -293,25 +310,60 @@ class PromptAdministration(_PromptDatabase):
                 connection,
                 "INSERT INTO prompt_versions (application, environment, version, body, "
                 "content_hash, runtime_version, runtime_hash, composer_version, "
-                "author_tenant, author_user, "
-                "validation_reference) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "author_tenant, author_user, validation_reference, source_manifest) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     *self._key(),
                     version,
                     body,
                     digest,
                     runtime_version,
-                    content_hash(RUNTIME_INSTRUCTIONS),
+                    content_hash(runtime.body),
                     composer_version,
                     actor.tenant_id,
                     actor.user_id,
                     validation_reference,
+                    Jsonb(source_manifest) if source_manifest is not None else None,
                 ),
             )
             return revision
 
         self._operation(actor, request_id, "publish", version, payload, write)
         return digest
+
+    def publish_definition(
+        self,
+        actor: Principal,
+        *,
+        request_id: str,
+        validation_reference: str,
+        reference: Reference | None = None,
+    ) -> str:
+        """Publish a pinned JSON system composition with its complete source provenance."""
+
+        self._check(actor)
+        selected = reference if reference is not None else self._catalog.catalog.defaults.system
+        system = self._catalog.compile(selected)
+
+        if system.kind != "system":
+            raise ValueError("publication requires a system prompt definition")
+
+        runtime = self._catalog.runtime()
+        runtime_source = self._catalog.compile(self._catalog.catalog.defaults.runtime)
+
+        # Example: system@1.1.0 includes guidelines.evidence@1.0.0. Store both
+        # their identities/hashes and the final rendered body. Later JSON edits
+        # cannot change a published version; old steps keep their exact bytes.
+        return self.publish(
+            actor,
+            request_id=request_id,
+            version=f"{selected.id}@{selected.version}",
+            body=system.body,
+            validation_reference=validation_reference,
+            runtime_version=runtime.version,
+            composer_version=runtime.composer_version,
+            source_manifest={"system": system.provenance(), "runtime": runtime_source.provenance()},
+        )
 
     def activate(
         self, actor: Principal, *, request_id: str, version: str, expected_revision: int
@@ -337,11 +389,14 @@ class PromptAdministration(_PromptDatabase):
                 (*self._key(), version),
             ).fetchone()
 
+            if row is None:
+                raise PromptUnavailableError("activation requires an available version")
+
+            runtime = self._catalog.runtime(row["runtime_version"])
+
             if (
-                row is None
-                or row["runtime_hash"] != content_hash(RUNTIME_INSTRUCTIONS)
-                or row["runtime_version"] != RUNTIME_VERSION
-                or row["composer_version"] != COMPOSER_VERSION
+                row["runtime_hash"] != content_hash(runtime.body)
+                or row["composer_version"] != runtime.composer_version
             ):
                 raise PromptUnavailableError("activation requires a compatible available version")
 

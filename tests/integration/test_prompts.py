@@ -546,3 +546,55 @@ def test_withdrawal_rollback_keeps_body_available(
 
     with pytest.raises(PromptUnavailableError):
         resolver.resolve()
+
+
+def test_json_publication_sources_and_legacy_recovery(
+    admin: PromptAdministration, dsn: str, scope: PromptScope
+) -> None:
+    from bankeriq_agent_platform.prompt_files.loader import load_catalog
+
+    catalog = load_catalog()
+    digest = admin.publish_definition(
+        ADMIN, request_id="json-publish", validation_reference="synthetic-json-tests"
+    )
+    assert (
+        admin.publish_definition(
+            ADMIN, request_id="json-publish", validation_reference="synthetic-json-tests"
+        )
+        == digest
+    )
+    version = "bankeriq.system@1.0.0"
+    activate(admin, version, 0)
+    reader = PostgresPromptResolver(dsn, scope)
+    manifest = reader.resolve()
+    assert reader.instructions(manifest) == catalog.resolver().instructions(
+        catalog.resolver().resolve()
+    )
+
+    with psycopg.connect(dsn) as connection:
+        row = connection.execute(
+            "SELECT source_manifest FROM prompt_versions WHERE application=%s AND version=%s",
+            (scope.application, version),
+        ).fetchone()
+        assert row is not None
+        assert row[0]["system"]["content_hash"] == digest
+        assert len(row[0]["runtime"]["components"]) > 1
+
+    # Previously persisted runtime-v1 steps retain their original wire bytes
+    # after the default has moved to the JSON-defined BankerIQ runtime.
+    admin.publish(
+        ADMIN,
+        request_id="legacy-publish",
+        version="legacy",
+        body="Legacy guidance",
+        runtime_version="runtime-v1",
+        validation_reference="legacy-byte-test",
+    )
+    activate(admin, "legacy", 1)
+    restored = PostgresPromptResolver(dsn, scope)
+    legacy = restored.resolve()
+    assert restored.instructions(legacy) == (
+        f"Runtime instructions\n{catalog.runtime('runtime-v1').body}\n\n"
+        "Global instructions\nLegacy guidance"
+    )
+    assert restored.instructions(manifest) == reader.instructions(manifest)

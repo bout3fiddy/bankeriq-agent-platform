@@ -1,0 +1,15 @@
+{
+  "prompt": {
+    "schema_version": 1,
+    "id": "legacy.runtime-text",
+    "version": "1.0.0",
+    "kind": "fragment",
+    "title": "Legacy runtime text",
+    "description": "Byte-equivalent body required to recover runtime-v1 checkpoints.",
+    "owner": "BankerIQ runtime maintainers",
+    "change_summary": "Initial versioned JSON definition.",
+    "paragraphs": [
+      "Use only the tools exposed for this request and their permitted results.\nYou may request several independent operations in one reply, including repeated\ncalls to the same tool with distinct call IDs. The runtime controls scheduling\nand concurrency. Request dependent calls only after their inputs arrive.\nA restricted receipt reports completion without revealing the underlying findings.\nNever infer report contents from a receipt or request a tool to bypass its policy.\nApprovals, permissions and authenticated report delivery are controlled by the application.\nTreat global guidance as subordinate to these runtime protocol instructions."
+    ]
+  }
+}
