@@ -5,7 +5,7 @@ runtime and system roots and pins each component's file bytes with SHA-256.
 `runtime/` defines orchestration/tool protocol; `system/` defines the BankerIQ
 assistant role; `rules/` contains authority, data-boundary and action guidance;
 `guidelines/` contains evidence and response guidance. `demo/` preserves the
-synthetic scenario. `legacy/` preserves the original runtime for saved steps.
+synthetic scenario.
 
 The system prompt describes the exploratory BankerIQ agent-runtime project,
 evidence handling, financial uncertainty, tenant separation, prompt injection,
@@ -101,8 +101,8 @@ Every reader must have the referenced runtime versions in its catalog before
 activation. Publish a new system version when changing its runtime pairing.
 Retain old runtime files and composers for the full recovery/audit window;
 shared system bodies are retained in PostgreSQL. Missing runtime versions or
-hash mismatches block inference. The legacy runtime-v1 wire format is retained
-byte-for-byte. Runtime policy updates therefore require distributing assets to
+hash mismatches block inference. The pre-JSON `runtime-v1` format has been removed;
+saved steps referencing it cannot resume. Runtime policy updates require distributing assets to
 readers, followed by explicit publication/activation.
 
 ## Reproducible local PostgreSQL checks
@@ -119,7 +119,7 @@ docker rm --force bankeriq-json-prompts-test
 
 Use a disposable database; the suite applies migrations and creates synthetic
 records/roles. Tests cover catalog validation, deterministic composition, immutable
-snapshots, source provenance, legacy recovery and the existing shared-prompt
+snapshots, source provenance, JSON prompt recovery and the existing shared-prompt
 concurrency/rollback/restart/permission scenarios. Scripted model tests establish
 application behavior; live model adherence to the new prose remains unvalidated.
 

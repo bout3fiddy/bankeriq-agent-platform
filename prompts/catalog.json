@@ -74,18 +74,6 @@
       "sha256": "77fdd8e27cab2820863c7c17a97a41529911a2d5ed88b01a89cd1de04498c8c2"
     },
     {
-      "id": "legacy.runtime-text",
-      "version": "1.0.0",
-      "path": "legacy/runtime-text/1.0.0.json",
-      "sha256": "33cd7269355147a2f171d2f1c1618dd3990a0d974919aeca2a645d3583a0056f"
-    },
-    {
-      "id": "legacy.runtime",
-      "version": "1.0.0",
-      "path": "legacy/runtime/1.0.0.json",
-      "sha256": "7f3cd1f3bd5f4f6dd83047fb4ed983c86b90c1bbe974f226327e284852df1998"
-    },
-    {
       "id": "demo.instructions",
       "version": "1.0.0",
       "path": "demo/instructions/1.0.0.json",

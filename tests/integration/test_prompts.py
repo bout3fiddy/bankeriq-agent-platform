@@ -548,7 +548,7 @@ def test_withdrawal_rollback_keeps_body_available(
         resolver.resolve()
 
 
-def test_json_publication_sources_and_legacy_recovery(
+def test_json_publication_sources_and_recovery(
     admin: PromptAdministration, dsn: str, scope: PromptScope
 ) -> None:
     from bankeriq_agent_platform.prompt_files.loader import load_catalog
@@ -580,21 +580,5 @@ def test_json_publication_sources_and_legacy_recovery(
         assert row[0]["system"]["content_hash"] == digest
         assert len(row[0]["runtime"]["components"]) > 1
 
-    # Previously persisted runtime-v1 steps retain their original wire bytes
-    # after the default has moved to the JSON-defined BankerIQ runtime.
-    admin.publish(
-        ADMIN,
-        request_id="legacy-publish",
-        version="legacy",
-        body="Legacy guidance",
-        runtime_version="runtime-v1",
-        validation_reference="legacy-byte-test",
-    )
-    activate(admin, "legacy", 1)
     restored = PostgresPromptResolver(dsn, scope)
-    legacy = restored.resolve()
-    assert restored.instructions(legacy) == (
-        f"Runtime instructions\n{catalog.runtime('runtime-v1').body}\n\n"
-        "Global instructions\nLegacy guidance"
-    )
     assert restored.instructions(manifest) == reader.instructions(manifest)

@@ -194,8 +194,8 @@ Live model behavior, production admin authentication and Redis remain later work
 JSON authoring follow-up completed on 3 November 2026: [prompt definitions](prompts/README.md)
 now separate runtime/system roots, security rules, guidelines and synthetic demo
 text into versioned JSON compositions. Catalogs pin exact component versions and
-file hashes. Migration 005 preserves publication source provenance; runtime-v1
-remains available for existing steps. Application startup performs file parsing;
+file hashes. Migration 005 preserves publication source provenance. The pre-JSON
+runtime-v1 compatibility files and composer have subsequently been removed. Application startup performs file parsing;
 core receives immutable prompt values. Offline authoring commands validate, render
 and register new versions. Wheels and containers package the assets.
 

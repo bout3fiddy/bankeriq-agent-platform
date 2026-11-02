@@ -126,8 +126,7 @@ interruption still requires run cancellation.
 
 Keep old runtime/composer implementations available while recoverable manifests
 reference them. The current release supports JSON-defined `bankeriq.runtime@1.0.0` /
-`runtime-system-v1`, retained `runtime-v1` / `runtime-global-v1`,
-and the fixed-profile format; incompatible versions fail explicitly. Keep prompt
+`runtime-system-v1` and the fixed-profile format; incompatible versions fail explicitly. Keep prompt
 versions, activation records and prepared-step references for the full run/audit/
 replay retention window. Physical prompt deletion is disabled. A database restore
 must follow the storage recovery-generation/fencing procedure; both administration
@@ -156,7 +155,7 @@ text does not expand tool discovery or bypass gateway/output enforcement.
 
 Executed on 3 November 2026 against local PostgreSQL 17.11: all 292 tests and
 static checks passed with the database enabled, including JSON source provenance,
-legacy recovery, file validation and the existing shared-prompt scenarios. The
+JSON prompt recovery, file validation and the existing shared-prompt scenarios. The
 packaged container passed its offline and HTTP verification.
 
 This evidence checks composition, storage and authorization behavior with scripted

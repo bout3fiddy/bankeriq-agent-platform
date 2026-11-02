@@ -849,5 +849,5 @@ guidelines in immutable versioned JSON. Exact references and file hashes determi
 composition. Application startup parses the catalog; core receives immutable text.
 Migration 005 records source provenance when publishing composed system definitions.
 Runtime assets must reach every reader before activation and remain available for
-old manifests. Existing runtime-v1 steps retain their original rendering. Local
+supported manifests. The pre-JSON runtime-v1 format has been removed. Local
 file profiles use startup snapshots; PostgreSQL profiles retain live activation.

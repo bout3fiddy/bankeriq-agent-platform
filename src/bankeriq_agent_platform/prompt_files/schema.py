@@ -47,8 +47,8 @@ class Runtime(Metadata):
     kind: Literal["runtime"]
     includes: Annotated[tuple[Reference, ...], Field(min_length=1, max_length=32)]
     runtime_version: Annotated[str, Field(min_length=1, max_length=128)]
-    composer_version: Literal["runtime-global-v1", "runtime-system-v1"]
-    renderer: Literal["sections-v1", "verbatim-v1"] = "sections-v1"
+    composer_version: Literal["runtime-system-v1"]
+    renderer: Literal["sections-v1"] = "sections-v1"
 
 
 class Document(StrictModel):

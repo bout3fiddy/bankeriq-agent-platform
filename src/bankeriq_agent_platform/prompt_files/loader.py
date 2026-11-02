@@ -65,7 +65,7 @@ class PromptCatalog:
             raise ValueError("runtime version identities must be unique")
 
         # Validate every retained version, not just the current defaults. For
-        # example, an old runtime-v1 checkpoint must still find its pinned body
+        # example, a bankeriq.runtime@1.0.0 checkpoint must still find its pinned body
         # after the default moves to bankeriq.runtime@2.0.0.
         for document in documents.values():
             self.compile(Reference(id=document.prompt.id, version=document.prompt.version))
@@ -105,20 +105,6 @@ class PromptCatalog:
 
             if isinstance(prompt, Fragment):
                 return "\n\n".join(prompt.paragraphs)
-
-            # The legacy runtime must preserve its original bytes. New section
-            # headings would change the hash saved by an existing checkpoint.
-            if isinstance(prompt, Runtime) and prompt.renderer == "verbatim-v1":
-                if len(prompt.includes) != 1:
-                    raise ValueError("verbatim runtime requires one fragment")
-
-                child = prompt.includes[0]
-                source = self._documents.get((child.id, child.version))
-
-                if source is None or not isinstance(source.prompt, Fragment):
-                    raise ValueError("verbatim runtime requires one fragment")
-
-                return render(child, depth + 1)
 
             sections: list[str] = []
 

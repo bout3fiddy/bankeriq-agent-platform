@@ -158,19 +158,13 @@
           "type": "string"
         },
         "composer_version": {
-          "enum": [
-            "runtime-global-v1",
-            "runtime-system-v1"
-          ],
+          "const": "runtime-system-v1",
           "title": "Composer Version",
           "type": "string"
         },
         "renderer": {
+          "const": "sections-v1",
           "default": "sections-v1",
-          "enum": [
-            "sections-v1",
-            "verbatim-v1"
-          ],
           "title": "Renderer",
           "type": "string"
         }

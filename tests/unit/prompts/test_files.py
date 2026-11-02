@@ -153,13 +153,9 @@ def test_exported_schemas_match_models() -> None:
         assert saved == model.model_json_schema()
 
 
-def test_legacy_runtime_hash_is_byte_identical() -> None:
-
-    # Hash of runtime-v1 before its move from Python to JSON. A heading or newline
-    # change would make old saved model-step manifests unreconstructable.
-    assert content_hash(load_catalog().runtime("runtime-v1").body) == (
-        "f9fda1b2b88a0412a077880bb840b2f043dd182d36891dee6c97c2546c45c822"
-    )
+def test_removed_runtime_is_unavailable() -> None:
+    with pytest.raises(PromptUnavailableError):
+        load_catalog().runtime("runtime-v1")
 
 
 def test_nested_sections_render_once_in_declared_order(directory: Path) -> None:

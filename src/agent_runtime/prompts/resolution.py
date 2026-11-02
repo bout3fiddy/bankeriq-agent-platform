@@ -88,12 +88,6 @@ def compose(manifest: PromptManifest, body: str, runtime: RuntimePrompt) -> str:
     # Keep application protocol guidance first and global business guidance
     # second. The result is one request-scoped system message; neither body is
     # appended to conversation history, and gateway permissions still govern tools.
-    # The legacy wire layout remains available for recorded runtime-v1 steps.
-    # New JSON compositions already contain their versioned headings. These are
-    # serialization formats; all instruction and rule text is supplied as data.
-    if runtime.composer_version == "runtime-global-v1":
-        return f"Runtime instructions\n{runtime.body}\n\nGlobal instructions\n{body}"
-
     if runtime.composer_version == "runtime-system-v1":
         return f"{runtime.body}\n\n{body}"
 
