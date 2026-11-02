@@ -9,8 +9,8 @@ def is_valid_reply(reply: ModelReply, previous_call_ids: set[str]) -> bool:
     has_answer = reply.answer is not None
     has_calls = bool(reply.calls)
 
-    # This reply format supports an answer or tool requests. Commentary alongside
-    # tool calls will need a richer representation when the provider adapter is built.
+    # This reply format supports an answer or tool requests. The provider adapter
+    # omits accompanying commentary when translating a provider's tool-call reply.
     if has_answer and has_calls:
         return False
 

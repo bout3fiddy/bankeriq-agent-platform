@@ -33,6 +33,13 @@ for the restricted-payload marker and artifact IDs. The inspection serializes
 actual dataclass fields, including `repr=False` payloads, so hidden representations
 cannot conceal a leak from these assertions. A dedicated test verifies that inspection.
 
+`test_foundry.py` repeats the calculation/report workflow through the real OpenAI
+SDK and Foundry adapter, using an in-process HTTP transport. It inspects the
+serialized API payloads for restricted content and internal references, verifies
+updated tool discovery after a wait, and checks failure handling for truncated
+responses, invalid arguments, rate limits and timeouts. Live Azure calls remain
+untested.
+
 The fake job provider delays delivery of an already-enforced gateway result;
 execution itself is synchronous. This suite does not establish production
 durability, authentication, network isolation or model behaviour. Those depend on

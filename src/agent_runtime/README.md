@@ -3,7 +3,8 @@
 Workshop and implementation workspace for the core agent runtime. Core data types,
 tool registry, completed-output enforcement, synchronous tool gateway, in-memory
 state storage, coordinator loop and mocked event continuation under `durable/` are implemented.
-External APIs remain pending.
+The Foundry model adapter implements inference calls with local HTTP tests;
+live Azure validation remains pending.
 Microsoft Foundry remains the initial coordinator target;
 the self-hosted specialist is deferred.
 
@@ -38,8 +39,8 @@ Typed callers supply valid identities, enum members and field types. Future inpu
 adapters and registry/gateway boundaries must validate external data, schemas and
 permissions. `runs/state.py` enforces lifecycle transitions when checkpoints are saved.
 The `VisibleResult` type must only be populated after output enforcement; its name
-does not establish that arbitrary content is safe. No SDK-specific messages or
-serialization format are fixed yet.
+does not establish that arbitrary content is safe. `providers/foundry/` translates these
+values into SDK-specific messages at the inference boundary.
 
 ## Implemented tool registry
 
@@ -202,13 +203,13 @@ on every model request, including requests after tool results. The available
 settings are `none`, `minimal`, `low`, `medium`, `high`, `xhigh` and `max`;
 support depends on the deployed model. The default Python `None` leaves the
 provider's default unchanged. `ReasoningEffort.NONE` requests disabled reasoning.
-The future adapter must reject unsupported combinations and map the setting to
-the API, for example `reasoning={"effort": "high"}` for Responses.
+The Foundry adapter checks an explicit allowlist configured for the deployment
+and maps the setting to the Chat Completions `reasoning_effort` field.
 
-This controls provider-managed reasoning effort. Opaque reasoning continuation
-items or response references will be managed by the model adapter; their
-conversation/run scoping and persistence remain future work. The current tests
-verify configuration propagation with a scripted client. See Microsoft's
+This controls provider-managed reasoning effort. Chat Completions replays the
+permitted transcript on every request. Responses API continuation items and
+their persistence remain future work. Tests verify configuration propagation
+through the real SDK with a local HTTP transport. See Microsoft's
 [reasoning model documentation](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/reasoning)
 for model-dependent settings and opaque reasoning state.
 
@@ -217,6 +218,18 @@ them, marks the run waiting and returns. The durable continuation handler accept
 their completion notifications. Running, waiting and terminal runs cannot be replayed through
 `run()`. Checkpointing does not make side effects durable: a crash during tool
 execution still requires reconciliation.
+
+## Implemented Foundry model adapter
+
+`providers/foundry/model.py` implements the model interface using Foundry's v1 Chat
+Completions API through the OpenAI SDK. `connection.py` constructs the client
+from application-supplied credentials; `messages.py` encodes permitted history
+and `replies.py` validates answers and tool requests. See the
+[adapter guide](providers/foundry/README.md) for configuration, API mapping and limits.
+
+Tests exercise the SDK through a local HTTP transport, including the complete
+calculation, approval, report and continuation workflow. Live deployment
+compatibility and Azure inference remain untested.
 
 ## Durable execution scaffolding
 
@@ -321,6 +334,12 @@ agent_runtime/
     reply_validation.py # Reply shape and tool-call ID checks
     control.py        # Execution budgets and application-facing outcome
     runner.py         # Run entry point and bounded model/tool loop
+  providers/
+    foundry/
+      connection.py   # SDK connection and supplied credentials
+      model.py        # One Foundry inference call per coordinator step
+      messages.py     # Permitted history and tool results to API messages
+      replies.py      # Provider completion and tool-argument validation
   durable/
     continuation.py   # Completion events, matching and trusted resolver interface
     handler.py        # Claim waiting runs, resolve events and resume the coordinator

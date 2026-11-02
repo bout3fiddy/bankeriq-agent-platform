@@ -9,8 +9,20 @@ description = "Azure banking agent architecture and development scaffold"
 requires-python = ">=3.14"
 dependencies = []
 
+[project.optional-dependencies]
+foundry-model = [
+    "openai>=3.41.0",
+]
+
 [dependency-groups]
-dev = ["basedpyright>=1.40.2", "pre-commit>=4", "pytest>=8", "ruff>=0.11"]
+dev = [
+    "basedpyright>=1.40.2",
+    "httpx2>=2.16.0",
+    "openai>=3.41.0",
+    "pre-commit>=4",
+    "pytest>=8",
+    "ruff>=0.11",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/bankeriq_agent_platform", "src/agent_runtime"]

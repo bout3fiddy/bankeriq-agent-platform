@@ -5,6 +5,8 @@ tests/
   unit/
     coordinator/   # Model/tool loop and execution budgets
     durable/       # Continuation matching, claims and resumption
+    providers/     # Provider-specific tests
+      foundry/     # API translation and SDK calls through a local HTTP transport
     policy/        # Output filtering and restricted receipts
     runs/          # Run-state invariants
     storage/       # Ownership, checkpoints and concurrent updates

@@ -15,7 +15,6 @@ delivered directly to the user through authenticated downloads.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the diagram and security boundaries.
 See [components.md](components.md) for logical responsibilities and initial scope.
-
 ## Current scope
 
 This repository contains design documentation, core runtime data types, a
@@ -26,8 +25,9 @@ for mocked job and approval events. Scripted model replies exercise repeated
 tool calls and resumption. The [integration harness](tests/integration/README.md)
 connects these components through synthetic calculation, approval, report and
 delivery workflows, including failure and permission changes.
-Local quality checks include behavioural tests. External APIs, Azure resources
-and live model integration remain unimplemented.
+The [Foundry model adapter](src/agent_runtime/providers/foundry/README.md) implements v1
+Chat Completions calls through the OpenAI SDK and is tested with a local HTTP
+transport. Azure resources and live model integration remain untested.
 Python 3.14 is the local tooling baseline copied from MONKI; deployment runtime
 compatibility must be checked before selecting an Azure hosting target.
 
@@ -48,6 +48,6 @@ exist. Pre-commit runs static checks. See [STYLEGUIDE.md](STYLEGUIDE.md) and the
 
 ## Next step
 
-Implement the Foundry model adapter behind the existing model interface after
-checking the current SDK and response formats. Raw chat-input policy, production
-delivery, Hosted Agents integration and durable recovery remain unresolved work.
+Validate inference against a configured Azure deployment and implement the hosted
+request boundary. Raw chat-input policy, persistent state, production delivery
+and durable recovery remain unresolved work.

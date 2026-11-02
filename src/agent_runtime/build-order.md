@@ -24,8 +24,10 @@ planned except where marked implemented. Keep external I/O mocked until the adap
    connects the runtime components through visible and restricted outputs, denied
    calls, failures, cancellation, waiting and continuation. Checks actual model
    request fields and stored history for synthetic restricted payloads and artifact IDs.
-9. **Foundry model adapter** — Replace the mock model with real inference calls
-   behind the same interface.
+9. **Foundry model adapter (implemented; local HTTP tests)** — `providers/foundry/` maps
+   permitted history and discovered tools to v1 Chat Completions through the
+   OpenAI SDK, then validates answers and function calls. Live Azure inference
+   and deployment/model compatibility remain untested.
 10. **Hosted-agent adapter** — Expose the coordinator through Foundry's
     request/response protocol and map trusted request context into runtime inputs.
 
