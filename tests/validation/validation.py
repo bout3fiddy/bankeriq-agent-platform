@@ -15,7 +15,7 @@ from agent_runtime.tools.definitions import ToolCall
 from agent_runtime.tools.results import RestrictedReceipt, VisibleResult
 
 from .application import PRINCIPAL, PROMPT, LocalServer
-from .tools import PRIVATE_MARKER, DemoDependencies
+from .tools import PRIVATE_MARKER, ValidationDependencies
 from .transcript import write_transcript
 
 
@@ -25,7 +25,7 @@ class ValidationFailed(RuntimeError):
 
 async def validate(
     server: LocalServer,
-    dependencies: DemoDependencies,
+    dependencies: ValidationDependencies,
     token: str,
     *,
     transcript_file: TextIO | None = None,
@@ -39,7 +39,7 @@ async def validate(
     app = create_hosted_server(server.endpoint, authenticate=server.authenticate)
     transport = httpx2.ASGITransport(app=app)
 
-    async with httpx2.AsyncClient(transport=transport, base_url="http://demo") as client:
+    async with httpx2.AsyncClient(transport=transport, base_url="http://validation") as client:
         headers = {"Authorization": f"Bearer {token}"}
 
         async def invoke(command: dict[str, object]) -> dict:
@@ -64,7 +64,7 @@ async def validate(
         artifacts = list(result["artifacts"])
         waits = 0
 
-        # Only saved demo job receipts can be resumed. A bounded loop also makes
+        # Only saved validation job receipts can be resumed. A bounded loop also makes
         # a broken continuation visible instead of hanging a live validation run.
         while result["status"] == "waiting" and waits < 6:
             result = await invoke(
@@ -99,7 +99,14 @@ async def validate(
     # For example, a model that answers immediately leaves a transcript showing
     # the missing tool calls. Output-isolation failures block export above.
     if transcript_file is not None:
-        write_transcript(transcript_file, checkpoint, model_label=model_label, resumptions=waits)
+        assert checkpoint.run.prompt_manifest is not None
+        write_transcript(
+            transcript_file,
+            checkpoint,
+            instructions=dependencies.prompts.instructions(checkpoint.run.prompt_manifest),
+            model_label=model_label,
+            resumptions=waits,
+        )
 
     if result["status"] != "completed" or not re.search(r"\b42\b", result["answer"] or ""):
         raise ValidationFailed(

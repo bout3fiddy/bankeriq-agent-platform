@@ -1,4 +1,4 @@
-# Only package inputs enter the build context. Local credentials, Terraform
+# Only package inputs and selected test fixtures enter the build context. Terraform
 # state, transcripts and the developer virtual environment stay outside it.
 **
 !Dockerfile
@@ -8,5 +8,10 @@
 !src/**
 !prompts/
 !prompts/**
+
+!tests/
+!tests/__init__.py
+!tests/validation/
+!tests/validation/**
 **/__pycache__/
 **/*.pyc

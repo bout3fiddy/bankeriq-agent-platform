@@ -73,9 +73,9 @@ approvals, dispatch
     application startup. Foundry is the initial implementation. Architecture
     tests enforce import boundaries, and provider SDKs are optional dependencies.
 12. **Executable startup (implemented; local process tests)** —
-    `uv run bankeriq-runtime serve` assembles mock tools, in-memory storage,
+    `uv run python -m tests.validation serve` assembles mock tools, in-memory storage,
     continuation fakes and explicit test authentication/input policy through
-    `open_runtime()`. `uv run bankeriq-runtime validate` checks the synthetic
+    `open_runtime()`. `uv run python -m tests.validation validate` checks the synthetic
     workflow. Tests launch a fresh HTTP server, complete two turns and shut it down.
 13. **Live model validation (passed, 2 November 2026)** — Terraform under
     `infra/azure/` supports EU Data Zone and regional deployments. The regional
@@ -95,14 +95,14 @@ Status: implemented and validated locally on Linux ARM64. Depends on initial run
 1. **Package the application** — Reuse the synthetic composition with locked
    dependencies, pinned base images and non-root execution.
 2. **Configure container startup** — Supply an explicit bind address, required
-   demo token, readiness check and direct process execution for shutdown signals.
+   validation token, readiness check and direct process execution for shutdown signals.
 3. **Validate the container** — Exercise the offline workflow, token/input checks,
    two HTTP turns and graceful shutdown with a read-only filesystem.
 
 Evidence: the [Docker verifier](scripts/verify_container.py) passed;
 `uv run python scripts/verify.py` passed all 244 Python tests and static checks.
 Other architectures and Azure execution remain unvalidated. See the
-[container guide](src/bankeriq_agent_platform/demo/README.md#container-validation).
+[container guide](tests/validation/README.md#container-validation).
 
 ## PostgreSQL journal and job records
 
@@ -156,8 +156,8 @@ ownership, projection and production HA remain later groups.
 Status: implemented and locally validated. Depends on PostgreSQL journal and job records.
 
 1. **Separate instructions from client lifetime** — Add explicit resolved
-   instructions and a prompt manifest to the provider-neutral model request. Keep
-   the existing synthetic startup prompt through a fixed resolver. Adapters encode
+   instructions and a prompt manifest to the provider-neutral model request. Use the
+   runtime/system catalog for synthetic validation too. Adapters encode
    request-scoped instructions without mutating shared model clients; history keeps
    its existing user/assistant/tool roles.
 2. **Store and publish global versions** — Add immutable prompt bodies/hashes,
@@ -196,8 +196,9 @@ permissions and restricted-output boundaries remain enforced by application code
 Live model behavior, production admin authentication and Redis remain later work.
 
 JSON authoring follow-up completed on 3 November 2026: [prompt definitions](prompts/README.md)
-now separate runtime/system roots, security rules, guidelines and synthetic demo
-text into versioned JSON compositions. Catalogs pin exact component versions and
+now separate runtime/system roots, security rules and guidelines into versioned
+JSON compositions. Synthetic validation fixtures subsequently moved under tests/validation/.
+Catalogs pin exact component versions and
 file hashes. Migration 005 preserves publication source provenance. The pre-JSON
 runtime-v1 compatibility files and composer have subsequently been removed. Application startup
 performs file parsing;
@@ -481,3 +482,17 @@ inform deployment validation; availability in the actual host remains a gate.
   https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/test/harness-tasks-recovery.test.ts#L448-L525
 [line-source-8]:
   https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/README.md#L854-L883
+
+Validation harness cleanup: synthetic tools, model, test authentication, CLI and
+transcript/scoring helpers now live under `tests/validation/`. The application
+retains reusable `LocalServer` and `open_runtime()` wiring. The test-only system
+prompt was removed; both mock and live-provider validation use the real BankerIQ
+runtime/system definitions. The synthetic Docker image explicitly includes this
+harness; the application wheel excludes it. Earlier live evidence used prescribed
+instructions and does not validate the current prompt composition.
+
+Executed on 3 November 2026: `uv run python scripts/verify.py` passed all 301
+tests with local PostgreSQL 17.11 enabled, plus static checks. The rebuilt synthetic
+container passed offline workflow, token, readiness, two-turn HTTP and shutdown
+checks. An isolated wheel loaded the application catalog and reusable server with
+no validation fixtures or synthetic CLI packaged. No live-model calls were made.

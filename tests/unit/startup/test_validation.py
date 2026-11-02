@@ -12,9 +12,9 @@ import pytest
 
 from agent_runtime.coordinator.model import ModelClient, ModelReply, ModelRequest
 from agent_runtime.providers.models import ModelSettings
-from bankeriq_agent_platform.demo.application import INSTRUCTIONS, PROMPT, open_demo
-from bankeriq_agent_platform.demo.tools import PRIVATE_MARKER
-from bankeriq_agent_platform.demo.validation import ValidationFailed, validate
+from tests.validation.application import PROMPT, open_validation
+from tests.validation.tools import PRIVATE_MARKER
+from tests.validation.validation import ValidationFailed, validate
 
 
 @pytest.mark.parametrize(
@@ -35,11 +35,11 @@ def test_failed_validation_preserves_only_safe_transcripts(
     def factory(settings: ModelSettings) -> Iterator[ModelClient]:
         yield AnswerOnly()
 
-    monkeypatch.setattr("bankeriq_agent_platform.demo.application.open_demo_model", factory)
+    monkeypatch.setattr("tests.validation.application.open_scripted_model", factory)
     transcript = StringIO()
 
     with (
-        open_demo({}, provider="mock", token="synthetic") as (server, dependencies),
+        open_validation({}, provider="mock", token="synthetic") as (server, dependencies),
         pytest.raises(ValidationFailed, match=failure),
     ):
         asyncio.run(validate(server, dependencies, "synthetic", transcript_file=transcript))
@@ -55,7 +55,7 @@ def test_transcript_records_permitted_exchange() -> None:
     transcript = StringIO()
     token = "TRANSCRIPT_TOKEN_SENTINEL"
 
-    with open_demo({}, provider="mock", token=token) as (server, dependencies):
+    with open_validation({}, provider="mock", token=token) as (server, dependencies):
         asyncio.run(
             validate(
                 server,
@@ -67,7 +67,10 @@ def test_transcript_records_permitted_exchange() -> None:
         )
 
     text = transcript.getvalue()
-    assert INSTRUCTIONS in text and PROMPT in text
+    from bankeriq_agent_platform.prompt_files.loader import load_catalog
+
+    resolver = load_catalog().resolver()
+    assert resolver.instructions(resolver.resolve()) in text and PROMPT in text
     assert '"values": [' in text and '"total": 42' in text
     assert text.index('"tool": "sample_values"') < text.index('"tool": "calculate"')
     assert text.index('"tool": "build_report"') < text.index("Runtime waiting")
@@ -81,7 +84,7 @@ def test_transcript_records_permitted_exchange() -> None:
     assert "**Completion received:** `build_report` completed" in text
     assert text.index("## Execution trace") < text.index("## Recorded fields")
     assert all(
-        value not in text for value in (PRIVATE_MARKER, "demo-report-", token, "reference_id")
+        value not in text for value in (PRIVATE_MARKER, "validation-report-", token, "reference_id")
     )
 
 
@@ -92,7 +95,7 @@ def test_invalid_config_does_not_echo_its_contents(tmp_path: Path) -> None:
         [
             sys.executable,
             "-m",
-            "bankeriq_agent_platform",
+            "tests.validation",
             "validate",
             "--config",
             str(configuration),
@@ -103,3 +106,53 @@ def test_invalid_config_does_not_echo_its_contents(tmp_path: Path) -> None:
     )
     assert result.returncode == 2
     assert "PRIVATE_CONFIG_SENTINEL" not in result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("provider", ["mock", "foundry"])
+def test_validation_uses_application_prompts_without_scoring_in_context(
+    monkeypatch: pytest.MonkeyPatch, provider: str
+) -> None:
+    from bankeriq_agent_platform.prompt_files.loader import load_catalog
+    from tests.validation.model import ScriptedModel
+
+    requests: list[ModelRequest] = []
+
+    class RecordingModel(ScriptedModel):
+        def complete(self, request: ModelRequest) -> ModelReply:
+            requests.append(request)
+            return super().complete(request)
+
+    @contextmanager
+    def factory(settings: ModelSettings) -> Iterator[ModelClient]:
+        yield RecordingModel()
+
+    # Exercise both provider selections without a live call. The adapter boundary
+    # receives the same application prompt bytes; the scripted reply supplies only
+    # deterministic infrastructure coverage, never a model-adherence claim.
+    monkeypatch.setattr("tests.validation.application.open_scripted_model", factory)
+    monkeypatch.setattr(
+        "tests.validation.application.model_providers", lambda environment: {"foundry": factory}
+    )
+
+    with open_validation(
+        {"MODEL_NAME": "configured-model"}, provider=provider, token="synthetic"
+    ) as (server, dependencies):
+        asyncio.run(validate(server, dependencies, "synthetic"))
+
+    resolver = load_catalog().resolver()
+    expected = resolver.instructions(resolver.resolve())
+    assert len(requests) == 4
+    assert all(request.instructions == expected for request in requests)
+    assert all(request.prompt_manifest == resolver.resolve() for request in requests)
+    assert "First call sample_values" not in expected
+    assert "validating a synthetic" not in expected
+
+
+def test_validation_rejects_test_only_instruction_override() -> None:
+    with (
+        pytest.raises(ValueError, match="application prompt catalog"),
+        open_validation(
+            {"MODEL_INSTRUCTIONS": "Pass this test"}, provider="mock", token="synthetic"
+        ),
+    ):
+        pytest.fail("instruction override was accepted")

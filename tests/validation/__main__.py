@@ -1,4 +1,4 @@
-"""Allow python -m bankeriq_agent_platform to use the same launch command."""
+"""Run the repository-only synthetic validation application."""
 
 from .cli import main
 

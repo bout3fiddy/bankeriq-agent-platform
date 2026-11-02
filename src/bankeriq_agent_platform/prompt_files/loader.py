@@ -73,8 +73,6 @@ class PromptCatalog:
         for reference, kind in (
             (catalog.defaults.runtime, "runtime"),
             (catalog.defaults.system, "system"),
-            (catalog.defaults.demo, "fragment"),
-            (catalog.defaults.demo_input, "fragment"),
         ):
             if self.compile(reference).kind != kind:
                 raise ValueError("catalog default has the wrong prompt kind")

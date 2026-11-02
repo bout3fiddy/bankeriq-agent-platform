@@ -597,8 +597,8 @@ metadata; full prompt bodies belong in the access-controlled prompt store.
 The Foundry adapter now reads explicit instructions and a prompt manifest from
 `ModelRequest`. It translates request-scoped instructions into the system role
 without mutating shared client state. `open_runtime()` accepts a prompt resolver;
-application defaults load pinned JSON runtime/system definitions, and the synthetic
-demo retains its exact JSON-loaded text through a fixed resolver. Shared
+application defaults and the synthetic validation harness load the same pinned JSON
+runtime/system definitions. Shared
 resolution and publication clients live in the application storage adapter,
 while core prompt types and composition have no database or SDK dependencies.
 

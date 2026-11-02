@@ -77,7 +77,7 @@ records and optimistic concurrency. Newly resolved steps use the latest version;
 in-flight steps and retries retain their recorded manifest. The context builder
 combines runtime instructions, the global prompt, permitted history and tool
 definitions, keeping prompts outside chat history. Foundry receives immutable
-request-scoped instructions; the synthetic profile uses a fixed resolver. The
+request-scoped instructions; synthetic validation uses the same catalog. The
 [implemented prompt system](src/agent_runtime/prompts/README.md) includes durable
 manifests, scoped publication/activation and withdrawal. Redis prompt caching
 and production management authentication remain later work.
@@ -226,3 +226,11 @@ this component is introduced.
 and supplies immutable definitions to core. Shared publication stores rendered
 system bodies and source provenance; retained runtime assets support old steps.
 See the [authoring workflow](prompts/README.md).
+
+### Synthetic validation fixtures
+
+`tests/validation/` owns synthetic tools, scripted models, test identity, request
+fixtures and scoring. It runs through `open_runtime()` with the application prompt
+catalog. `bankeriq_agent_platform.server.LocalServer` remains reusable startup wiring.
+The application wheel excludes the harness; the synthetic Docker image copies it
+explicitly and starts `python -m tests.validation`.

@@ -66,8 +66,6 @@ class Document(StrictModel):
 class Defaults(StrictModel):
     runtime: Reference
     system: Reference
-    demo: Reference
-    demo_input: Reference
 
 
 class Catalog(StrictModel):

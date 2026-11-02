@@ -7,15 +7,18 @@ COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_PYTHON_DOWNLOADS=never UV_LINK_MODE=copy
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
-RUN uv sync --locked --no-dev --extra foundry-hosting --extra demo --no-install-project
+RUN uv sync --locked --no-dev --extra foundry-hosting --extra validation --no-install-project
 COPY src/ src/
 COPY prompts/ prompts/
-RUN uv sync --locked --no-dev --extra foundry-hosting --extra demo --no-editable
+RUN uv sync --locked --no-dev --extra foundry-hosting --extra validation --no-editable
 
 FROM python:3.14-slim-bookworm@${PYTHON_DIGEST} AS runtime
 ENV PATH="/app/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 COPY --from=build /app/.venv /app/.venv
+# This image is a validation harness; test fixtures are excluded from the wheel.
+COPY tests/__init__.py tests/__init__.py
+COPY tests/validation/ tests/validation/
 USER 10001:10001
 EXPOSE 8088
 HEALTHCHECK --interval=5s --timeout=3s --start-period=10s --retries=3 \
@@ -23,5 +26,5 @@ HEALTHCHECK --interval=5s --timeout=3s --start-period=10s --retries=3 \
          "import urllib.request; \
 urllib.request.urlopen('http://127.0.0.1:8088/readiness', timeout=2).close()"]
 # Direct execution makes the server PID 1 so docker stop reaches its signal handler.
-ENTRYPOINT ["bankeriq-runtime"]
+ENTRYPOINT ["python", "-m", "tests.validation"]
 CMD ["serve", "--provider", "mock", "--host", "0.0.0.0", "--port", "8088"]

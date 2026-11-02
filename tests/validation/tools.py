@@ -6,6 +6,7 @@ from typing import cast
 from uuid import uuid4
 
 from agent_runtime.policy.output import EnforcedOutput
+from agent_runtime.prompts.resolution import PromptResolver
 from agent_runtime.runs.context import RunContext
 from agent_runtime.storage.memory import InMemoryStateStore
 from agent_runtime.tools.bindings import ExecutionOutput, ToolBinding
@@ -16,11 +17,11 @@ from agent_runtime.tools.results import PendingToolCall, RestrictedReceipt, Wait
 from agent_runtime.types.json_value import JsonValue
 
 PRIVATE_MARKER = "SYNTHETIC_RESTRICTED_REPORT_CONTENT"
-PERMISSIONS = frozenset({"demo.use"})
+PERMISSIONS = frozenset({"validation.use"})
 SAMPLE = ToolDefinition(
     "sample_values",
     "v1",
-    "Load the synthetic sample values for the calculation.",
+    "Load the available sample values.",
     {"type": "object", "properties": {}, "additionalProperties": False},
     OutputPolicy.VISIBLE,
     required_permissions=PERMISSIONS,
@@ -28,7 +29,7 @@ SAMPLE = ToolDefinition(
 CALCULATE = ToolDefinition(
     "calculate",
     "v1",
-    "Sum the values returned by sample_values.",
+    "Sum the supplied numeric values.",
     {
         "type": "object",
         "properties": {
@@ -43,7 +44,7 @@ CALCULATE = ToolDefinition(
 REPORT = ToolDefinition(
     "build_report",
     "v1",
-    "Prepare a synthetic restricted report using the calculated total.",
+    "Prepare a restricted report using the supplied total.",
     {
         "type": "object",
         "properties": {"total": {"type": "integer"}},
@@ -55,13 +56,13 @@ REPORT = ToolDefinition(
 )
 
 
-class DemoAccess:
-    """Grant the fixed demo identity access to the three synthetic tools."""
+class ValidationAccess:
+    """Grant the fixed validation identity access to the three synthetic tools."""
 
     def permissions_for(self, context: RunContext) -> frozenset[str]:
         return (
             PERMISSIONS
-            if (context.tenant_id, context.user_id) == ("demo", "local")
+            if (context.tenant_id, context.user_id) == ("validation", "local")
             else frozenset()
         )
 
@@ -72,7 +73,7 @@ class DemoAccess:
         self, context: RunContext, definition: ToolDefinition, call: ToolCall
     ) -> bool:
 
-        # These demo tools require no approval. Adding an approval-gated tool
+        # These validation tools require no approval. Adding an approval-gated tool
         # leaves it denied until an actual approval provider is supplied.
         return False
 
@@ -84,10 +85,12 @@ class DeferredResult:
     output: EnforcedOutput
 
 
-class DemoJobs:
+class ValidationJobs:
     """Hold an enforced report receipt until the matching resume notification."""
 
-    def __init__(self, gateway: ToolGateway, registry: ToolRegistry, access: DemoAccess) -> None:
+    def __init__(
+        self, gateway: ToolGateway, registry: ToolRegistry, access: ValidationAccess
+    ) -> None:
         self.gateway = gateway
         self.registry = registry
         self.access = access
@@ -119,17 +122,18 @@ class DemoJobs:
         )
 
         if not self.access.can_access(context, definition, result.call):
-            raise PermissionError("demo result unavailable")
+            raise PermissionError("validation result unavailable")
 
         return result.output
 
 
-class DemoDependencies:
+class ValidationDependencies:
     """Keep mutable storage and fake jobs scoped to one application process."""
 
-    def __init__(self) -> None:
+    def __init__(self, prompts: PromptResolver) -> None:
+        self.prompts = prompts
         self.store = InMemoryStateStore()
-        self.access = DemoAccess()
+        self.access = ValidationAccess()
         self.registry = ToolRegistry([SAMPLE, CALCULATE, REPORT])
 
         # Each binding joins an executor, argument validator and optional visible
@@ -148,7 +152,7 @@ class DemoDependencies:
             },
             self.access,
         )
-        self.jobs = DemoJobs(gateway, self.registry, self.access)
+        self.jobs = ValidationJobs(gateway, self.registry, self.access)
 
 
 def sample(context: RunContext, arguments: Mapping[str, JsonValue]) -> ExecutionOutput:
@@ -162,8 +166,8 @@ def calculate(context: RunContext, arguments: Mapping[str, JsonValue]) -> Execut
 def report(context: RunContext, arguments: Mapping[str, JsonValue]) -> ExecutionOutput:
 
     # This opaque artifact ID demonstrates delivery metadata. No blob or report
-    # service exists in the demo; restricted content must stay out of model input.
-    return ExecutionOutput({"body": PRIVATE_MARKER}, artifact_id=f"demo-report-{uuid4()}")
+    # service exists in this fixture; restricted content must stay out of model input.
+    return ExecutionOutput({"body": PRIVATE_MARKER}, artifact_id=f"validation-report-{uuid4()}")
 
 
 def public_values(payload: JsonValue) -> JsonValue:

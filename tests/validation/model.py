@@ -11,7 +11,7 @@ from agent_runtime.tools.definitions import ToolCall
 from agent_runtime.tools.results import RestrictedReceipt, VisibleResult
 
 
-class DemoModel:
+class ScriptedModel:
     """Choose the next step from this request's history, allowing independent sessions."""
 
     def complete(self, request: ModelRequest) -> ModelReply:
@@ -54,8 +54,8 @@ class DemoModel:
 
 
 @contextmanager
-def open_demo_model(settings: ModelSettings) -> Iterator[ModelClient]:
+def open_scripted_model(settings: ModelSettings) -> Iterator[ModelClient]:
     if settings.reasoning_effort is not None:
         raise ValueError("the mock model has no reasoning setting")
 
-    yield DemoModel()
+    yield ScriptedModel()

@@ -13,7 +13,7 @@ from uuid import uuid4
 import httpx2
 import pytest
 
-from bankeriq_agent_platform.demo.application import PROMPT
+from tests.validation.application import PROMPT
 
 
 def test_mock_validation_runs_in_a_fresh_process(tmp_path: Path) -> None:
@@ -22,7 +22,7 @@ def test_mock_validation_runs_in_a_fresh_process(tmp_path: Path) -> None:
         [
             sys.executable,
             "-m",
-            "bankeriq_agent_platform",
+            "tests.validation",
             "validate",
             "--transcript",
             str(transcript),
@@ -54,12 +54,12 @@ def test_server_startup_authentication_two_turns_and_shutdown(host_arguments: li
         port = probe.getsockname()[1]
 
     token = secrets.token_urlsafe(32)
-    environment = {**os.environ, "BANKERIQ_DEMO_TOKEN": token}
+    environment = {**os.environ, "BANKERIQ_VALIDATION_TOKEN": token}
     process = subprocess.Popen(
         [
             sys.executable,
             "-m",
-            "bankeriq_agent_platform",
+            "tests.validation",
             "serve",
             "--port",
             str(port),
@@ -83,7 +83,7 @@ def test_server_startup_authentication_two_turns_and_shutdown(host_arguments: li
                     pass
 
                 if process.poll() is not None or time.monotonic() > deadline:
-                    raise AssertionError("demo server did not become ready")
+                    raise AssertionError("validation server did not become ready")
 
                 time.sleep(0.05)
 
@@ -131,16 +131,18 @@ def test_server_startup_authentication_two_turns_and_shutdown(host_arguments: li
         except subprocess.TimeoutExpired:
             process.kill()
             process.communicate()
-            raise AssertionError("demo server did not shut down") from None
+            raise AssertionError("validation server did not shut down") from None
 
     assert process.returncode == 0, stderr
     assert token not in stdout + stderr
 
 
 def test_serve_requires_an_explicit_token() -> None:
-    environment = {key: value for key, value in os.environ.items() if key != "BANKERIQ_DEMO_TOKEN"}
+    environment = {
+        key: value for key, value in os.environ.items() if key != "BANKERIQ_VALIDATION_TOKEN"
+    }
     result = subprocess.run(
-        [sys.executable, "-m", "bankeriq_agent_platform", "serve"],
+        [sys.executable, "-m", "tests.validation", "serve"],
         env=environment,
         capture_output=True,
         text=True,

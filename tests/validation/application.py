@@ -1,9 +1,10 @@
 """Assemble the development application using the shared startup composition."""
 
 import hmac
+import json
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
-from dataclasses import dataclass
+from pathlib import Path
 from typing import cast
 
 from starlette.requests import Request
@@ -12,73 +13,51 @@ from agent_runtime.coordinator.control import RunLimits
 from agent_runtime.hosting.access import AuthenticationRequired, InputRejected, Principal
 from agent_runtime.hosting.endpoint import RuntimeEndpoint
 from agent_runtime.providers.hosts import Authenticator
+from bankeriq_agent_platform.configuration import load_settings
+from bankeriq_agent_platform.providers import model_providers
+from bankeriq_agent_platform.runtime import open_runtime
+from bankeriq_agent_platform.server import LocalServer
 
-from ..configuration import load_settings
-from ..prompt_files.loader import load_catalog
-from ..providers import model_providers
-from ..runtime import open_runtime
-from .model import open_demo_model
-from .tools import DemoDependencies
+from .model import open_scripted_model
+from .tools import ValidationDependencies
 
-# The synthetic user input and instruction sequence are versioned alongside the
-# runtime/system definitions. Keep these exports for the admission/transcript
-# helpers; both now obtain their exact text from pinned JSON assets.
-_DEMO_CATALOG = load_catalog()
-PROMPT = _DEMO_CATALOG.compile(_DEMO_CATALOG.catalog.defaults.demo_input).body
-INSTRUCTIONS = _DEMO_CATALOG.compile(_DEMO_CATALOG.catalog.defaults.demo).body
-PRINCIPAL = Principal("demo", "local")
-
-
-@dataclass
-class LocalServer:
-    """Default to loopback; container startup explicitly selects all interfaces."""
-
-    endpoint: RuntimeEndpoint
-    authenticate: Authenticator
-    port: int
-    host: str = "127.0.0.1"
-
-    def run(self) -> None:
-        from agent_runtime.providers.foundry.hosting import create_hosted_server
-
-        create_hosted_server(self.endpoint, authenticate=self.authenticate).run(
-            host=self.host, port=self.port
-        )
+# Requests are test fixtures. No validation role or expected tool sequence is
+# supplied as system guidance; application startup selects the real prompt catalog.
+PROMPT = json.loads((Path(__file__).parent / "fixtures/request.json").read_text())["message"]
+PRINCIPAL = Principal("validation", "local")
 
 
 @contextmanager
-def open_demo(
+def open_validation(
     environment: Mapping[str, str],
     *,
     provider: str,
     token: str,
     port: int = 8088,
     host: str = "127.0.0.1",
-) -> Iterator[tuple[LocalServer, DemoDependencies]]:
+) -> Iterator[tuple[LocalServer, ValidationDependencies]]:
     """Supply explicit fakes while reusing normal model selection and client cleanup."""
 
     if not token:
-        raise ValueError("BANKERIQ_DEMO_TOKEN is required")
+        raise ValueError("BANKERIQ_VALIDATION_TOKEN is required")
 
-    # Copy caller configuration before choosing the synthetic prompt and limits.
-    # For example, provider="foundry" can retain its endpoint and credentials,
-    # while both Foundry and mock executions receive the same three-tool scenario.
-    # Mutating this local copy leaves another server's startup mapping unchanged.
+    # Use the same system/runtime prompt composition as application startup.
+    # Reject a test-only override so live validation cannot quietly run different
+    # instructions. Scoring and the mock model's scripted progression stay here.
+    if "MODEL_INSTRUCTIONS" in environment:
+        raise ValueError("validation requires the application prompt catalog")
+
     configuration = dict(environment)
-    configuration.update(
-        MODEL_PROVIDER=provider,
-        HOSTING_PROVIDER="foundry",
-        MODEL_INSTRUCTIONS=INSTRUCTIONS,
-        MODEL_MAX_OUTPUT_TOKENS="256",
-    )
+    configuration.update(MODEL_PROVIDER=provider, HOSTING_PROVIDER="foundry")
 
     if provider == "mock":
         configuration["MODEL_NAME"] = "synthetic"
 
     settings = load_settings(configuration)
-    dependencies = DemoDependencies()
+    assert settings.prompts is not None
+    dependencies = ValidationDependencies(settings.prompts)
     models = model_providers(configuration)
-    models["mock"] = open_demo_model
+    models["mock"] = open_scripted_model
 
     async def authenticate(request: Request) -> Principal:
 
@@ -88,7 +67,7 @@ def open_demo(
         supplied = request.headers.get("authorization", "").encode()
 
         if not hmac.compare_digest(supplied, expected):
-            raise AuthenticationRequired("demo token required")
+            raise AuthenticationRequired("validation token required")
 
         return PRINCIPAL
 
@@ -104,7 +83,7 @@ def open_demo(
         permissions_for=dependencies.access.permissions_for,
         continuation_resolver=dependencies.jobs,
         authenticate=authenticate,
-        prepare_input=admit_demo_input,
+        prepare_input=admit_validation_input,
         limits=RunLimits(model_steps=6, tool_calls=6),
         models=models,
         hosts={"foundry": create_host},
@@ -112,11 +91,11 @@ def open_demo(
         yield cast(LocalServer, server), dependencies
 
 
-def admit_demo_input(principal: Principal, text: str) -> str:
+def admit_validation_input(principal: Principal, text: str) -> str:
 
     # This executable accepts the documented synthetic prompt only. For example,
     # arbitrary pasted customer text fails before any model request is made.
     if principal != PRINCIPAL or text != PROMPT:
-        raise InputRejected("use the synthetic demo prompt")
+        raise InputRejected("use the validation request")
 
     return text

@@ -3,7 +3,7 @@
 from agent_runtime.conversations.messages import Message, MessageRole
 from agent_runtime.tools.definitions import ToolCall
 from agent_runtime.tools.results import ToolErrorCode, ToolFailure, VisibleResult
-from bankeriq_agent_platform.demo.trace import explain_history
+from tests.validation.trace import explain_history
 
 
 def test_multiple_tools_in_one_reply_share_a_model_call() -> None:

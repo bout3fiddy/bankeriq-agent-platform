@@ -267,9 +267,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-demo = [
-    { name = "httpx2" },
-]
 foundry-hosting = [
     { name = "azure-ai-agentserver-invocations" },
 ]
@@ -279,6 +276,9 @@ foundry-model = [
 ]
 postgres = [
     { name = "psycopg", extra = ["binary"] },
+]
+validation = [
+    { name = "httpx2" },
 ]
 
 [package.dev-dependencies]
@@ -298,13 +298,13 @@ dev = [
 requires-dist = [
     { name = "azure-ai-agentserver-invocations", marker = "extra == 'foundry-hosting'", specifier = ">=1.3.0" },
     { name = "azure-identity", marker = "extra == 'foundry-model'", specifier = ">=1.27.0" },
-    { name = "httpx2", marker = "extra == 'demo'", specifier = ">=2.16.0" },
+    { name = "httpx2", marker = "extra == 'validation'", specifier = ">=2.16.0" },
     { name = "openai", marker = "extra == 'foundry-model'", specifier = ">=3.41.0" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'postgres'", specifier = ">=3.2" },
     { name = "pydantic", specifier = ">=2.14.2" },
     { name = "starlette", specifier = ">=1.10.0" },
 ]
-provides-extras = ["foundry-model", "foundry-hosting", "demo", "postgres"]
+provides-extras = ["foundry-model", "foundry-hosting", "validation", "postgres"]
 
 [package.metadata.requires-dev]
 dev = [

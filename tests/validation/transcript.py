@@ -10,12 +10,16 @@ from agent_runtime.storage.interface import Checkpoint
 from agent_runtime.tools.definitions import ToolCall
 from agent_runtime.tools.results import RestrictedReceipt, ToolFailure, VisibleResult
 
-from .application import INSTRUCTIONS
 from .trace import explain_history
 
 
 def write_transcript(
-    destination: TextIO, checkpoint: Checkpoint, *, model_label: str, resumptions: int
+    destination: TextIO,
+    checkpoint: Checkpoint,
+    *,
+    instructions: str,
+    model_label: str,
+    resumptions: int,
 ) -> None:
     """Export recorded conversation items after the validator's output-isolation check."""
 
@@ -29,9 +33,10 @@ def write_transcript(
         f"tool calls: {run.tool_calls}; job resumptions: {resumptions}.",
         "The coordinator ran locally with synthetic tools and in-memory state. "
         "Entries below come from its recorded conversation. Runtime wait events are "
-        "labelled separately. The instructions prescribe the tool sequence.",
+        "labelled separately. Standard BankerIQ instructions were used; "
+        "scoring stayed outside model context.",
         "## Instructions supplied to the model",
-        INSTRUCTIONS,
+        instructions,
         explain_history(checkpoint.conversation.items),
         "## Recorded fields",
         "<details>\n<summary>Show exact recorded fields and call IDs</summary>\n",

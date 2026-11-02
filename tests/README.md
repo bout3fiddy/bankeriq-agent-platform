@@ -57,3 +57,7 @@ recovery generation. Without that environment variable these tests skip.
 authorization, write rollback and prepared-step recovery tests against that same
 disposable database. `unit/prompts/` covers fixed-profile recovery. Foundry HTTP
 transport tests verify concurrent request-scoped instructions without live inference.
+
+`validation/` contains the repository-only synthetic application, scripted model,
+tools, request fixtures and smoke-test scoring. Run `uv run python -m tests.validation validate`.
+It uses the application's normal prompt catalog; it is excluded from the application wheel.

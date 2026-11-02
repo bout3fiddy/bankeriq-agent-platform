@@ -8,19 +8,11 @@
         },
         "system": {
           "$ref": "#/$defs/Reference"
-        },
-        "demo": {
-          "$ref": "#/$defs/Reference"
-        },
-        "demo_input": {
-          "$ref": "#/$defs/Reference"
         }
       },
       "required": [
         "runtime",
-        "system",
-        "demo",
-        "demo_input"
+        "system"
       ],
       "title": "Defaults",
       "type": "object"

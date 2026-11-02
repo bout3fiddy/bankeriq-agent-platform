@@ -4,8 +4,8 @@ All maintained instruction text lives in JSON. `catalog.json` selects exact
 runtime and system roots and pins each component's file bytes with SHA-256.
 `runtime/` defines orchestration/tool protocol; `system/` defines the BankerIQ
 assistant role; `rules/` contains authority, data-boundary and action guidance;
-`guidelines/` contains evidence and response guidance. `demo/` preserves the
-synthetic scenario.
+`guidelines/` contains evidence and response guidance. Synthetic requests and scoring
+live in `tests/validation/`; no demo-specific system prompt is included.
 
 The system prompt describes the exploratory BankerIQ agent-runtime project,
 evidence handling, financial uncertainty, tenant separation, prompt injection,
@@ -128,5 +128,5 @@ application behavior; live model adherence to the new prose remains unvalidated.
 
 Executed on 3 November 2026: the full gate passed 292 tests with PostgreSQL 17.11
 and all static checks. `uv build` produced an sdist and wheel; the rebuilt container
-passed `uv run python scripts/verify_container.py`, and its installed package loaded
+passed `uv run python -m scripts.verify_container`, and its installed package loaded
 `bankeriq.system@1.0.0` with networking disabled and no repository files.

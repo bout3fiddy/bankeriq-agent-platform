@@ -30,12 +30,12 @@ def main() -> int:
     if arguments.transcript is not None and arguments.command != "validate":
         parser.error("--transcript requires validate")
 
-    from .demo.application import open_demo
+    from .application import open_validation
 
-    # serve uses the explicitly supplied demo token so the caller knows how to
+    # serve uses the explicitly supplied validation token so the caller knows how to
     # authenticate. validate creates a temporary token shared by its in-process
     # server and test client; that run needs no reusable credential or open socket.
-    token = os.environ.get("BANKERIQ_DEMO_TOKEN", "")
+    token = os.environ.get("BANKERIQ_VALIDATION_TOKEN", "")
 
     if arguments.command == "validate":
         token = secrets.token_urlsafe(32)
@@ -62,7 +62,7 @@ def main() -> int:
                 if arguments.transcript is not None
                 else nullcontext()
             ) as transcript_file,
-            open_demo(
+            open_validation(
                 configuration,
                 provider=arguments.provider,
                 token=token,
@@ -74,7 +74,7 @@ def main() -> int:
                 print(f"Synthetic runtime: http://{arguments.host}:{arguments.port}", flush=True)
                 server.run()
             else:
-                from .demo.validation import validate
+                from .validation import validate
 
                 model = "synthetic" if arguments.provider == "mock" else configuration["MODEL_NAME"]
                 result = asyncio.run(
@@ -92,7 +92,7 @@ def main() -> int:
         # Startup errors can contain credential/configuration values. Report
         # only the exception type and point to the documented required settings.
         print(
-            f"Startup configuration failed ({type(error).__name__}); see the demo README.",
+            f"Startup configuration failed ({type(error).__name__}); see the validation README.",
             file=sys.stderr,
         )
         return 2

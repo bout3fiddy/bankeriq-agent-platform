@@ -20,7 +20,7 @@ Actual tool dispatch remains synchronous in this phase.
 Instruction text is authored in [versioned JSON compositions](../../../prompts/README.md).
 Application startup loads the pinned runtime/system defaults; the core receives
 immutable definitions and requires an explicit resolver. `FixedPromptResolver`
-preserves explicit trusted startup text and the synthetic demo's JSON-loaded text.
+preserves explicit trusted startup text. Synthetic validation uses the standard catalog.
 `open_runtime()` uses an injected shared resolver, configured file resolver, or
 explicit `ModelSettings.instructions`, in that order. `FoundryModelClient` receives
 instructions through each `ModelRequest`; no provider adapter owns a binding.

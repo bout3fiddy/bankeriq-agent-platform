@@ -48,9 +48,9 @@ sessions to execute concurrently while each coordinator loop remains synchronous
 Python 3.14 is the tooling and container baseline. The synthetic container has
 passed local Linux ARM64 validation; Azure hosting compatibility remains pending.
 
-The [executable development profile](src/bankeriq_agent_platform/demo/README.md)
+The [executable development profile](tests/validation/README.md)
 wires these components with synthetic tools and in-memory state. Run
-`uv run bankeriq-runtime validate` for the complete local workflow, or select
+`uv run python -m tests.validation validate` for the complete local workflow, or select
 Foundry explicitly for live inference. [Azure Terraform](infra/azure/README.md)
 defines the development resources; repeat live validation after provisioning a
 supported model with available quota.
@@ -72,7 +72,7 @@ exist. Pre-commit runs static checks. See [STYLEGUIDE.md](STYLEGUIDE.md) and the
 
 ## Next step
 
-The [synthetic container](src/bankeriq_agent_platform/demo/README.md#container-validation)
+The [synthetic container](tests/validation/README.md#container-validation)
 packages the existing composition with locked dependencies and non-root execution.
 Local Docker checks cover readiness, two HTTP turns and graceful shutdown.
 
@@ -93,8 +93,8 @@ The [shared prompt system](src/agent_runtime/prompts/README.md) now resolves a
 published application/environment binding at each new model step and records its
 manifest before inference. Prepared steps retain their original version across
 recovery. Administration supports publication, activation, rollback and withdrawal;
-Foundry receives request-scoped instructions. The synthetic profile preserves its
-startup text through a fixed resolver. Business overlays remain later work.
+Foundry receives request-scoped instructions. Synthetic validation uses the same
+runtime/system catalog as application startup. Business overlays remain later work.
 
 Tools own private Blob reports and authenticated download endpoints. The runtime
 forwards opaque links to the user without reading report contents. Tool-specific

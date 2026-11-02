@@ -8,14 +8,6 @@
     "system": {
       "id": "bankeriq.system",
       "version": "1.0.0"
-    },
-    "demo": {
-      "id": "demo.instructions",
-      "version": "1.0.0"
-    },
-    "demo_input": {
-      "id": "demo.input",
-      "version": "1.0.0"
     }
   },
   "documents": [
@@ -72,18 +64,6 @@
       "version": "1.0.0",
       "path": "system/1.0.0.json",
       "sha256": "f51faaa1d11cca19f19e8460eba155024600d38ffd45cb319d9cdcef17d3d6a1"
-    },
-    {
-      "id": "demo.instructions",
-      "version": "1.0.0",
-      "path": "demo/instructions/1.0.0.json",
-      "sha256": "c62471b8e20d73813ae651300a9e213991ec1c314117e914f5373e994bf444b5"
-    },
-    {
-      "id": "demo.input",
-      "version": "1.0.0",
-      "path": "demo/input/1.0.0.json",
-      "sha256": "79cb0e3b4a45c481722453181c4ca5c51aa59e3744974a6ad99928eda5caa34a"
     }
   ]
 }

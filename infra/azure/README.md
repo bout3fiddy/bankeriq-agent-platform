@@ -91,13 +91,14 @@ terraform -chdir=infra/azure apply development.tfplan
 terraform -chdir=infra/azure output -json runtime_environment | \
   uv run python -m json.tool > infra/azure/runtime.json
 mkdir -p scratch/transcripts
-uv run bankeriq-runtime validate --provider foundry --config infra/azure/runtime.json \
+uv run python -m tests.validation validate --provider foundry \
+  --config infra/azure/runtime.json \
   --transcript scratch/transcripts/foundry.md
 ```
 
 Role changes can take time to propagate. A failed live command exits nonzero;
 investigate access, quota and deployment readiness before rerunning. The
-[demo guide](../../src/bankeriq_agent_platform/demo/README.md) describes the exact
+[validation guide](../../tests/validation/README.md) describes the exact
 synthetic workflow and its limits.
 
 Choose a new transcript filename for each run. The exporter preserves existing
@@ -320,7 +321,9 @@ with four model calls, three tool calls and one continuation. Its final answer
 was `The total is 42, and the report status is "restricted."` The receipt recorded
 execution as completed and output as restricted; the final wording conflates
 those two fields. The transcript retains the supplied instructions, which
-prescribe the tool sequence, so this evidence evaluates workflow execution.
+prescribed the tool sequence, so this historical evidence evaluates workflow execution.
+The current validation harness uses the normal BankerIQ prompts; it has not yet been
+validated against a live model after removing those test-specific instructions.
 The exporter and existing Python checks passed all 241 tests.
 Terraform then destroyed all five repeat-test resources; the state is empty,
 the `bankeriq-transcript-runtime` resource group no longer exists, and its

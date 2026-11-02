@@ -69,3 +69,15 @@ assert set(hosting_providers()) == {{'foundry'}}
 """
     result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+
+
+def test_application_does_not_import_validation_fixtures() -> None:
+    application = ROOT / "src/bankeriq_agent_platform"
+    assert not (application / "demo").exists()
+
+    for path in application.rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Import):
+                assert all(not alias.name.startswith("tests") for alias in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                assert not (node.module or "").startswith("tests")

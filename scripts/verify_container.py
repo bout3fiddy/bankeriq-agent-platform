@@ -10,8 +10,8 @@ from uuid import uuid4
 
 import httpx2
 
-from bankeriq_agent_platform.demo.application import PROMPT
-from bankeriq_agent_platform.demo.tools import PRIVATE_MARKER
+from tests.validation.application import PROMPT
+from tests.validation.tools import PRIVATE_MARKER
 
 
 def main() -> None:
@@ -39,7 +39,7 @@ def main() -> None:
 
     name = f"bankeriq-smoke-{uuid4().hex}"
     token = secrets.token_urlsafe(32)
-    environment = {**os.environ, "BANKERIQ_DEMO_TOKEN": token}
+    environment = {**os.environ, "BANKERIQ_VALIDATION_TOKEN": token}
 
     try:
 
@@ -54,7 +54,7 @@ def main() -> None:
             "--publish",
             "127.0.0.1::8088",
             "--env",
-            "BANKERIQ_DEMO_TOKEN",
+            "BANKERIQ_VALIDATION_TOKEN",
             image_id,
             environment=environment,
         )
@@ -108,7 +108,7 @@ def verify_http(client: httpx2.Client, token: str) -> None:
     # Reuse one conversation for two fresh runs. The first completed response
     # supplies the revision used to admit the second turn, exercising continuity
     # through the HTTP boundary. Each turn first submits unapproved text and must
-    # receive 403 before the same command is retried with the approved demo prompt.
+    # receive 403 before the same command is retried with the approved validation request.
     for _ in range(2):
         run_id = str(uuid4())
         command = {
