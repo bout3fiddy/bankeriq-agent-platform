@@ -40,6 +40,8 @@
 - Keep secrets and private data out of source, fixtures, logs and commits.
 - Ask before destructive changes or external actions not already authorised.
 - Do not commit, push, publish or deploy unless requested.
+- When committing, separate distinct work into focused commits. Keep each change's
+  implementation, tests and supporting documentation together.
 
 ## Infrastructure
 
