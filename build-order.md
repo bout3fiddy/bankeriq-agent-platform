@@ -227,7 +227,9 @@ Status: planned. Depends on PostgreSQL records and shared system prompts.
 3. **Project history asynchronously** — Record dirty cursors in PostgreSQL and
    materialise bounded history pages/snapshots in batches. Starting triggers are
    60 seconds, 100 events or 1 MiB; these require measurement. Persist cursor advance
-   atomically and preserve events that arrive during projection.
+   atomically and preserve events that arrive during projection. Version the JSON
+   snapshot shape and rebuild from its committed cursor plus subsequent deltas;
+   verify this produces the same permitted view as replaying the retained journal.
 4. **Handle idle cleanup** — Propose a 15-minute idle snapshot and 30-minute sliding
    Redis TTL. Discover dirty/idle work from PostgreSQL even when Redis is gone.
    Explicit cleanup compares the observed generation/cursor before deleting keys.
@@ -251,28 +253,49 @@ The projection loop can run explicitly in tests until durable workers exist.
 
 Status: planned. Depends on PostgreSQL records and Redis recovery semantics.
 
-1. **Claim work safely** — Use short `SKIP LOCKED` transactions, database-time
+1. **Define serializable recovery state** — Extend the existing storage codec and
+   versioned checkpoint records with explicit task kind/version, phase, bounded
+   inputs or references, operation identity, waits and retry state. Encode strict
+   JSON at the adapter boundary; reject unsupported values and non-finite numbers
+   before writes. Persist permitted data only; keep callables, credentials, clients
+   and process-local handles in worker composition. Resolve a registered handler
+   from the saved kind/version and resume its phase with fresh dependencies.
+2. **Claim work safely** — Use short `SKIP LOCKED` transactions, database-time
    leases, heartbeats and monotonic ownership tokens. Never hold a DB lock during
    external I/O. Reject expired/stale settlement and renewal.
-2. **Wake and recover** — Add LISTEN/NOTIFY with ID-only payloads and indexed poll
+3. **Wake and recover** — Add LISTEN/NOTIFY with ID-only payloads and indexed poll
    fallback. A dedicated listener connection handles session semantics. Sweep
    expired jobs and find due retries without relying on Redis or notifications.
-3. **Settle atomically** — Commit unique output, completed job, checkpoint change
+4. **Settle atomically** — Commit unique output, completed job, checkpoint change
    and next job in one transaction. Stable IDs and input fingerprints distinguish
    matching retries from conflicting reuse. Keep cache projection repair durable.
    Claims, renewals, settlement and unknown-commit lookups always use the primary;
-   database retry loops never repeat tool/model I/O.
-4. **Persist retry and wait state** — Save backoff deadlines, attempt/run budgets,
+   database retry loops never repeat tool/model I/O. Order transitions for each
+   affected conversation/run/group through the existing row-lock order and revision
+   checks across processes. Publish accepted/saved state after commit; independent
+   conversations and external handlers retain bounded concurrency.
+5. **Persist retry and wait state** — Save backoff deadlines, attempt/run budgets,
    approval expiry and cancellation. Recheck access after waits. Unsafe operations
    with unknown outcomes enter reconciliation; replay requires tool idempotency
-   or saved/current replay permission.
-5. **Bound and drain workers** — Limit per-queue and per-tenant work, reserve API
+   or permission from both the saved and current replay policies. Save final
+   validated arguments, version and operation identity before dispatch; reuse that
+   identity for any provider idempotency lookup. A saved intent alone cannot prove
+   whether an external effect happened.
+6. **Bound and drain workers** — Limit per-queue and per-tenant work, reserve API
    connection capacity and stop claiming before shutdown. Preserve compatible
    worker versions for persisted work; maintenance initially shares bounded tasks
    in the worker deployment.
-6. **Validate ownership** — Run two independent worker processes with synthetic
+7. **Validate ownership and reconstruction** — Run two independent worker processes with synthetic
    handlers. Kill the claimant, drop notifications, delay completions beyond lease
    expiry, race renewals and settlements, and verify duplicate-safe logical results.
+   Round-trip each supported checkpoint phase into a fresh process; prove invalid
+   encoding leaves no partial writes and missing/incompatible handlers cannot run.
+   Race two settlements to prove one committed result and continuation.
+
+For example, persist phase `charge` and operation ID `payment-123` before a
+synthetic payment. If its effect succeeds but result persistence fails, recovery
+uses the same ID to resolve or safely retry the payment, or enters reconciliation.
+The saved phase determines recovery; a vanished Python stack provides no evidence.
 
 Completion requires one accepted job to recover across worker loss and duplicate
 notifications. Model and tool orchestration remain synthetic until the next group.
@@ -286,7 +309,9 @@ milestone; parallel tool execution has moved out of follow-up scope.
    one model-step outcome and its next work. Retain the in-memory synchronous
    profile as a reference. Add an async provider dependency at the model boundary;
    keep SDKs, pools and worker scheduling outside core runtime logic. Resolve and
-   pin the prompt manifest when preparing each new step; retries reuse it.
+   pin the prompt manifest when preparing each new step; retries reuse it. Use the
+   worker group's versioned phase records to reconstruct each model/tool boundary;
+   recovery invokes the saved phase and may repeat its unfinished external call.
 2. **Queue tool calls** — Commit validated model output, pinned tool intent and
    child jobs together before dispatch. Parallel execution is the bounded default
    for every call in the reply, including repeated calls to the same tool. Explicit
@@ -307,7 +332,10 @@ milestone; parallel tool execution has moved out of follow-up scope.
 5. **Deliver progress and final results** — Add bounded SSE/progress events through
    Redis with run/attempt generations. Reconnect uses a durable cursor and rebuilds
    after stream loss. Persist final answers before saved acknowledgement. Forward
-   synthetic tool-owned report links separately from model receipts.
+   synthetic tool-owned report links separately from model receipts. Label partial
+   tokens and tool progress as disposable; they cannot drive durable decisions.
+   Admission, intent, checkpoints and final outcomes always require a PostgreSQL
+   commit. Test that losing displayed progress preserves all accepted work.
 6. **Validate async behaviour** — A slow tool must not block another conversation.
    Test simultaneous tool completion, partial failure, cancellation, revoked access,
    client disconnect, lost token stream and interrupted model calls. Check that
@@ -332,7 +360,9 @@ Status: planned. Depends on asynchronous coordinator and tools.
 2. **Test migrations and retention** — Run mixed compatible worker versions, reject
    unsupported checkpoints, preserve old state on migration failure, and verify
    retention cannot remove deduplication/recovery evidence early. Deletion cannot
-   be undone by a delayed projection or worker.
+   be undone by a delayed projection or worker. Include strict-JSON rejection,
+   encode/decode round trips and restart from each phase. Exercise every saved/current
+   replay-policy combination, including a policy revoked between attempts.
 3. **Measure concurrency** — Use multiple API, coordinator and tool processes.
    Preserve one active logical run per conversation, fairness between tenants and
    bounded model requests. Measure queue age, commit latency, warm/cold reads,
@@ -429,6 +459,32 @@ of Pi's durable package at commit `95485d32f19d5ab9dca81bf2d7299661347d3238`
 on 2 November 2026. Pi's tests were inspected, not executed. These are proposed
 BankerIQ adaptations; only groups marked implemented have execution evidence.
 
+Serialization follow-up reviewed on 3 November 2026 against the local Pi checkout
+at commit `f9daca3480732d0042b1df3a6e27221f597a620d`. This adds planned requirements
+to Redis history, durable workers, asynchronous execution and recovery validation;
+completed storage milestones retain their existing evidence. Pi tests were read
+only. No Pi dependency or Chord integration is proposed.
+
+- **Serialized recovery state**
+  Persist strict JSON phase records and reconstruct handlers from registered
+  definitions. Keep executable objects and credentials outside storage. Extend
+  [the existing codec](src/bankeriq_agent_platform/storage/codec.py) within its
+  permitted variants and bounds. [Pi JSON ownership][pi-json-source] and
+  [phase recovery][pi-phase-source] inform worker steps 1 and 7.
+
+- **Serialized commits**
+  Pi queues Session mutations through storage settlement and adoption. BankerIQ
+  applies its existing PostgreSQL locks, revisions and ownership checks across
+  workers; one process-local queue cannot establish that guarantee. See worker
+  step 4 and [Pi's Session mutation boundary][pi-commit-source].
+
+- **Incremental state and disposable progress**
+  Pi stores document deltas with periodic bases and permits deferred persistence
+  for model partials/tool progress. BankerIQ uses bounded journal snapshots and
+  Redis progress, with accepted execution state committed to PostgreSQL. See Redis
+  step 3, asynchronous execution step 5, [Pi checkpoints][pi-checkpoint-source]
+  and [deferred persistence][pi-progress-source].
+
 - **Intent and replay policy**
   Planned adaptation and source: Persist per-call intent and require saved/current policy to permit
   recovery. [Pi tool recovery][line-source-1].
@@ -496,3 +552,14 @@ tests with local PostgreSQL 17.11 enabled, plus static checks. The rebuilt synth
 container passed offline workflow, token, readiness, two-turn HTTP and shutdown
 checks. An isolated wheel loaded the application catalog and reusable server with
 no validation fixtures or synthetic CLI packaged. No live-model calls were made.
+
+[pi-json-source]:
+  https://github.com/earendil-works/pi/blob/f9daca3480732d0042b1df3a6e27221f597a620d/packages/durable/docs/spec.md#L1518-L1549
+[pi-phase-source]:
+  https://github.com/earendil-works/pi/blob/f9daca3480732d0042b1df3a6e27221f597a620d/packages/durable/docs/spec.md#L2038-L2163
+[pi-commit-source]:
+  https://github.com/earendil-works/pi/blob/f9daca3480732d0042b1df3a6e27221f597a620d/packages/durable/src/session/session.ts#L155-L171
+[pi-checkpoint-source]:
+  https://github.com/earendil-works/pi/blob/f9daca3480732d0042b1df3a6e27221f597a620d/packages/durable/docs/spec.md#L1562-L1613
+[pi-progress-source]:
+  https://github.com/earendil-works/pi/blob/f9daca3480732d0042b1df3a6e27221f597a620d/packages/durable/docs/spec.md#L1834-L1852
