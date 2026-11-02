@@ -21,6 +21,11 @@ startup settings and optional SDK dependencies.
 
 ## Current scope
 
+The initial runtime scope is complete as of 2 November 2026, including live
+Foundry inference with synthetic tools and in-memory state. The
+[build order](src/agent_runtime/build-order.md) separates this completed milestone
+from the planned infrastructure phase and later runtime features.
+
 This repository contains design documentation, core runtime data types, a
 permission-filtered tool registry, completed-output enforcement, a synchronous
 tool gateway, conversation/run state, an in-memory store with atomic checkpoint
@@ -65,6 +70,8 @@ exist. Pre-commit runs static checks. See [STYLEGUIDE.md](STYLEGUIDE.md) and the
 
 ## Next step
 
-Package and validate hosted execution in Azure, then wire
-production identity and input admission. Raw chat-input policy, persistent state,
-production delivery and durable recovery remain unresolved work.
+The `codex/runtime-infrastructure` branch covers containerisation, persistent
+state and durable execution, message passing, private Blob storage and report
+delivery, and hosted runtime validation in Azure. Infrastructure remains managed
+through Terraform. Production identity and input admission require integration;
+the browser app and self-hosted specialist remain separate work.

@@ -3,10 +3,10 @@
 Build from core runtime logic towards external integrations. These steps are
 planned except where marked implemented. Keep external I/O mocked until the adapter steps.
 
-As of 2 November 2026, the initial core implementation and live-model validation
-are complete. Hosted execution validation (step 14) is the remaining initial
-milestone. The follow-up features and production integrations listed below remain
-separate work.
+The initial runtime scope (steps 1–13) is complete as of 2 November 2026,
+including live-model validation with synthetic integrations. Containerisation,
+durability, storage, message passing and hosted execution form the next phase on
+`codex/runtime-infrastructure`.
 
 1. **Core data types (implemented)** — Run context, messages, tool definitions, calls, results,
    output policies and run statuses.
@@ -54,16 +54,24 @@ separate work.
     one job continuation and the final answer. EU Data Zone quota was unavailable.
     Follow the
     [Azure resource inventory](../../infra/azure/README.md).
-14. **Hosted execution validation (planned)** — Package the runnable application
-    as a container, publish its image and deploy the hosted agent through Terraform.
-    Verify trusted request authentication, input admission, readiness, concurrent
-    sessions and shutdown in Azure. Repeat the synthetic workflow through the
-    deployed endpoint with mocked tools, storage and durable dependencies.
 
 Add meaningful component tests alongside each step; step 8 brings those components
 together for end-to-end validation.
 
-Steps 12–14 complete the first runnable version and its Azure validation.
+## Next phase: runtime infrastructure
+
+- **Containerisation (planned)** — Package the runnable application with explicit
+  configuration, dependency versions, readiness and graceful shutdown.
+- **Persistent state and durability (planned)** — Add persistent conversation,
+  run and job storage; implement worker ownership, recovery, bounded retries and
+  idempotency around execution.
+- **Message passing (planned)** — Connect runtime requests and worker completion
+  events through a transport, preserving authorisation and output enforcement.
+- **Blob storage and delivery (planned)** — Store report artifacts privately,
+  record ownership and require authenticated access for downloads.
+- **Hosted runtime (planned)** — Publish the image and provision hosting,
+  identities and supporting resources through Terraform. Validate authentication,
+  input admission, readiness, concurrent sessions, shutdown and recovery in Azure.
 
 ## Follow-up runtime work
 
@@ -78,7 +86,7 @@ Steps 12–14 complete the first runnable version and its Azure validation.
 ## Scope boundary
 
 Real tool applications, durable workers, persistent storage, enterprise identity
-integration and the browser app remain outside this branch's initial scope.
+integration and the browser app remain outside the completed initial core scope.
 Permission checks and output enforcement are real runtime logic; their external
 providers and execution dependencies are mocked. The self-hosted specialist is
 deferred.
