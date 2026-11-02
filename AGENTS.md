@@ -23,6 +23,29 @@
 - Preserve unrelated work, supplied fixtures and reference outputs.
 - Keep documentation aligned with implemented behaviour and label unfinished work.
 
+## Commenting standard
+
+- Use `src/agent_runtime/storage/memory.py`, especially `create_run()`, as the
+  repository-wide example of the expected commenting style and level of detail.
+  Apply this standard to new code and when reviewing or changing existing code.
+- Explain meaningful operations in stages: what the caller supplies, what each
+  stage does, why its checks or ordering matter, and what the caller receives.
+  Put the explanation beside the relevant code so a reader can follow the flow.
+- Include concrete examples with representative values, a small call site and
+  its result. For stateful operations, show before/after revisions or statuses;
+  for failures, explain which conflicting input is rejected and why.
+- For injected callables and interfaces, show a small implementation, how it is
+  passed and representative inputs/outputs. Explain unfamiliar Python syntax
+  when it helps the reader understand the example or interface.
+- Explain transaction boundaries, ownership, permissions, recovery and output
+  isolation through concrete scenarios. Distinguish implemented guarantees from
+  behavior reserved for later work; comments must agree with executable code.
+- Match the detail in `memory.py` for consequential behavior. Avoid comments that
+  merely repeat an assignment or function name, and keep trivial code uncluttered.
+- Keep examples synthetic and comments current when behavior changes. A
+  commenting-only review must preserve behavior, fixtures and reference outputs;
+  do not edit immutable applied migration files just to add comments.
+
 ## Validation
 
 - Use uv for Python commands and dependency changes.

@@ -64,6 +64,10 @@ def open_demo(
     if not token:
         raise ValueError("BANKERIQ_DEMO_TOKEN is required")
 
+    # Copy caller configuration before choosing the synthetic prompt and limits.
+    # For example, provider="foundry" can retain its endpoint and credentials,
+    # while both Foundry and mock executions receive the same three-tool scenario.
+    # Mutating this local copy leaves another server's startup mapping unchanged.
     configuration = dict(environment)
     configuration.update(
         MODEL_PROVIDER=provider,

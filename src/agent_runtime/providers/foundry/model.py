@@ -43,6 +43,11 @@ class FoundryModelClient:
         if effort is not None and effort not in self._supported_reasoning_efforts:
             raise FoundryModelError("reasoning effort is unsupported by this deployment")
 
+        # Example: requests A and B share this client but carry instructions
+        # from v7 and v8 respectively. Build a fresh message list for each call;
+        # inserting A's system text cannot change B's request or stored history.
+        # The manifest remains runtime metadata; only the resolved text enters
+        # the provider's system message.
         messages = encode_messages(request.history)
         messages.insert(0, {"role": "system", "content": request.instructions})
 

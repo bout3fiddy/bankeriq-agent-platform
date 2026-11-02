@@ -47,6 +47,11 @@ class InvalidInvocation(ValueError):
 
 
 def parse_invocation(body: bytes) -> Invocation:
+
+    # parse_invocation(b'{"action":"create_conversation"}') returns the typed
+    # creation command. Adding "permissions":["reports.create"] is rejected
+    # before the endpoint sees it; strict parsing also rejects revision "3"
+    # when the start command requires an integer revision.
     try:
         return _REQUEST_PARSER.validate_json(body)
     except ValidationError:

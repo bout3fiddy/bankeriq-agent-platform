@@ -36,11 +36,17 @@ class ContinuationHandler:
     ) -> CoordinatorResult:
         """Resolve one matching wait and continue once all outstanding calls have results."""
 
+        # Example: a waiting run has call-2/job-17 and call-3/job-18. A
+        # notification for job-17 must first match its saved call/reason/reference
+        # under the authenticated context. The notification carries no result or
+        # permission; the resolver obtains the policy-enforced outcome separately.
         checkpoint = self._store.load_run(context)
         pending = match_pending_call(checkpoint.run, event)
 
-        # Claim before contacting the resolver, which may execute an approved
-        # action. Two consumers of job-17 cannot both save this revision.
+        # Save WAITING -> RUNNING before contacting the resolver, which may
+        # execute an approved action. Revision checks reject conflicting updates;
+        # PostgreSQL can return the saved outcome for identical retries. Synthetic
+        # callers must serialize execution until durable worker ownership exists.
         checkpoint = self._save(checkpoint, RunStatus.RUNNING, pending=checkpoint.run.pending_calls)
         artifacts: list[ArtifactReference] = []
 
@@ -60,6 +66,10 @@ class ContinuationHandler:
         if output.artifact is not None:
             artifacts.append(output.artifact)
 
+        # Save job-17's receipt, its opaque delivery metadata and the remaining
+        # job-18 wait together. If storage rejects the transition, no partial
+        # receipt is accepted as the next model context. Earlier external effects
+        # still require their own reconciliation after a crash.
         status = RunStatus.WAITING if remaining else RunStatus.RUNNING
         checkpoint = self._save(
             checkpoint, status, (output.model_result,), remaining, artifacts=tuple(artifacts)

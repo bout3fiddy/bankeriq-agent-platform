@@ -148,6 +148,11 @@ class InMemoryStateStore:
         # The lock covers validation and both replacements, so competing threads
         # cannot save an answer against stale history or observe a partial update.
         current = self.load_run(context)
+
+        # Example: run revision 0 prepared model step 1 using prompt v7, producing
+        # revision 1. Retrying that preparation still addresses revision 0 even
+        # if the run has progressed or the active prompt is now v8. Retain the
+        # original snapshot separately so replay can return its v7 manifest.
         prior = self._prepared.get((context.tenant_id, context.run_id, expected_run_revision))
 
         if prompt_resolver is not None and prior is not None:
@@ -162,6 +167,10 @@ class InMemoryStateStore:
             ):
                 raise StateConflictError("prepared step conflicts")
 
+            # Matching revision and step number alone are insufficient: the
+            # resolver must still be able to reconstruct the original version.
+            # Withdrawing v7, or changing fixed startup text, blocks this replay
+            # before its caller could send different instructions to the model.
             assert prior.run.prompt_manifest is not None
             prompt_resolver.instructions(prior.run.prompt_manifest)
             return prior
@@ -173,9 +182,16 @@ class InMemoryStateStore:
         ):
             raise StateConflictError("checkpoint changed or run is inactive")
 
+        # A RUNNING checkpoint can still contain pending calls while the
+        # continuation handler resolves them. For example, claiming job-17 must
+        # not allow another model step before job-17's permitted result is saved.
         if prompt_resolver is not None and current.run.pending_calls:
             raise StateConflictError("model preparation requires resolved tool calls")
 
+        # Preparation is one specific transition. For a run with two model
+        # attempts, supply model_steps=3 and prompt_resolver=resolver, with no
+        # result delta. Combining it with tool output or skipping to step 4 would
+        # make the saved manifest's association with the attempt ambiguous.
         if prompt_resolver is not None and (
             status is not RunStatus.RUNNING
             or items
@@ -215,6 +231,9 @@ class InMemoryStateStore:
         self._artifacts[key] = self._artifacts.get(key, ()) + artifacts
         result = Checkpoint(conversation, run)
 
+        # Preserve the prepared context as well as the manifest. For example,
+        # load_model_step(context, 1) must exclude tool results saved after that
+        # model request, even when the current run has reached step 3.
         if prompt_resolver is not None:
             self._prepared[(context.tenant_id, context.run_id, expected_run_revision)] = result
 
@@ -222,6 +241,10 @@ class InMemoryStateStore:
 
     @synchronized
     def load_model_step(self, context: RunContext, step_number: int) -> Checkpoint:
+
+        # Verify the current tenant/user binding before searching historical
+        # preparations. Knowing run-1 and step 2 cannot reveal another user's
+        # saved context. A match is a snapshot; it grants no execution ownership.
         self.load_run(context)
 
         for (tenant, run, _), checkpoint in self._prepared.items():
@@ -236,5 +259,9 @@ class InMemoryStateStore:
 
     @synchronized
     def deliveries(self, context: RunContext) -> tuple[ArtifactReference, ...]:
+
+        # A stored ArtifactReference("call-2", "report-17") returns through the
+        # authenticated delivery path. Its opaque ID stays outside model history;
+        # the report service still checks permission before serving report bytes.
         self.load_run(context)
         return self._artifacts.get((context.tenant_id, context.run_id), ())

@@ -44,6 +44,11 @@ class ModelRequest:
     # Python None leaves the provider default unchanged. ReasoningEffort.NONE
     # explicitly requests disabled reasoning where the deployed model supports it.
     reasoning_effort: ReasoningEffort | None = None
+
+    # Example: the prepared checkpoint holds a v7 manifest, and the resolver
+    # returns its composed text. Supply both on this request even if v8 became
+    # active meanwhile. Adapters send the text as instructions; the manifest is
+    # available to application recovery and stays outside conversation history.
     instructions: str = field(default="", repr=False)
     prompt_manifest: PromptManifest | None = None
 

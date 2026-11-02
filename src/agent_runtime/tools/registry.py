@@ -33,6 +33,9 @@ class ToolRegistry:
     def discover(self, granted_permissions: frozenset[str]) -> tuple[ToolDefinition, ...]:
         """Return authorised definitions in name order for reproducible model context."""
 
+        # With grants={"public.calculate"}, a tool requiring both that grant
+        # and "reports.create" stays hidden. Sorting names keeps the same set of
+        # exposed definitions in a reproducible order across model requests.
         return tuple(
             definition
             for _, definition in sorted(self._tools.items())

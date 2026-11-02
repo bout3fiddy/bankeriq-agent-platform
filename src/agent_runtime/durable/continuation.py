@@ -41,6 +41,9 @@ def match_pending_call(run: RunState, event: ContinuationEvent) -> PendingToolCa
     if run.status is not RunStatus.WAITING:
         raise StateConflictError("continuation requires a waiting run")
 
+    # For call-2/job-17, an approval notification bearing the same call ID is
+    # still unrelated. Match all three fields before the handler changes state;
+    # IDs can coincide across notification kinds without identifying the same wait.
     for pending in run.pending_calls:
         if (
             pending.call_id == event.call_id

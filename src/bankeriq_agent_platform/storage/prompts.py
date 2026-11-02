@@ -36,9 +36,15 @@ class _PromptDatabase:
         if not scope.application or not scope.environment:
             raise ValueError("prompt application and environment are required")
 
+        # PromptScope("bankeriq", "development") selects one global binding.
+        # A production resolver uses a different scope even when both deployment
+        # environments share the same database. The DSN comes from trusted startup.
         self._dsn = dsn
         self.scope = scope
 
+        # Pin this client to the timeline it opened. After a restore changes
+        # recovery-A to recovery-B, even a locally cached body must pass a fresh
+        # primary generation check before this client can resolve instructions.
         with self._connect() as connection:
             row = connection.execute("SELECT recovery_id FROM runtime_generation").fetchone()
             assert row is not None
@@ -53,6 +59,11 @@ class _PromptDatabase:
 
     @contextmanager
     def _transaction(self, *, write: bool = False) -> Iterator[Database]:
+
+        # Management writes hold a shared generation lock until commit, so an
+        # operator's exclusive recovery cutover waits for them to finish. Reads
+        # check the same generation without requesting UPDATE privileges; a
+        # SELECT-only prompt identity can therefore resolve and recover versions.
         try:
             with self._connect() as connection:
                 row = connection.execute(
@@ -65,6 +76,10 @@ class _PromptDatabase:
                     raise PromptUnavailableError("prompt database recovery generation changed")
 
                 yield connection
+
+        # Management retains database error classes for bounded retry handling.
+        # Readers expose a fixed availability error; connection errors can carry
+        # internal endpoints or credentials and must not become model context.
         except psycopg.Error:
             if write:
                 raise
@@ -84,6 +99,11 @@ class PostgresPromptResolver(_PromptDatabase):
         self._lock = RLock()
 
     def resolve(self) -> PromptManifest:
+
+        # Example: v7 is active at binding revision 12 when model step 3 starts.
+        # resolve() reads that exact committed binding and returns a manifest for
+        # v7/revision 12. Activating v8 afterward affects a later resolve() call;
+        # the already prepared step continues to use its saved v7 manifest.
         with self._transaction() as connection:
             row = connection.execute(
                 "SELECT v.version, v.content_hash, v.runtime_version, v.runtime_hash, "
@@ -110,10 +130,19 @@ class PostgresPromptResolver(_PromptDatabase):
             row["runtime_hash"],
             row["composer_version"],
         )
+
+        # Confirm that the selected body can actually be reconstructed before
+        # its caller checkpoints the preparation. Missing/withdrawn bodies and
+        # unsupported runtime/composer versions fail without startup-text fallback.
         self.instructions(manifest)
         return manifest
 
     def instructions(self, manifest: PromptManifest) -> str:
+
+        # instructions(saved_manifest) is also the recovery path. For example,
+        # a worker restarting after v8 activation can still rebuild step 3's v7
+        # instructions. A development manifest cannot be used through a resolver
+        # configured for production, even when their version labels both say v7.
         if manifest.scope != self.scope:
             raise PromptUnavailableError("prompt manifest belongs to another deployment")
 
@@ -140,6 +169,9 @@ class PostgresPromptResolver(_PromptDatabase):
             ):
                 raise PromptUnavailableError("recorded prompt is unavailable or incompatible")
 
+            # Only immutable bodies enter this cache. The check above runs for
+            # every request, so cached v7 cannot hide its later withdrawal. The
+            # scope is fixed on this resolver; version/hash separates its bodies.
             key = (manifest.version, manifest.content_hash)
 
             with self._lock:
@@ -155,19 +187,31 @@ class PostgresPromptResolver(_PromptDatabase):
                     body = record["body"]
                     self._bodies[key] = body
 
+                # With 64 cached bodies, accessing v7 refreshes its position.
+                # Loading a 65th distinct body removes the least recently used
+                # entry; rebuilding that entry later reads its immutable DB row.
                 self._bodies.move_to_end(key)
 
                 if len(self._bodies) > 64:
                     self._bodies.popitem(last=False)
 
+        # Composition verifies the saved hashes and places runtime guidance
+        # before global guidance. No composed instructions or active binding is
+        # cached, so the body cache cannot select a version for a new model step.
         return compose(manifest, body)
 
 
 class PromptAdministration(_PromptDatabase):
     """Management API supplied with a trusted principal and explicit application authorizer.
 
-    For example, authorize=lambda actor, scope: actor.user_id in operators[scope]
-    uses a server-owned operator list. No chat command or model tool exposes this API.
+    For example, the application can define:
+
+        def can_publish(actor, scope):
+            return (actor.tenant_id, actor.user_id) in operators[scope]
+
+    Passing authorize=can_publish checks a verified Principal against the
+    server-owned operator set for this application/environment. The caller must
+    authenticate that Principal first. No chat command or model tool exposes this API.
     Use a separate database identity from workers; infrastructure grants are external.
     """
 
@@ -186,6 +230,10 @@ class PromptAdministration(_PromptDatabase):
     def active_binding(self, actor: Principal) -> tuple[str | None, int]:
         """Read management CAS inputs even when the active version has been withdrawn."""
 
+        # active_binding(admin) returns ("v7", 12), which supplies revision 12
+        # to activate(..., expected_revision=12). Withdrawal can make v7 unusable
+        # for inference while this management read still exposes the revision
+        # needed to activate an available replacement.
         self._check(actor)
 
         with self._transaction() as connection:
@@ -210,6 +258,11 @@ class PromptAdministration(_PromptDatabase):
     ) -> str:
         """Publish a reviewed immutable body; activation is an explicit CAS operation."""
 
+        # Example: publish(admin, request_id="publish-v8", version="v8",
+        # body="Explain totals clearly.", validation_reference="review-42")
+        # records an immutable version and returns its content hash. It leaves
+        # the active binding unchanged until an explicit activate() call.
+        # Authorisation runs before validation or writes, including on retries.
         self._check(actor)
         validate_body(body)
 
@@ -219,6 +272,10 @@ class PromptAdministration(_PromptDatabase):
         if runtime_version != RUNTIME_VERSION or composer_version != COMPOSER_VERSION:
             raise ValueError("unsupported runtime or composer version")
 
+        # The hash identifies the exact body; compatibility fields identify the
+        # runtime/composer expected to interpret it. The validation reference is
+        # supplied by the trusted authoring workflow and records its review link;
+        # this storage API does not execute model evaluations or grant tool access.
         digest = content_hash(body)
         payload = [
             digest,
@@ -228,6 +285,9 @@ class PromptAdministration(_PromptDatabase):
             composer_version,
         ]
 
+        # _operation passes this callable its locked connection and current
+        # binding revision. Publishing v8 writes a version row and returns that
+        # same revision; _operation then records both its audit and commit outcome.
         def write(connection: Database, revision: int) -> int:
             self._write(
                 connection,
@@ -258,6 +318,10 @@ class PromptAdministration(_PromptDatabase):
     ) -> int:
         """Publish or roll back the active binding, preserving every activation revision."""
 
+        # activate(admin, request_id="activate-v8", version="v8",
+        #          expected_revision=12) changes v7/revision 12 to v8/revision 13.
+        # If another publisher already committed revision 13, this request fails
+        # before updating the pointer. Rolling back to v7 creates revision 14.
         self._check(actor)
 
         def write(connection: Database, revision: int) -> int:
@@ -281,6 +345,9 @@ class PromptAdministration(_PromptDatabase):
             ):
                 raise PromptUnavailableError("activation requires a compatible available version")
 
+            # The scope row remains locked through the following audit insert.
+            # Readers see the new pointer and its activation record together;
+            # a failure between those writes rolls back the pointer update too.
             self._write(
                 connection,
                 "UPDATE prompt_bindings SET active_version = %s, revision = revision + 1 "
@@ -294,6 +361,10 @@ class PromptAdministration(_PromptDatabase):
     def withdraw(self, actor: Principal, *, request_id: str, version: str) -> None:
         """Permanently block new resolutions and retries of an unsafe version; retain its body."""
 
+        # withdraw(admin, request_id="withdraw-v7", version="v7") appends a
+        # permanent unavailability marker. It retains v7's body and audit records
+        # and leaves the active pointer unchanged; administrators choose the next
+        # version explicitly. An already dispatched model call keeps its inputs.
         self._check(actor)
 
         def write(connection: Database, revision: int) -> int:
@@ -326,6 +397,9 @@ class PromptAdministration(_PromptDatabase):
         if not request_id or not version:
             raise ValueError("stable request ID and version are required")
 
+        # A request ID binds the actor as well as the operation. For example,
+        # retrying activate-v8 with expected revision 12 retrieves its original
+        # revision-13 result; reusing activate-v8 to select v9 conflicts.
         digest = fingerprint([actor.tenant_id, actor.user_id, action, version, payload])
 
         # Scope locking serializes publishers/CAS activation, while resolvers use
@@ -352,6 +426,9 @@ class PromptAdministration(_PromptDatabase):
                         (*self._key(), request_id),
                     ).fetchone()
 
+                    # Resolve a previous commit before running write() again.
+                    # This also handles an acknowledgement lost after a newer
+                    # publisher has already moved the active binding to revision 14.
                     if prior:
                         if prior["fingerprint"] != digest:
                             raise StateConflictError(
@@ -360,6 +437,10 @@ class PromptAdministration(_PromptDatabase):
 
                         return prior["revision"]
 
+                    # The supplied write callable changes the version/pointer
+                    # using this same connection. Its resulting revision and
+                    # actor are recorded before commit; withdrawal adds its
+                    # marker only after the referenced audit row exists.
                     revision = write(connection, binding["revision"])
                     self._write(
                         connection,
@@ -385,6 +466,9 @@ class PromptAdministration(_PromptDatabase):
                             (*self._key(), version, request_id),
                         )
 
+                # Raising an OperationalError here models a committed operation
+                # whose response never reached the caller. The next bounded
+                # attempt reconnects and finds the stable request ID above.
                 self._fault("after_commit")
                 return revision
             except psycopg.OperationalError, psycopg.errors.SerializationFailure:
@@ -397,5 +481,9 @@ class PromptAdministration(_PromptDatabase):
     def _write(
         self, connection: Database, query: LiteralString, parameters: tuple[Any, ...]
     ) -> None:
+
+        # A test fault after the binding UPDATE but before the audit INSERT
+        # escapes the connection context and rolls the entire operation back.
+        # Production defaults to a no-op callback; it adds no scheduling behavior.
         connection.execute(query, parameters)
         self._fault("after_write")

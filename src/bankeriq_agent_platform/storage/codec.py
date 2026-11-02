@@ -21,8 +21,13 @@ from agent_runtime.tools.results import (
 
 
 def plain(value: Any) -> Any:
-    """Convert immutable runtime values to JSON without serialising arbitrary objects."""
+    """Unwrap runtime structures; the JSON encoder rejects unsupported terminal values."""
 
+    # ToolCall("call-1", "sum", {"values": (2, 3)}) contains frozen mappings
+    # and tuples. Unwrap those to {"call_id": "call-1", "tool_name": "sum",
+    # "arguments": {"values": [2, 3]}} before passing the result to Jsonb.
+    # This helper also handles checkpoint dataclasses; encode_items separately
+    # limits which dataclass types may enter model-visible conversation history.
     if is_dataclass(value) and not isinstance(value, type):
         return {field.name: plain(getattr(value, field.name)) for field in fields(value)}
 
@@ -36,14 +41,25 @@ def plain(value: Any) -> Any:
 
 
 def fingerprint(value: Any) -> str:
+
+    # {"a": 1, "b": 2} and {"b": 2, "a": 1} represent the same JSON object.
+    # Sorting keys gives both the same digest, while changing b to 3 conflicts
+    # when a caller tries to reuse the same admission or transition identity.
     return sha256(json.dumps(value, sort_keys=True, allow_nan=False).encode()).hexdigest()
 
 
 def encode_items(items: tuple[ConversationItem, ...]) -> list[dict[str, Any]]:
+
+    # For example, RestrictedReceipt("call-1") becomes a tagged record with
+    # only its call ID. snapshot_items rejects raw ExecutionOutput and delivery
+    # references before this serializer can copy their fields into the journal.
     encoded = [
         {"type": type(item).__name__, "value": plain(item)} for item in snapshot_items(items)
     ]
 
+    # Bound the entire write and each member independently. A 101-item delta
+    # and a single 60,001-byte event both fail before storage starts the write;
+    # the individual limit also leaves headroom below the database row limit.
     if len(encoded) > 100 or len(json.dumps(encoded).encode()) > 131072:
         raise ValueError("checkpoint delta exceeds storage bound")
 
@@ -54,6 +70,10 @@ def encode_items(items: tuple[ConversationItem, ...]) -> list[dict[str, Any]]:
 
 
 def decode_item(record: dict[str, Any]) -> ConversationItem:
+
+    # The saved tag selects an explicit runtime variant. For example, decoding
+    # a RestrictedReceipt reconstructs its call ID without adding a payload or
+    # artifact field. An unknown tag requires an explicit format upgrade.
     value = record["value"]
 
     match record["type"]:

@@ -65,6 +65,10 @@ class Coordinator:
             context, expected_conversation_revision=expected_conversation_revision, items=(message,)
         )
 
+        # PostgreSQL can admit turn B while turn A is active, or return an
+        # existing run for a matching start retry. Return B's queued status or
+        # the stored terminal outcome here. Neither case starts another loop.
+        # The in-memory profile instead rejects admission while A is active.
         if (
             checkpoint.conversation.active_run_id != context.run_id
             or checkpoint.run.status is not RunStatus.QUEUED
@@ -89,7 +93,7 @@ class Coordinator:
     def run(
         self, context: RunContext, *, is_cancelled: Callable[[], bool] | None = None
     ) -> CoordinatorResult:
-        """Claim a queued run and execute it once; storage conflicts propagate."""
+        """Start a queued run under caller-owned execution; storage conflicts propagate."""
 
         # start() saves the user's message first. load_run() checks ownership and
         # retrieves the conversation history and execution state for this context.
@@ -100,7 +104,10 @@ class Coordinator:
         if checkpoint.run.status is not RunStatus.QUEUED:
             raise StateConflictError("coordinator requires a queued run")
 
-        # The revision check allows only one caller to claim this queued run.
+        # Transition QUEUED revision 0 to RUNNING revision 1 before inference.
+        # Stale/conflicting writes fail, but PostgreSQL matching retries can
+        # return the same saved transition. Callers still serialize execution;
+        # durable worker claims and leases belong to the later worker group.
         checkpoint = self._save(checkpoint, RunStatus.RUNNING)
         return self._run_loop(checkpoint, [], is_cancelled)
 
@@ -146,8 +153,11 @@ class Coordinator:
             if is_cancelled is not None and is_cancelled():
                 return self._finish(checkpoint, RunStatus.CANCELLED, artifacts)
 
-            # Count the attempt before calling the provider. A wait/resume keeps
-            # this count, so repeated job events cannot reset the model budget.
+            # Prepare the prompt and reserve the attempt together before calling
+            # the provider. For example, step 2 records v7 and model_steps=2;
+            # publication of v8 during inference leaves that request on v7. The
+            # next prepared step can select v8. Wait/resume retains the counter,
+            # so repeated job events cannot reset the model budget.
             checkpoint = self._save(
                 checkpoint,
                 RunStatus.RUNNING,
@@ -158,6 +168,10 @@ class Coordinator:
             try:
                 reply, definitions = self._request_model(checkpoint)
             except PromptUnavailableError:
+
+                # A withdrawn v7 or unavailable prompt primary blocks the call.
+                # Retain the prepared checkpoint for explicit recovery instead
+                # of inventing replacement instructions or a model response.
                 raise
             except Exception:
 
@@ -214,15 +228,26 @@ class Coordinator:
     ) -> tuple[ModelReply, tuple[ToolDefinition, ...]]:
         """Ask the model and retain the exact tool versions offered on this step."""
 
-        # A permission revoked after step one must disappear from step two.
+        # Example injected reader:
+        # def permissions_for(context):
+        #     return grants[(context.tenant_id, context.user_id)]
+        #
+        # Passing permissions_for=permissions_for makes every model request use
+        # current trusted grants. Removing reports.create after step one removes
+        # that tool from step two even if the global prompt still requests it.
         permissions = self._permissions_for(checkpoint.run.context)
         definitions = self._registry.discover(permissions)
         model_tools = tuple(
             ModelTool(tool.name, tool.description, tool.argument_schema) for tool in definitions
         )
 
-        # Full history includes the last batch's permitted results, e.g. {"total": 2}.
-        # Future context management will select/compact history here.
+        # The store supplies run-specific history, including the last permitted
+        # result, e.g. {"total": 2}. PostgreSQL excludes later queued inputs here;
+        # future context management will select or compact long histories.
+        # Reconstruct the version prepared above. Calling resolve() here could
+        # select v8 after the checkpoint recorded v7 and break exact recovery.
+        # Request-local fields also let simultaneous sessions use different
+        # prepared versions through the same model client.
         assert checkpoint.run.prompt_manifest is not None
         instructions = self._prompts.instructions(checkpoint.run.prompt_manifest)
         request = ModelRequest(

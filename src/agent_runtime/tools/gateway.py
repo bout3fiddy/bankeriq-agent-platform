@@ -61,6 +61,11 @@ class ToolGateway:
         elif definition.output_policy is not OutputPolicy.RESTRICTED:
             return enforce_failure(call.call_id)
 
+        # For example, report({"dataset": "sample", "total": 42}) first passes
+        # its shape/domain validator, then resource access for "sample", then an
+        # approval bound to this context/version/arguments when required. A
+        # negative total rejected by validation never reaches access consumption
+        # or the handler; a valid shape alone grants no resource access.
         try:
             binding.validate_arguments(call.arguments)
         except ValueError:
@@ -74,6 +79,10 @@ class ToolGateway:
         ):
             return EnforcedOutput(ToolFailure(call.call_id, ToolErrorCode.DENIED))
 
+        # Only after those gates can the handler create a report. A handler may
+        # return ExecutionOutput(private_payload, artifact_id="report-17");
+        # enforce_output converts a restricted operation to a fixed receipt and
+        # sends report-17 through separate delivery metadata before returning.
         output = binding.handler(context, call.arguments)
         return enforce_output(
             definition,

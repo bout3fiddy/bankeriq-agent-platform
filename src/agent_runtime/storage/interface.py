@@ -30,6 +30,10 @@ class Checkpoint:
 class HistoryPage:
     """Bounded journal items with a resume cursor, including metadata-only changes."""
 
+    # A page can contain events at cursors 4 and 6 because cursor 5 recorded
+    # a metadata-only change. Request the next page with after=next_cursor;
+    # adding len(items) to the old cursor would miss this gap. Compare both
+    # generations before reusing a cached page after deletion or database recovery.
     items: tuple[ConversationItem, ...]
     next_cursor: int
     durable_cursor: int

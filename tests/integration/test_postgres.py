@@ -50,6 +50,9 @@ def dsn() -> str:
     if not value:
         pytest.skip("set BANKERIQ_TEST_POSTGRES_DSN to a disposable local PostgreSQL database")
 
+    # An explicit DSN opts into a disposable local primary. Apply migrations on
+    # each fixture entry to exercise their repeatability; unique tenant IDs below
+    # keep each scenario's records separate without deleting another test's data.
     migrate(value)
     return value
 
@@ -97,6 +100,10 @@ def snapshot(dsn: str, tenant: str) -> list[list[tuple[Any, ...]]]:
         ]
 
 
+# Pass Fault(write=3) as the adapter's fault callback to raise after its third
+# write, while the transaction can still roll back all related rows.
+# Fault(lost_ack=True) raises once after commit: data already exists, so recovery
+# must find the same stable operation instead of creating a second result/job.
 class Fault:
     def __init__(self, *, write: int | None = None, lost_ack: bool = False) -> None:
         self.write = write

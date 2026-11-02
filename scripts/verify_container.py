@@ -22,6 +22,11 @@ def main() -> None:
 
     # Resolve once so every check uses the same local image, even if its tag moves.
     image_id = docker("image", "inspect", "--format", "{{.Id}}", image).stdout.strip()
+
+    # First run the synthetic workflow with networking disabled. A successful
+    # result establishes that the image contains its offline dependencies and can
+    # complete the calculation/report scenario under the restricted filesystem.
+    # The separate server phase below checks loopback HTTP and graceful shutdown.
     isolation = ["--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges"]
     validated = docker("run", "--rm", "--network=none", *isolation, image_id, "validate")
     report = json.loads(validated.stdout)
@@ -100,6 +105,10 @@ def verify_http(client: httpx2.Client, token: str) -> None:
     conversation = invoke({"action": "create_conversation"})
     revision = 0
 
+    # Reuse one conversation for two fresh runs. The first completed response
+    # supplies the revision used to admit the second turn, exercising continuity
+    # through the HTTP boundary. Each turn first submits unapproved text and must
+    # receive 403 before the same command is retried with the approved demo prompt.
     for _ in range(2):
         run_id = str(uuid4())
         command = {

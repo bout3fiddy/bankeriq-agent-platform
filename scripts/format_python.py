@@ -19,6 +19,11 @@ def main() -> int:
         "paths", nargs="*", type=Path, help="Files or directories; defaults to project scopes."
     )
     arguments = parser.parse_args()
+
+    # Explicit paths let a focused edit format one file, e.g.
+    # `uv run python -m scripts.format_python src/bankeriq_agent_platform/runtime.py`.
+    # Without paths, use every authored Python scope. The set removes duplicates
+    # when the caller supplies both a directory and a file within that directory.
     paths = arguments.paths or [ROOT / scope for scope in SCOPES]
     files = sorted(
         {file for path in paths for file in (path.rglob("*.py") if path.is_dir() else [path])}

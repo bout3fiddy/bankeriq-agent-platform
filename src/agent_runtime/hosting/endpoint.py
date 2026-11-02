@@ -35,6 +35,9 @@ class RuntimeEndpoint:
     def invoke(self, principal: Principal, command: Invocation) -> dict[str, JsonValue]:
         """Create a conversation, start one turn, or resolve a trusted pending event."""
 
+        # Example: invoke(Principal("tenant-a", "user-1"), create_command)
+        # returns a fresh conversation ID at revision 0 owned by that principal.
+        # The transport's parsed command cannot supply an alternate tenant/user.
         if isinstance(command, CreateConversationRequest):
             conversation = self._store.create_conversation(
                 tenant_id=principal.tenant_id,

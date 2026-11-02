@@ -15,6 +15,11 @@ class DemoModel:
     """Choose the next step from this request's history, allowing independent sessions."""
 
     def complete(self, request: ModelRequest) -> ModelReply:
+
+        # Example: history already contains last turn's completed report, followed
+        # by a new user message. Start after that latest user item so the old
+        # receipt cannot make this turn answer immediately. There is no mutable
+        # "current step" on the model that could mix two conversations' progress.
         turn_start = max(
             index
             for index, item in enumerate(request.history)
@@ -27,6 +32,11 @@ class DemoModel:
         ]
         call_id = str(uuid4())
 
+        # The synthetic progression is driven by saved, permitted results:
+        # no result -> sample_values -> {"values": [12, 30]} -> calculate
+        # -> {"total": 42} -> build_report -> restricted receipt -> final answer.
+        # This deterministic fixture exercises runtime sequencing. It does not
+        # evaluate whether a live model follows the supplied instructions.
         if not results:
             return ModelReply(calls=(ToolCall(call_id, "sample_values", {}),))
 

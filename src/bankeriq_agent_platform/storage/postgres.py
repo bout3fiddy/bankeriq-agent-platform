@@ -45,6 +45,9 @@ class CommitUnknownError(RuntimeError):
 def migrate(dsn: str) -> None:
     """Apply immutable numbered migrations under one transaction and migration lock."""
 
+    # Two release processes may call migrate(writer_dsn) at the same time.
+    # The transaction-scoped advisory lock makes the second wait until the first
+    # commits its schema and version ledger together, then skip matching files.
     with Connection[dict[str, Any]].connect(dsn, row_factory=dict_row) as connection:
         connection.execute("SELECT pg_advisory_xact_lock(720321)")
         connection.execute(
@@ -59,6 +62,9 @@ def migrate(dsn: str) -> None:
                 "SELECT fingerprint FROM schema_versions WHERE version = %s", (path.name,)
             ).fetchone()
 
+            # If 001_journal.sql was applied previously, even a comment change
+            # changes its recorded fingerprint. Add a new numbered migration
+            # instead of rewriting the evidence of what an existing DB applied.
             if existing:
                 if existing["fingerprint"] != digest:
                     raise StateConflictError("applied migration changed")
@@ -68,6 +74,9 @@ def migrate(dsn: str) -> None:
             connection.execute(source.encode())
             connection.execute("INSERT INTO schema_versions VALUES (%s, %s)", (path.name, digest))
 
+        # Re-running migrations preserves the recovery ID. A fresh UUID is only
+        # installed for a database without one; an operator-controlled restore
+        # cutover must fence old applications before deliberately replacing it.
         connection.execute(
             "INSERT INTO runtime_generation VALUES (true, %s) ON CONFLICT DO NOTHING",
             (str(uuid4()),),
@@ -77,7 +86,14 @@ def migrate(dsn: str) -> None:
 class PostgresStateStore:
     """Inject into open_runtime(store=...). Each operation uses a short primary connection.
 
-    fault is a test seam, e.g. fault=lambda phase: raise_after_third_write(phase).
+    fault is a test seam. For example, pass fault=fail_after_write where:
+
+        def fail_after_write(phase):
+            if phase == "after_write":
+                raise RuntimeError("synthetic rollback")
+
+    The exception leaves the enclosing connection context and rolls back its
+    transaction. Tests also fail at "after_commit" to simulate a lost response.
     No model, tool, permission resolution or scheduling runs inside these transactions.
     """
 
@@ -85,6 +101,9 @@ class PostgresStateStore:
         self._dsn = dsn
         self._fault = fault or (lambda phase: None)
 
+        # Pin this instance to the database timeline it opened. For example,
+        # after operators replace recovery-A with recovery-B, an old instance
+        # fails its next generation check before accepting more conversation work.
         with self._connect() as connection:
             row = connection.execute("SELECT recovery_id FROM runtime_generation").fetchone()
             assert row is not None
@@ -93,6 +112,10 @@ class PostgresStateStore:
     def create_conversation(
         self, *, tenant_id: str, user_id: str, conversation_id: str
     ) -> Conversation:
+
+        # create_conversation(tenant_id="acme", user_id="sam", conversation_id="c1")
+        # reserves c1 for Sam in Acme. A second tenant may also use c1; attempting
+        # to recreate Acme's c1 conflicts, including after a retained tombstone.
         with self._connect() as connection:
             self._generation(connection)
 
@@ -111,6 +134,10 @@ class PostgresStateStore:
     def load_conversation(
         self, *, tenant_id: str, user_id: str, conversation_id: str
     ) -> Conversation:
+
+        # No run is selected for this UI-oriented read. _head still checks the
+        # verified owner and locks the conversation while its history is loaded,
+        # so the metadata and events come from one consistent aggregate view.
         context = RunContext(tenant_id, user_id, conversation_id, "")
 
         with self._connect() as connection:
@@ -122,6 +149,13 @@ class PostgresStateStore:
     ) -> Checkpoint:
         """Persist policy-approved user input and ordered work under a stable request ID."""
 
+        # Example: admit(context_for_run_b, request_id="request-b", items=(
+        #     Message(MessageRole.USER, "Calculate the next total"),))
+        #
+        # If run-a owns the conversation at execution revision 4, run-b receives
+        # the next admission sequence and a blocked job. Revision 4 remains valid
+        # for run-a's result. The input policy has already approved this message;
+        # this boundary checks its variant and bounds without deciding permissions.
         if not items or any(
             not isinstance(item, Message) or item.role != MessageRole.USER for item in items
         ):
@@ -131,6 +165,10 @@ class PostgresStateStore:
         digest = fingerprint([plain(context), encoded])
 
         def transaction(connection: Database) -> Checkpoint:
+
+            # Lock the owned conversation before looking up or allocating work.
+            # Retrying request-b with identical input returns its stored run;
+            # changing its text or run identity under that key raises a conflict.
             head = self._head(connection, context)
             prior = connection.execute(
                 "SELECT * FROM admissions WHERE tenant_id = %s AND request_id = %s",
@@ -143,6 +181,9 @@ class PostgresStateStore:
 
                 return self._load(connection, context, head)
 
+            # The sequence records turn order even while another turn is running.
+            # Create the run before its referencing admission/event/job rows, and
+            # leave the whole group inside this transaction until _retry commits.
             sequence = head["admission_sequence"] + 1
             active = head["active_run_id"] is None
             run = RunState(context, RunStatus.QUEUED)
@@ -176,6 +217,10 @@ class PostgresStateStore:
                 ),
             )
             head["active_run_id"] = context.run_id if active else head["active_run_id"]
+
+            # Persist both recoverable input and durable work before returning.
+            # If the process dies after commit, the retry finds request-b and its
+            # job together. Projection work survives a future cache refresh failure.
             self._job(connection, context, 0, "ready" if active else "blocked")
             self._dirty(connection, context, head)
             return self._load(connection, context, head)
@@ -191,6 +236,10 @@ class PostgresStateStore:
     ) -> Checkpoint:
         """Use run_id as request ID; durable ordering supersedes the UI revision."""
 
+        # The existing synchronous endpoint supplies run_id and a UI revision.
+        # Reuse that ID for admission deduplication; a stale displayed revision
+        # does not discard a later turn that can safely wait in admission order.
+        # save_checkpoint still checks execution revisions before settling work.
         return self.admit(context, request_id=context.run_id, items=items)
 
     def load_run(self, context: RunContext) -> Checkpoint:
@@ -219,11 +268,23 @@ class PostgresStateStore:
         original bounded checkpoint response, even if execution has advanced further.
         """
 
+        # Example: run-r at run revision 2 / conversation revision 7 saves a
+        # RestrictedReceipt("call-1") and ArtifactReference("call-1", "report-9")
+        # with status=RUNNING. The receipt enters history; report-9 is saved only
+        # as delivery metadata. The transaction produces revisions 3 / 8 and the
+        # next synthetic job, or rolls every related write back on failure.
+        #
+        # A checkpoint recovered from an earlier database timeline must fail even
+        # when this caller has opened a new adapter against the restored primary.
         if expected_recovery_id is not None and expected_recovery_id != self.recovery_id:
             raise StateConflictError("checkpoint recovery generation changed")
 
         encoded = encode_items(items)
         encode_items(pending_calls)
+
+        # The transition from run-r revision 2 always uses checkpoint:run-r:2.
+        # Its fingerprint covers the proposed change, so a retry cannot replace
+        # a committed answer with different text under the same stable identity.
         operation_id = f"checkpoint:{context.run_id}:{expected_run_revision}"
         digest = fingerprint(
             [
@@ -251,14 +312,23 @@ class PostgresStateStore:
                 if prior["fingerprint"] != digest:
                     raise StateConflictError("transition ID reused with different checkpoint")
 
+                # Resolve a lost acknowledgement before applying stale-revision
+                # checks. The original response retains its journal cursor even
+                # when later transitions have already advanced this run.
                 replay = self._response(connection, context, prior["response"])
 
                 if prompt_resolver is not None:
                     assert replay.run.prompt_manifest is not None
+
+                    # A preparation that selected prompt v1 must still recover v1
+                    # after activation of v2. Withdrawal of v1 blocks that replay.
                     prompt_resolver.instructions(replay.run.prompt_manifest)
 
                 return replay
 
+            # Only a genuinely new transition reaches these ownership checks.
+            # A queued input does not change execution revision, but another saved
+            # checkpoint or a changed active run invalidates this worker's view.
             if head["deletion_generation"] != expected_deletion_generation:
                 raise StateConflictError("checkpoint deletion generation changed")
 
@@ -271,6 +341,9 @@ class PostgresStateStore:
             ):
                 raise StateConflictError("checkpoint changed or run is inactive")
 
+            # Reserving model step 3 from usage 2 must happen without unresolved
+            # tool work. The resolver performs trusted prompt reads; the actual
+            # model call happens after the manifest and budget commit together.
             if prompt_resolver is not None and current.run.pending_calls:
                 raise StateConflictError("model preparation requires resolved tool calls")
 
@@ -300,6 +373,9 @@ class PostgresStateStore:
             if run.model_steps < current.run.model_steps or run.tool_calls < current.run.tool_calls:
                 raise ValueError("budget usage cannot decrease")
 
+            # Save the run and bounded journal delta before their outcome/job
+            # bookkeeping. The enclosing transaction hides this intermediate
+            # state from readers and rolls it back if a later invariant fails.
             terminal = status in TERMINAL_STATUSES
             self._write(
                 connection,
@@ -326,6 +402,9 @@ class PostgresStateStore:
             self._pending(connection, context, pending_calls, run.revision)
             head["revision"] += 1
 
+            # Finishing run-a releases its active slot and makes the earliest
+            # admitted run-b ready in this same commit. A waiting run-a keeps
+            # its slot, and its successor remains blocked until terminal status.
             if terminal:
                 head["active_run_id"] = self._activate_next(connection, context)
             else:
@@ -348,6 +427,10 @@ class PostgresStateStore:
                 ),
             )
             self._dirty(connection, context, head)
+
+            # Retain the small response metadata and run snapshot for stable-ID
+            # recovery. _response reconstructs history from the saved cursor;
+            # the growing conversation transcript is never copied into this row.
             response = {"head": head, "run": plain(run)}
             self._write(
                 connection,
@@ -367,6 +450,11 @@ class PostgresStateStore:
         return self._retry(transaction)
 
     def load_model_step(self, context: RunContext, step_number: int) -> Checkpoint:
+
+        # load_model_step(context, 2) retrieves the preparation for model step 2,
+        # including its original prompt manifest, usage and context cursor. It
+        # first checks current conversation ownership/deletion; this recovery
+        # read grants no execution lease or permission to repeat external effects.
         with self._connect() as connection:
             self._head(connection, context)
             row = connection.execute(
@@ -398,6 +486,10 @@ class PostgresStateStore:
         worker execution and approval consumption remain later work.
         """
 
+        # For example, approval-3 is bound to ToolCall("call-1", "report",
+        # {"public_total": 42}). Approving a call with total=43 under approval-3
+        # conflicts. The exact version, decision and expiry must also match on
+        # retries; this record does not itself consume or execute the approval.
         digest = fingerprint(encode_items((call,))[0])
 
         def transaction(connection: Database) -> None:
@@ -416,6 +508,9 @@ class PostgresStateStore:
             if row is None or row["argument_fingerprint"] != digest:
                 raise StateConflictError("approval does not match original intent")
 
+            # A duplicate delivery of the same decision is harmless. Compare
+            # expiry as a PostgreSQL timestamp so equivalent timezone spellings
+            # can identify the same decision without changing its scope.
             if row["decision"] is not None:
                 matches = connection.execute(
                     "SELECT decision = %s AND operation_version = %s "
@@ -437,6 +532,10 @@ class PostgresStateStore:
                 "AND run_id = %s AND reference_id = %s",
                 (granted, operation_version, expires_at, *self._key(context), reference_id),
             )
+
+            # A decision changes the conversation view without adding model text.
+            # Advance its durable cursor and dirty record so later projection can
+            # notice approval state even when the transcript has not grown.
             head["cursor"] += 1
             self._write(
                 connection,
@@ -451,6 +550,10 @@ class PostgresStateStore:
     def delete_conversation(self, context: RunContext) -> int:
         """Fence late writes with a permanent tombstone; retain records for policy review."""
 
+        # Deleting c1 at deletion generation 0 cancels its active/queued work and
+        # records generation 1. Repeating deletion returns 1. A delayed run result
+        # cannot recreate c1 because ordinary reads/writes reject its tombstone.
+        # Physical removal and backup/report retention require later policy work.
         def transaction(connection: Database) -> int:
             head = self._head(connection, context, allow_deleted=True)
 
@@ -501,6 +604,9 @@ class PostgresStateStore:
     def history_page(self, context: RunContext, *, after: int = 0, limit: int = 100) -> HistoryPage:
         """Read a bounded journal page; asynchronous materialisation is a later group."""
 
+        # history_page(context, after=10, limit=2) might return event cursors 11
+        # and 13: cursor 12 may represent a metadata-only checkpoint. Resume with
+        # next_cursor, rather than adding the number of returned items to 10.
         if not 1 <= limit <= 100 or after < 0:
             raise ValueError("invalid history page bounds")
 
@@ -547,6 +653,10 @@ class PostgresStateStore:
         raise CommitUnknownError("resolve the same stable ID on the primary before proceeding")
 
     def _write(self, connection: Database, sql: LiteralString, parameters: tuple[Any, ...]) -> int:
+
+        # Raising the injected fault here simulates a process failing between,
+        # for example, saving the result and creating its continuation job. The
+        # outer connection context rolls both the result and earlier writes back.
         cursor = connection.execute(sql, parameters)
         self._fault("after_write")
         return cursor.rowcount
@@ -563,6 +673,10 @@ class PostgresStateStore:
     def _head(
         self, connection: Database, context: RunContext, *, allow_deleted: bool = False
     ) -> dict[str, Any]:
+
+        # Even a multi-statement read takes the head lock. For example, loading
+        # revision 7 and then reading events must not race a writer committing
+        # revision 8 halfway through the load under READ COMMITTED isolation.
         self._generation(connection)
         row = connection.execute(
             "SELECT tenant_id, conversation_id, user_id, revision, admission_sequence, "
@@ -596,6 +710,10 @@ class PostgresStateStore:
     def _response(
         self, connection: Database, context: RunContext, response: dict[str, Any]
     ) -> Checkpoint:
+
+        # Early checkpoints predate shared prompts and have no prompt_manifest.
+        # Preserve that absence on read; a new prepared model step records its
+        # own manifest instead of guessing which instructions an old run used.
         data = response["run"]
         manifest_data = data.get("prompt_manifest")
         manifest = (
@@ -657,6 +775,10 @@ class PostgresStateStore:
         encoded: list[dict[str, Any]],
         operation_id: str,
     ) -> None:
+
+        # A RUNNING checkpoint can consume a model attempt without adding text.
+        # Give that change a cursor too, so projection can observe budget/status
+        # changes. Event rows therefore need not occupy every cursor position.
         if not encoded:
             head["cursor"] += 1
 
@@ -681,6 +803,11 @@ class PostgresStateStore:
         )
 
     def _dirty(self, connection: Database, context: RunContext, head: dict[str, Any]) -> None:
+
+        # If cursor 14 arrives while a future projector is applying cursor 12,
+        # keep 14 as the dirty target and retain the old projected_cursor. This
+        # adapter only records pending work; a later projector acknowledges the
+        # particular cursor it actually materialised without dropping newer work.
         self._write(
             connection,
             "INSERT INTO projection_work (tenant_id, conversation_id, dirty_cursor, "
@@ -702,6 +829,10 @@ class PostgresStateStore:
         )
 
     def _activate_next(self, connection: Database, context: RunContext) -> str | None:
+
+        # The caller has already made the finishing run inactive while holding
+        # the head lock. With queued admission sequences 5 and 6, activate 5 and
+        # its blocked job before releasing that lock at the terminal commit.
         row = connection.execute(
             "SELECT run_id FROM runs WHERE tenant_id = %s AND conversation_id = %s "
             "AND status = 'queued' ORDER BY admission_sequence LIMIT 1 FOR UPDATE",
@@ -738,6 +869,11 @@ class PostgresStateStore:
             for item in items
             if isinstance(item, (VisibleResult, RestrictedReceipt, ToolFailure))
         ]
+
+        # RestrictedReceipt("call-1") and ArtifactReference("call-1", "report-9")
+        # share a call identity but take separate storage paths. A report ID
+        # without a matching permitted outcome is rejected, preventing orphaned
+        # delivery metadata from appearing after a partial settlement.
         delivery = {artifact.call_id: artifact for artifact in artifacts}
 
         if len(delivery) != len(artifacts) or not delivery.keys() <= {
@@ -786,6 +922,10 @@ class PostgresStateStore:
         calls: tuple[PendingToolCall, ...],
         revision: int,
     ) -> None:
+
+        # A repeated WAITING checkpoint can retain the same pending call. Its
+        # stable job key prevents another synthetic job record; an approval
+        # reference must still identify the same original call and arguments.
         for call in calls:
             if call.reason == WaitReason.JOB:
                 self._write(

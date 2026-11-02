@@ -31,6 +31,11 @@ async def validate(
     transcript_file: TextIO | None = None,
     model_label: str = "unspecified",
 ) -> dict[str, object]:
+
+    # ASGITransport exercises the actual authenticated HTTP handlers inside this
+    # process. For example, invoke({"action": "create_conversation"}) sends the
+    # generated bearer token and receives a real endpoint response. The transport
+    # itself opens no listening socket; the selected model may still call Foundry.
     app = create_hosted_server(server.endpoint, authenticate=server.authenticate)
     transport = httpx2.ASGITransport(app=app)
 
@@ -78,6 +83,10 @@ async def validate(
     history = checkpoint.conversation.items
     calls = [item for item in history if isinstance(item, ToolCall)]
     visible = [item for item in history if isinstance(item, VisibleResult)]
+
+    # Serialize the stored fields rather than repr(history): message/result repr
+    # deliberately hides payloads. A leaked report body or opaque artifact ID must
+    # therefore be visible to this assertion before any transcript is exported.
     transcript = json.dumps(history, default=_json_fields)
     required_calls = ["sample_values", "calculate", "build_report"]
 

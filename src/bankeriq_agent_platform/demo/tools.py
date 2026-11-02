@@ -107,6 +107,12 @@ class DemoJobs:
         return output
 
     def resolve(self, context: RunContext, pending: PendingToolCall) -> EnforcedOutput:
+
+        # Example: (context, "job-17") locates the already-enforced report output.
+        # pop consumes that fake notification once; a different user/run context
+        # cannot retrieve it even if it knows the reference. Resolve the original
+        # tool version against current permissions before releasing its receipt
+        # and separate delivery reference. Durable replay is outside this fake.
         result = self.pending.pop((context, pending.reference_id))
         definition = self.registry.resolve(
             result.call.tool_name, result.version, self.access.permissions_for(context)
@@ -125,6 +131,12 @@ class DemoDependencies:
         self.store = InMemoryStateStore()
         self.access = DemoAccess()
         self.registry = ToolRegistry([SAMPLE, CALCULATE, REPORT])
+
+        # Each binding joins an executor, argument validator and optional visible
+        # projection. For example, calculate(context, {"values": (12, 30)}) returns
+        # ExecutionOutput({"total": 42}); public_total exposes that approved field.
+        # The restricted report binding has no visible projection: output policy
+        # produces a completion receipt and routes its artifact ID separately.
         gateway = ToolGateway(
             self.registry,
             {

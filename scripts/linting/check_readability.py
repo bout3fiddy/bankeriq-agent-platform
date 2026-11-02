@@ -31,6 +31,10 @@ def findings(source: str) -> list[tuple[int, str]]:
             if not isinstance(statements, list):
                 continue
 
+            # Compare neighboring statements within the same suite. For example,
+            # an assignment followed by an if block needs a separating blank line;
+            # two simple assignments can remain one stage. Source line slices
+            # preserve the actual spacing that the AST itself does not represent.
             for before, after in zip(statements, statements[1:], strict=False):
                 if not isinstance(before, ast.stmt) or not isinstance(after, ast.stmt):
                     continue

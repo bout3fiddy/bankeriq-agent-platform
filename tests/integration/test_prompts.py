@@ -184,6 +184,9 @@ def test_prepared_step_restart_and_lost_ack_retain_original_prompt(
     publish(admin, "v2")
     acknowledgement_lost = False
 
+    # Timeline: step 1 commits v1 -> another publisher activates v2 -> the caller
+    # loses step 1's acknowledgement. Retrying the original preparation must keep
+    # v1 and model_steps=1; only the next new preparation should resolve v2.
     def lose_ack_after_activation(phase: str) -> None:
         nonlocal acknowledgement_lost
 
@@ -399,6 +402,11 @@ def test_concurrent_publishers_activation_compare_and_swap(
 ) -> None:
     publish(admin, "v1")
     publish(admin, "v2")
+
+    # Both clients supply the same expected binding revision, 0. The barrier places
+    # their activation attempts together while separate database connections race
+    # for the scoped binding lock. Exactly one advances 0 -> 1; the loser must
+    # reload the active binding before deciding whether to activate another version.
     barrier = Barrier(2)
 
     def compete(version: str) -> str:

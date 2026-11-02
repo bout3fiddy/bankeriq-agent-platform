@@ -32,6 +32,9 @@ def main() -> int:
 
     from .demo.application import open_demo
 
+    # serve uses the explicitly supplied demo token so the caller knows how to
+    # authenticate. validate creates a temporary token shared by its in-process
+    # server and test client; that run needs no reusable credential or open socket.
     token = os.environ.get("BANKERIQ_DEMO_TOKEN", "")
 
     if arguments.command == "validate":
@@ -40,6 +43,10 @@ def main() -> int:
     try:
         configuration = dict(os.environ)
 
+        # A config file overlays the inherited environment. For example,
+        # {"MODEL_NAME": "coordinator"} replaces that setting but preserves other
+        # environment entries. Strict dict[str, str] parsing rejects numeric or
+        # nested values instead of guessing how to turn them into configuration.
         if arguments.config is not None:
             configuration.update(
                 TypeAdapter(dict[str, str]).validate_json(

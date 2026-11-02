@@ -16,7 +16,13 @@ class ExecutionOutput:
     artifact_id: str | None = None
 
 
-# Example handler: total(context, arguments) -> ExecutionOutput({"total": 42}).
+# Example application handler:
+# def total(context, arguments):
+#     return ExecutionOutput({"total": sum(arguments["values"])})
+#
+# Pass handler=total in ToolBinding(...), alongside an argument validator and
+# public-output filter. Calling it with {"values": [12, 30]} returns total 42;
+# the gateway still applies that filter before the value enters model history.
 # context carries trusted identity separately from model-generated arguments.
 type ToolHandler = Callable[[RunContext, Mapping[str, JsonValue]], ExecutionOutput]
 
