@@ -30,8 +30,11 @@ HOSTING_PROVIDER=foundry
 FOUNDRY_OPENAI_BASE_URL=https://RESOURCE.openai.azure.com/openai/v1/
 ```
 
-Supply `AZURE_OPENAI_API_KEY` through the application's secret configuration.
-It is read only by the selected Foundry factory. `MODEL_NAME` identifies the
+Set `FOUNDRY_AUTH_MODE=azure_cli` to use an existing `az login` session, optionally
+with `AZURE_TENANT_ID`. The signed-in principal needs inference access to the
+Foundry account. The default `api_key` mode reads `AZURE_OPENAI_API_KEY` through
+the application's secret configuration. Credentials are resolved only by the
+selected Foundry factory. `MODEL_NAME` identifies the
 configured model/deployment for the selected adapter. Optional common settings:
 
 - `MODEL_INSTRUCTIONS`: application-owned instructions.
@@ -119,5 +122,8 @@ group includes SDKs needed to test the implemented adapters, so the existing
 Architecture tests reject provider imports from core components and verify that
 core and startup modules load when vendor imports are blocked. An isolated local
 installation was also checked with Azure and OpenAI SDKs absent. Integration tests
-verify selection, cleanup, waits and output separation with synthetic providers;
-live Azure behavior remains untested.
+verify selection, cleanup, waits and output separation with synthetic providers.
+The executable profile also passed live Foundry inference on 2 November 2026
+using regional `gpt-4o` in Sweden Central; see the
+[Azure validation evidence](../../../infra/azure/README.md#validation-evidence).
+Azure-hosted execution and enterprise identity integration remain pending.

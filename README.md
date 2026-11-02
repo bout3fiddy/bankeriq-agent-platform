@@ -31,13 +31,22 @@ connects these components through synthetic calculation, approval, report and
 delivery workflows, including failure and permission changes.
 The [Foundry model adapter](src/agent_runtime/providers/foundry/README.md) implements v1
 Chat Completions calls through the OpenAI SDK and is tested with a local HTTP
-transport. Azure resources and live model integration remain untested.
+transport. Live inference passed on 2 November 2026 using a Terraform-provisioned
+regional `gpt-4o` deployment in Sweden Central; see the
+[validation evidence](infra/azure/README.md#validation-evidence).
 The [hosting boundary](src/agent_runtime/hosting/README.md) exposes conversation
 creation, run start and continuation through Microsoft's Invocations SDK, tested
 locally with synthetic identity and input policy. Its worker pool allows separate
 sessions to execute concurrently while each coordinator loop remains synchronous.
 Python 3.14 is the local tooling baseline copied from MONKI; deployment runtime
 compatibility must be checked before selecting an Azure hosting target.
+
+The [executable development profile](src/bankeriq_agent_platform/demo/README.md)
+wires these components with synthetic tools and in-memory state. Run
+`uv run bankeriq-runtime validate` for the complete local workflow, or select
+Foundry explicitly for live inference. [Azure Terraform](infra/azure/README.md)
+defines the development resources; repeat live validation after provisioning a
+supported model with available quota.
 
 ## Development
 
@@ -56,6 +65,6 @@ exist. Pre-commit runs static checks. See [STYLEGUIDE.md](STYLEGUIDE.md) and the
 
 ## Next step
 
-Validate inference and hosting against a configured Azure deployment, then wire
+Package and validate hosted execution in Azure, then wire
 production identity and input admission. Raw chat-input policy, persistent state,
 production delivery and durable recovery remain unresolved work.

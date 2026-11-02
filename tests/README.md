@@ -11,11 +11,17 @@ tests/
     policy/        # Output filtering and restricted receipts
     runs/          # Run-state invariants
     storage/       # Ownership, checkpoints and concurrent updates
+    startup/       # Smoke-test assertions and configuration admission
     tools/         # Definitions, results, registry and gateway
   integration/     # Complete synthetic workflows and their shared harness
   architecture/    # Core/provider import boundaries and SDK-free startup
   tooling/         # Readability checks and Python formatting
 ```
+
+`integration/test_startup.py` launches the executable in fresh processes, checks
+its loopback HTTP boundary and completes two turns before graceful shutdown.
+Terraform configuration tests live under `infra/azure/tests/` and use mocked
+providers; run them with `terraform -chdir=infra/azure test`.
 
 Place focused runtime tests under `unit/` using the owning component's folder.
 Keep small fakes with the tests that use them. The integration harness and its

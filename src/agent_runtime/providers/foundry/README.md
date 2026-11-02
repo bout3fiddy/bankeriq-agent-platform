@@ -69,8 +69,10 @@ with create_foundry_client(
 `FOUNDRY_OPENAI_BASE_URL` is the full resource API base URL, for example
 `https://RESOURCE.openai.azure.com/openai/v1/`. `deployment` is the configured
 Azure model deployment name. `api_key` also accepts a renewable token-provider
-callable supplied by the application; Entra credential acquisition remains part
-of future application wiring. Client construction makes no inference call.
+callable supplied by the application. The startup factory supports
+`FOUNDRY_AUTH_MODE=azure_cli`, which obtains renewable Entra tokens from the
+signed-in Azure CLI identity. Managed identity acquisition remains future work.
+Client construction makes no inference call.
 
 The connection defaults to a 60-second SDK request timeout. Automatic SDK retries
 are disabled, including for injected clients, so one coordinator attempt makes
@@ -90,6 +92,12 @@ Tests use the real SDK with an in-process HTTP transport. They check serialized
 requests, final answers, repeated tool calls, approval/job resumption, current
 tool discovery, output separation, malformed replies, timeouts and HTTP failures.
 No Azure account, credentials or live endpoint were used for these tests.
+
+Separately, the executable demo passed live inference on 2 November 2026 using
+`gpt-4o` version `2024-11-20`, regional Standard in Sweden Central, and Azure CLI
+Entra credentials. It completed four model calls, three successive synthetic tool
+calls and one continuation, with restricted output excluded from model history.
+See the [provisioning and validation record](../../../../infra/azure/README.md#validation-evidence).
 
 Live use requires an Azure subscription/resource, a compatible deployed model,
 its endpoint and authorized credentials. Azure DevOps is a separate development
