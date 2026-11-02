@@ -35,23 +35,29 @@ PRINCIPAL = Principal("demo", "local")
 
 @dataclass
 class LocalServer:
-    """Keep the demo server on loopback even though the hosting SDK defaults to all interfaces."""
+    """Default to loopback; container startup explicitly selects all interfaces."""
 
     endpoint: RuntimeEndpoint
     authenticate: Authenticator
     port: int
+    host: str = "127.0.0.1"
 
     def run(self) -> None:
         from agent_runtime.providers.foundry.hosting import create_hosted_server
 
         create_hosted_server(self.endpoint, authenticate=self.authenticate).run(
-            host="127.0.0.1", port=self.port
+            host=self.host, port=self.port
         )
 
 
 @contextmanager
 def open_demo(
-    environment: Mapping[str, str], *, provider: str, token: str, port: int = 8088
+    environment: Mapping[str, str],
+    *,
+    provider: str,
+    token: str,
+    port: int = 8088,
+    host: str = "127.0.0.1",
 ) -> Iterator[tuple[LocalServer, DemoDependencies]]:
     """Supply explicit fakes while reusing normal model selection and client cleanup."""
 
@@ -87,7 +93,7 @@ def open_demo(
         return PRINCIPAL
 
     def create_host(endpoint: RuntimeEndpoint, auth: Authenticator) -> LocalServer:
-        return LocalServer(endpoint, auth, port)
+        return LocalServer(endpoint, auth, port, host)
 
     with open_runtime(
         settings,

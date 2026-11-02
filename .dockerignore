@@ -1,0 +1,10 @@
+# Only package inputs enter the build context. Local credentials, Terraform
+# state, transcripts and the developer virtual environment stay outside it.
+**
+!Dockerfile
+!pyproject.toml
+!uv.lock
+!src/
+!src/**
+**/__pycache__/
+**/*.pyc

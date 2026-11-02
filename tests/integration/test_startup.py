@@ -11,6 +11,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import httpx2
+import pytest
 
 from bankeriq_agent_platform.demo.application import PROMPT
 
@@ -46,7 +47,8 @@ def test_mock_validation_runs_in_a_fresh_process(tmp_path: Path) -> None:
     assert transcript.read_bytes() == original
 
 
-def test_server_startup_authentication_two_turns_and_shutdown() -> None:
+@pytest.mark.parametrize("host_arguments", [[], ["--host", "0.0.0.0"]])
+def test_server_startup_authentication_two_turns_and_shutdown(host_arguments: list[str]) -> None:
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]
@@ -54,7 +56,15 @@ def test_server_startup_authentication_two_turns_and_shutdown() -> None:
     token = secrets.token_urlsafe(32)
     environment = {**os.environ, "BANKERIQ_DEMO_TOKEN": token}
     process = subprocess.Popen(
-        [sys.executable, "-m", "bankeriq_agent_platform", "serve", "--port", str(port)],
+        [
+            sys.executable,
+            "-m",
+            "bankeriq_agent_platform",
+            "serve",
+            "--port",
+            str(port),
+            *host_arguments,
+        ],
         env=environment,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

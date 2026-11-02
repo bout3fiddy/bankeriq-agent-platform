@@ -69,6 +69,7 @@ uv run bankeriq-runtime serve
 ```
 
 The server binds to `127.0.0.1:8088`; `--port` selects another local port.
+`--host 0.0.0.0` explicitly enables container port forwarding.
 `GET /readiness` reports readiness. `POST /invocations` requires
 `Authorization: Bearer <BANKERIQ_DEMO_TOKEN>`. See the
 [request examples](../../agent_runtime/hosting/README.md) for create/start/resume.
@@ -84,6 +85,49 @@ input admission before model access. This is an executable development profile;
 enterprise identity, free-form input policy and production hosting remain pending.
 The startup integration test launches a separate server process, checks denied
 requests and two complete turns, then verifies graceful shutdown.
+
+## Container validation
+
+The root Dockerfile packages this synthetic profile using Python 3.14, digest-pinned
+base images and `uv.lock`. The build installs the `foundry-hosting` and `demo`
+extras; development tools and the live model extra are excluded. The final image
+runs the installed command directly as UID/GID 10001. The build context allowlist
+includes only package inputs, keeping local Terraform state and credentials out.
+
+From the repository root with Docker running:
+
+```sh
+docker build -t bankeriq-runtime:synthetic .
+uv run python scripts/verify_container.py
+```
+
+The verifier resolves the local image ID, runs `validate` with networking disabled,
+checks startup rejection without a token, then starts a temporary HTTP container.
+It checks Docker readiness, UID 10001, HTTP 401/403 boundaries, two complete turns,
+restricted report continuations, cache headers, log markers and exit code zero
+after `docker stop`. Containers use a read-only filesystem, dropped capabilities
+and `no-new-privileges`. The temporary server publishes an ephemeral loopback port
+and is removed after validation. Docker checks are separate from `scripts/verify.py`.
+
+To serve manually, export a private random `BANKERIQ_DEMO_TOKEN`, then run:
+
+```sh
+docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges \
+  --publish 127.0.0.1:8088:8088 --env BANKERIQ_DEMO_TOKEN bankeriq-runtime:synthetic
+```
+
+The default command selects the mock model and binds `0.0.0.0:8088` inside the
+container. The built-in health check targets port 8088; override it if changing
+the server port. The token remains synthetic authentication and is visible to
+local Docker administrators. Supply no customer data to this profile.
+
+Validated on 2 November 2026 on Docker Desktop, Linux ARM64, Python 3.14.6:
+the image build and all checks above passed. No Azure resources were provisioned.
+Linux AMD64 and Foundry-hosted lifecycle validation remain pending. Conversations,
+jobs and artifacts remain in memory and disappear on exit. PostgreSQL conversation
+and job storage, Redis sessions, asynchronous workers and production identity are
+unfinished integrations.
+Real report storage and authenticated downloads belong to tool implementations.
 
 ## Live Foundry validation
 

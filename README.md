@@ -43,8 +43,8 @@ The [hosting boundary](src/agent_runtime/hosting/README.md) exposes conversation
 creation, run start and continuation through Microsoft's Invocations SDK, tested
 locally with synthetic identity and input policy. Its worker pool allows separate
 sessions to execute concurrently while each coordinator loop remains synchronous.
-Python 3.14 is the local tooling baseline copied from MONKI; deployment runtime
-compatibility must be checked before selecting an Azure hosting target.
+Python 3.14 is the tooling and container baseline. The synthetic container has
+passed local Linux ARM64 validation; Azure hosting compatibility remains pending.
 
 The [executable development profile](src/bankeriq_agent_platform/demo/README.md)
 wires these components with synthetic tools and in-memory state. Run
@@ -69,6 +69,10 @@ exist. Pre-commit runs static checks. See [STYLEGUIDE.md](STYLEGUIDE.md) and the
 [test layout and commands](tests/README.md).
 
 ## Next step
+
+The [synthetic container](src/bankeriq_agent_platform/demo/README.md#container-validation)
+packages the existing composition with locked dependencies and non-root execution.
+Local Docker checks cover readiness, two HTTP turns and graceful shutdown.
 
 The `codex/runtime-infrastructure` branch covers containerisation, persistent
 state and durable execution, message passing, private Blob storage and report

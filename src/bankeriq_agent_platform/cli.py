@@ -17,6 +17,7 @@ def main() -> int:
     parser.add_argument("command", choices=["serve", "validate"])
     parser.add_argument("--provider", choices=["mock", "foundry"], default="mock")
     parser.add_argument("--port", type=int, default=8088)
+    parser.add_argument("--host", choices=["127.0.0.1", "0.0.0.0"], default="127.0.0.1")
     parser.add_argument("--config", type=Path, help="JSON object containing environment settings")
     parser.add_argument(
         "--transcript", type=Path, help="Write validation history to a new Markdown file"
@@ -55,11 +56,15 @@ def main() -> int:
                 else nullcontext()
             ) as transcript_file,
             open_demo(
-                configuration, provider=arguments.provider, token=token, port=arguments.port
+                configuration,
+                provider=arguments.provider,
+                token=token,
+                port=arguments.port,
+                host=arguments.host,
             ) as (server, dependencies),
         ):
             if arguments.command == "serve":
-                print(f"Synthetic runtime: http://127.0.0.1:{arguments.port}", flush=True)
+                print(f"Synthetic runtime: http://{arguments.host}:{arguments.port}", flush=True)
                 server.run()
             else:
                 from .demo.validation import validate
