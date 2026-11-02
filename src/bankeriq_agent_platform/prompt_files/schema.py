@@ -14,7 +14,7 @@ class StrictModel(BaseModel):
 
 
 class Reference(StrictModel):
-    """Select an exact component; latest/range references would break old-step recovery."""
+    """Pin an exact component version for reproducible recovery."""
 
     id: Identifier
     version: Version
@@ -33,9 +33,15 @@ class Metadata(Reference):
     change_summary: Annotated[str, Field(min_length=1, max_length=1024)]
 
 
+# A nested array wraps one paragraph into source lines. Rendering joins those
+# lines with a single space: ["Use permitted tools", "for this request."] becomes
+# "Use permitted tools for this request." Separate paragraphs keep blank lines.
+Paragraph = Text | Annotated[tuple[Text, ...], Field(min_length=1, max_length=1024)]
+
+
 class Fragment(Metadata):
     kind: Literal["fragment"]
-    paragraphs: Annotated[tuple[Text, ...], Field(min_length=1, max_length=64)]
+    paragraphs: Annotated[tuple[Paragraph, ...], Field(min_length=1, max_length=64)]
 
 
 class Section(Metadata):

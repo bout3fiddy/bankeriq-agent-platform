@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "kind": "runtime",
     "title": "BankerIQ runtime protocol",
-    "description": "Runtime-level tool protocol and security boundaries shared across system prompts.",
+    "description": "BankerIQ runtime protocol.",
     "owner": "BankerIQ runtime maintainers",
     "change_summary": "Initial versioned JSON definition.",
     "includes": [

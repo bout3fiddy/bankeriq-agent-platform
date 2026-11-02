@@ -20,7 +20,8 @@ before deployment. The existing Foundry hosting adapter and its validation work
 are preserved; hosting compatibility is a separate gate below.
 
 A smaller, self-hosted open-weights model is deferred to a later phase for bounded
-tasks involving restricted data. Its intended benefit is lower hosting cost; capability and cost require
+tasks involving restricted data. Its intended benefit is lower hosting cost; capability and cost
+require
 measurement. Deterministic applications perform well-defined work and calculations
 without requiring a model. The external coordinator remains useful for general
 reasoning, but cannot interpret or refine restricted findings it never receives.
@@ -53,14 +54,34 @@ optional SDK dependencies and local validation evidence.
 
 ## Selected state and execution services
 
-| Responsibility | Selected service | Ownership |
-| --- | --- | --- |
-| Durable state and dispatch | Azure Database for PostgreSQL Flexible Server | Conversation journal and snapshots, runs, jobs, leases, retries, approvals and deduplication. |
-| Active sessions | Azure Managed Redis | Main API read path for recent history, context and progress; pending display state and transient streams. |
-| Execution | Azure Container Apps, proposed | Independently scalable API, coordinator and tool worker pools; maintenance starts as a bounded worker role. |
-| Model inference | Microsoft Foundry | Permitted context and tool schemas through the existing provider boundary. |
-| Shared system prompts | PostgreSQL versions and active binding; Redis caches immutable bodies | All sessions inherit the active global prompt at each new model step. Business overlays are deferred. |
-| Confidential reports | Tool-owned Azure Blob Storage and authenticated report service | Report bytes, access checks, retention and download links belong to the producing tool. |
+- **Durable state and dispatch**
+  Selected service: Azure Database for PostgreSQL Flexible Server
+  Ownership: Conversation journal and snapshots, runs, jobs, leases, retries, approvals and
+  deduplication.
+
+- **Active sessions**
+  Selected service: Azure Managed Redis
+  Ownership: Main API read path for recent history, context and progress; pending display state and
+  transient streams.
+
+- **Execution**
+  Selected service: Azure Container Apps, proposed
+  Ownership: Independently scalable API, coordinator and tool worker pools; maintenance starts as a
+  bounded worker role.
+
+- **Model inference**
+  Selected service: Microsoft Foundry
+  Ownership: Permitted context and tool schemas through the existing provider boundary.
+
+- **Shared system prompts**
+  Selected service: PostgreSQL versions and active binding; Redis caches immutable bodies
+  Ownership: All sessions inherit the active global prompt at each new model step. Business overlays
+  are deferred.
+
+- **Confidential reports**
+  Selected service: Tool-owned Azure Blob Storage and authenticated report service
+  Ownership: Report bytes, access checks, retention and download links belong to the producing tool.
+
 
 PostgreSQL queue rows provide durable message passing. Redis serves active reads
 and reduces repeated history reconstruction. Durable Task Scheduler, Kafka and
@@ -123,16 +144,42 @@ prompt versions and bindings. History materialisation and worker lifecycle remai
 later groups. Related writes
 use one PostgreSQL database.
 
-| Records | Contents and invariants |
-| --- | --- |
-| Conversations | Tenant/owner, revision, next sequence, active run, latest snapshot cursor, last accepted activity and deletion generation. One active logical run per conversation. |
-| Conversation events | Append-only permitted input, committed model reply, tool receipts and final answers, with unique event ID, conversation sequence and run/step association. Store deltas, never rewrite the growing transcript per turn. |
-| History pages and snapshots | Immutable bounded history pages and a versioned recent-context snapshot, each with a committed journal cursor. Rebuild from journal; do not create an ever-growing JSON row. |
-| Runs and steps | Versioned checkpoint, resolved prompt manifest, model/tool budgets, expected conversation cursor, pending tool group, cancellation and terminal status. |
-| Jobs | Queue/tenant/run/step IDs, input reference, operation/version, due time, status, attempt, lease owner/expiry and monotonic ownership token. |
-| Tool results and approvals | Unique call outcome, approved receipt/delivery metadata, original argument fingerprint, approval scope/expiry and replay policy. Restricted bytes remain in the tool. |
-| Projection work | Durable dirty cursor and pending cache/history refresh work. Coalesce repeated updates; advancing a cursor must preserve newer pending work. |
-| Prompt versions and binding | Immutable published global prompt bodies, content hashes, author/validation metadata and one active version per deployment environment. Activation revisions record publication and rollback. |
+- **Conversations**
+  Contents and invariants: Tenant/owner, revision, next sequence, active run, latest snapshot
+  cursor, last accepted activity and deletion generation. One active logical run per conversation.
+
+- **Conversation events**
+  Contents and invariants: Append-only permitted input, committed model reply, tool receipts and
+  final answers, with unique event ID, conversation sequence and run/step association. Store deltas,
+  never rewrite the growing transcript per turn.
+
+- **History pages and snapshots**
+  Contents and invariants: Immutable bounded history pages and a versioned recent-context snapshot,
+  each with a committed journal cursor. Rebuild from journal; do not create an ever-growing JSON
+  row.
+
+- **Runs and steps**
+  Contents and invariants: Versioned checkpoint, resolved prompt manifest, model/tool budgets,
+  expected conversation cursor, pending tool group, cancellation and terminal status.
+
+- **Jobs**
+  Contents and invariants: Queue/tenant/run/step IDs, input reference, operation/version, due time,
+  status, attempt, lease owner/expiry and monotonic ownership token.
+
+- **Tool results and approvals**
+  Contents and invariants: Unique call outcome, approved receipt/delivery metadata, original
+  argument fingerprint, approval scope/expiry and replay policy. Restricted bytes remain in the
+  tool.
+
+- **Projection work**
+  Contents and invariants: Durable dirty cursor and pending cache/history refresh work. Coalesce
+  repeated updates; advancing a cursor must preserve newer pending work.
+
+- **Prompt versions and binding**
+  Contents and invariants: Immutable published global prompt bodies, content hashes,
+  author/validation metadata and one active version per deployment environment. Activation revisions
+  record publication and rollback.
+
 
 Admission atomically appends input, records its tenant-scoped idempotency key and
 fingerprint, updates conversation revision and creates the next job. A matching
@@ -168,18 +215,50 @@ The application never dual-writes a transition to database replicas.
 
 #### Changes that commit together
 
-| Transition | One PostgreSQL transaction |
-| --- | --- |
-| Accept input | Idempotency key/fingerprint and response identity, permitted input event, admission sequence, queued run/work record and projection dirty cursor. A later turn remains ineligible while another run is active. |
-| Claim or renew a job | Due/status checks, attempt identity, lease owner/expiry and ownership token. Renewal checks current unexpired ownership. |
-| Prepare a model attempt | Current ownership/run checks, bounded context cursor, prompt manifest for a new step and attempt budget reservation. Retries retain the step manifest. |
-| Commit a tool batch | Validated model reply, tool-call identities/intents and replay policies, tool budget, pending group, child jobs, waiting checkpoint and completed coordinator job. |
-| Settle a tool | Unique permitted result, delivery metadata, completed job, checkpoint/group progress and, when the group settles, one uniquely keyed continuation job. |
-| Finish a run | Final answer/terminal outcome, completed job/run, released active-run slot and activation of the next queued turn. |
-| Retry, approve or cancel | Idempotent command/decision record, matching operation fingerprint, retry deadline or approval/cancellation state, affected checkpoint and job eligibility. Cancellation serializes with settlement; late outcomes cannot reopen the run. |
-| Delete a conversation | Tombstone and new deletion generation, run cancellation/dispatch gate and durable cache invalidation work. Physical removal follows retention rules. |
-| Materialise history | Bounded pages/snapshot at a fixed committed cursor, projected cursor advance and conditional dirty-work acknowledgement. Later events remain dirty. |
-| Activate a prompt | Immutable version reference, expected binding revision check, new activation revision and audit record. Version publication may precede activation; the selected version must already exist. |
+- **Accept input**
+  One PostgreSQL transaction: Idempotency key/fingerprint and response identity, permitted input
+  event, admission sequence, queued run/work record and projection dirty cursor. A later turn
+  remains ineligible while another run is active.
+
+- **Claim or renew a job**
+  One PostgreSQL transaction: Due/status checks, attempt identity, lease owner/expiry and ownership
+  token. Renewal checks current unexpired ownership.
+
+- **Prepare a model attempt**
+  One PostgreSQL transaction: Current ownership/run checks, bounded context cursor, prompt manifest
+  for a new step and attempt budget reservation. Retries retain the step manifest.
+
+- **Commit a tool batch**
+  One PostgreSQL transaction: Validated model reply, tool-call identities/intents and replay
+  policies, tool budget, pending group, child jobs, waiting checkpoint and completed coordinator
+  job.
+
+- **Settle a tool**
+  One PostgreSQL transaction: Unique permitted result, delivery metadata, completed job,
+  checkpoint/group progress and, when the group settles, one uniquely keyed continuation job.
+
+- **Finish a run**
+  One PostgreSQL transaction: Final answer/terminal outcome, completed job/run, released active-run
+  slot and activation of the next queued turn.
+
+- **Retry, approve or cancel**
+  One PostgreSQL transaction: Idempotent command/decision record, matching operation fingerprint,
+  retry deadline or approval/cancellation state, affected checkpoint and job eligibility.
+  Cancellation serializes with settlement; late outcomes cannot reopen the run.
+
+- **Delete a conversation**
+  One PostgreSQL transaction: Tombstone and new deletion generation, run cancellation/dispatch gate
+  and durable cache invalidation work. Physical removal follows retention rules.
+
+- **Materialise history**
+  One PostgreSQL transaction: Bounded pages/snapshot at a fixed committed cursor, projected cursor
+  advance and conditional dirty-work acknowledgement. Later events remain dirty.
+
+- **Activate a prompt**
+  One PostgreSQL transaction: Immutable version reference, expected binding revision check, new
+  activation revision and audit record. Version publication may precede activation; the selected
+  version must already exist.
+
 
 Every transition affecting the conversation view also advances durable projection
 work in that transaction. Restricted payloads never enter these records. Tool
@@ -230,17 +309,27 @@ failure domains. Its managed standby supports failover; optional read replicas
 serve lag-tolerant reads. Replication does not add independent write capacity.
 Select and validate availability, recovery-point and recovery-time targets before
 provisioning. The synthetic pilot has no demonstrated HA guarantee.
-[Azure HA](https://learn.microsoft.com/en-us/azure/postgresql/high-availability/concepts-high-availability),
-[Azure read replicas](https://learn.microsoft.com/en-us/azure/postgresql/read-replica/concepts-read-replicas)
+[Azure HA][line-source-1],
+[Azure read replicas][line-source-2]
 
-| Read or operation | Route |
-| --- | --- |
-| Admission, deduplication and unknown-commit lookup | Primary. |
-| Claims, leases, approvals, cancellation, checkpoints and joins | Primary. |
-| New-step active prompt binding and current access/deletion checks | Primary, with current trusted permission checks. |
-| Active context hydration and reads requiring an accepted cursor | Primary when Redis cannot satisfy the cursor. |
-| History projection inputs and progress | Primary. |
-| Older history/reporting that explicitly tolerates lag | Optional read replica; current authorisation/deletion checks still gate access. |
+- **Admission, deduplication and unknown-commit lookup**
+  Route: Primary.
+
+- **Claims, leases, approvals, cancellation, checkpoints and joins**
+  Route: Primary.
+
+- **New-step active prompt binding and current access/deletion checks**
+  Route: Primary, with current trusted permission checks.
+
+- **Active context hydration and reads requiring an accepted cursor**
+  Route: Primary when Redis cannot satisfy the cursor.
+
+- **History projection inputs and progress**
+  Route: Primary.
+
+- **Older history/reporting that explicitly tolerates lag**
+  Route: Optional read replica; current authorisation/deletion checks still gate access.
+
 
 After HA failover, discard failed connections, reconnect through the managed writer
 endpoint, re-establish listeners and resolve outstanding IDs before continuing.
@@ -423,11 +512,21 @@ publication cannot change production behaviour.
 
 The effective instructions are assembled in a fixed order:
 
-| Layer | Owner and purpose | Timing |
-| --- | --- | --- |
-| Runtime instructions | Trusted application supplies protocol behaviour, including parallel tool batches, repeated calls to one tool and receipt handling. | Versioned with compatible runtime releases. |
-| Global system prompt | Authorised operators define common assistant behaviour, tone and workflow guidance. | Editable drafts; immutable versions activated live for all sessions. |
-| Business overlay, deferred | Trusted user class or usage profile supplies specialised terminology and workflow guidance. | Later addition, selected from verified application context. |
+- **Runtime instructions**
+  Owner and purpose: Trusted application supplies protocol behaviour, including parallel tool
+  batches, repeated calls to one tool and receipt handling.
+  Timing: Versioned with compatible runtime releases.
+
+- **Global system prompt**
+  Owner and purpose: Authorised operators define common assistant behaviour, tone and workflow
+  guidance.
+  Timing: Editable drafts; immutable versions activated live for all sessions.
+
+- **Business overlay, deferred**
+  Owner and purpose: Trusted user class or usage profile supplies specialised terminology and
+  workflow guidance.
+  Timing: Later addition, selected from verified application context.
+
 
 Composition keeps all enabled layers and labels their precedence: runtime guidance,
 then global guidance, then business specialisation. A business overlay cannot
@@ -543,12 +642,22 @@ or restore requires external-effect reconciliation before resuming queues.
 
 ### Horizontal scaling and latency
 
-| Pool | Scaling signal | Boundaries |
-| --- | --- | --- |
-| API | Concurrent HTTP requests and SSE connections | Stateless replicas; any replica can serve reconnects. |
-| Coordinator | Due model-step backlog and oldest-ready age | Bound concurrent model calls by deployment RPM/TPM and tenant quotas. |
-| Tool workers | Due jobs and oldest-ready age per tool queue | Separate credentials, resource limits and tool-specific concurrency. |
-| Projection/maintenance | Dirty conversations and projection lag | Small batches, capped DB connections, lower priority than admission. |
+- **API**
+  Scaling signal: Concurrent HTTP requests and SSE connections
+  Boundaries: Stateless replicas; any replica can serve reconnects.
+
+- **Coordinator**
+  Scaling signal: Due model-step backlog and oldest-ready age
+  Boundaries: Bound concurrent model calls by deployment RPM/TPM and tenant quotas.
+
+- **Tool workers**
+  Scaling signal: Due jobs and oldest-ready age per tool queue
+  Boundaries: Separate credentials, resource limits and tool-specific concurrency.
+
+- **Projection/maintenance**
+  Scaling signal: Dirty conversations and projection lag
+  Boundaries: Small batches, capped DB connections, lower priority than admission.
+
 
 Use async I/O to multiplex active requests, then add replicas. Initial hosted
 validation keeps at least one API and coordinator worker warm. Slow tool queues
@@ -584,18 +693,48 @@ never cancel durable work implicitly.
 
 ### Azure deployment and operating envelope
 
-| Azure component | Proposed use |
-| --- | --- |
-| Container Apps workload-profiles environment | Consumption compute for separate API, coordinator and tool apps in a VNet; distinct identities and bounded replicas. Restricted tools may require a separate environment/network boundary. |
-| PostgreSQL Flexible Server | Shared transactional conversation journal and queue. Burstable for synthetic pilot; General Purpose with zone-redundant HA for production availability after sizing. Enable backups/PITR and execute restore drills. |
-| Azure Managed Redis | Private endpoint, bounded active data and TTLs. HA reduces disruption; recovery relies on PostgreSQL even if Redis persistence is enabled. |
-| Foundry account, project and model deployment | Existing inference boundary, managed identity and selected EU processing location. Model availability/quota must be rechecked. |
-| Container Registry | Immutable images and scoped image-pull roles. |
-| Microsoft Entra ID and managed identities | User authentication and separate API/coordinator/tool access. Database roles restrict queue access and permitted operations; tenancy comes from verified identity. |
-| VNet, subnets, private connectivity and DNS | Private Redis and PostgreSQL connectivity; model/tool reachability and egress policy validated per host. Only the authenticated API needs user-facing ingress. |
-| Key Vault | Credentials only where managed identity or the chosen scaler cannot supply authentication; token refresh remains adapter code. |
-| Azure Monitor / Log Analytics | Queue depth/age, accepted-to-start and first-token latency, commit latency, retries, lease conflicts, cache hit rate and projection lag. No prompts, tokens, raw tool errors or reports in traces. |
-| Terraform state storage | Dedicated private Blob backend, isolated from application and tool report lifecycles. |
+- **Container Apps workload-profiles environment**
+  Proposed use: Consumption compute for separate API, coordinator and tool apps in a VNet; distinct
+  identities and bounded replicas. Restricted tools may require a separate environment/network
+  boundary.
+
+- **PostgreSQL Flexible Server**
+  Proposed use: Shared transactional conversation journal and queue. Burstable for synthetic pilot;
+  General Purpose with zone-redundant HA for production availability after sizing. Enable
+  backups/PITR and execute restore drills.
+
+- **Azure Managed Redis**
+  Proposed use: Private endpoint, bounded active data and TTLs. HA reduces disruption; recovery
+  relies on PostgreSQL even if Redis persistence is enabled.
+
+- **Foundry account, project and model deployment**
+  Proposed use: Existing inference boundary, managed identity and selected EU processing location.
+  Model availability/quota must be rechecked.
+
+- **Container Registry**
+  Proposed use: Immutable images and scoped image-pull roles.
+
+- **Microsoft Entra ID and managed identities**
+  Proposed use: User authentication and separate API/coordinator/tool access. Database roles
+  restrict queue access and permitted operations; tenancy comes from verified identity.
+
+- **VNet, subnets, private connectivity and DNS**
+  Proposed use: Private Redis and PostgreSQL connectivity; model/tool reachability and egress policy
+  validated per host. Only the authenticated API needs user-facing ingress.
+
+- **Key Vault**
+  Proposed use: Credentials only where managed identity or the chosen scaler cannot supply
+  authentication; token refresh remains adapter code.
+
+- **Azure Monitor / Log Analytics**
+  Proposed use: Queue depth/age, accepted-to-start and first-token latency, commit latency, retries,
+  lease conflicts, cache hit rate and projection lag. No prompts, tokens, raw tool errors or reports
+  in traces.
+
+- **Terraform state storage**
+  Proposed use: Dedicated private Blob backend, isolated from application and tool report
+  lifecycles.
+
 
 Restrict worker roles to their queues and result operations. Coordinator identities
 can call the selected model and use permitted conversation state; they cannot read
@@ -618,7 +757,7 @@ $39. These Sweden Central USD estimates use 730 hours and the 2 November retail
 lookup; model tokens, registry, logs, networking, backups beyond allowances and
 tool services are additional. Free compute grants can reduce spend. This is a
 pilot budget, with database capacity and production HA still to be measured.
-[Azure retail pricing API](https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices)
+[Azure retail pricing API][line-source-3]
 
 Provision every cloud resource through provider-managed Terraform under
 `infra/azure/`; database schemas use versioned application migrations. Review plans
@@ -628,19 +767,50 @@ for synthetic tests. No deployment is authorised by this design document.
 
 ### Failure behaviour and acceptance gates
 
-| Failure | Required behaviour |
-| --- | --- |
-| Redis lost before idle snapshot | Rebuild accepted conversation from snapshot plus journal; provisional unsaved UI fragments may disappear. |
-| PostgreSQL unavailable or commit outcome unknown | No new durable acceptance or external dispatch; retry admission by stable ID. Already running effects require reconciliation. Cached history may remain readable with explicit stale status. |
-| Worker dies or loses lease | Another worker claims recoverable work; stale completion is rejected; unsafe side effects enter reconciliation. |
-| Result committed, notification/cache refresh lost | Queue/projection scans recover progress without re-executing the completed operation. |
-| Two tools finish concurrently | One durable join continuation; no missing or duplicated model progression. |
-| Idle snapshot races with new activity | Save the fixed older cursor, retain newer events and preserve the newer Redis generation. |
-| Permission revoked while waiting | Recheck before tool execution, model resumption and user delivery; deny without leaking previous restricted results. |
-| Commit succeeds but its acknowledgement is lost | Resolve the original ID on the primary; return the existing result or retry the same database transition without replaying external effects. |
-| Read replica trails a completed write | Keep claims, deduplication and active prompt resolution on the primary; cursor-required reads cannot use a stale replica. |
-| PostgreSQL HA failover | Reconnect to the writer, renew listeners and resolve unknown commits by stable IDs before continuing. |
-| Restore or promotion loses committed history | Pause dispatch, fence old workers, advance the recovery generation, rebuild Redis and reconcile effects/accepted requests before resuming. |
+- **Redis lost before idle snapshot**
+  Required behaviour: Rebuild accepted conversation from snapshot plus journal; provisional unsaved
+  UI fragments may disappear.
+
+- **PostgreSQL unavailable or commit outcome unknown**
+  Required behaviour: No new durable acceptance or external dispatch; retry admission by stable ID.
+  Already running effects require reconciliation. Cached history may remain readable with explicit
+  stale status.
+
+- **Worker dies or loses lease**
+  Required behaviour: Another worker claims recoverable work; stale completion is rejected; unsafe
+  side effects enter reconciliation.
+
+- **Result committed, notification/cache refresh lost**
+  Required behaviour: Queue/projection scans recover progress without re-executing the completed
+  operation.
+
+- **Two tools finish concurrently**
+  Required behaviour: One durable join continuation; no missing or duplicated model progression.
+
+- **Idle snapshot races with new activity**
+  Required behaviour: Save the fixed older cursor, retain newer events and preserve the newer Redis
+  generation.
+
+- **Permission revoked while waiting**
+  Required behaviour: Recheck before tool execution, model resumption and user delivery; deny
+  without leaking previous restricted results.
+
+- **Commit succeeds but its acknowledgement is lost**
+  Required behaviour: Resolve the original ID on the primary; return the existing result or retry
+  the same database transition without replaying external effects.
+
+- **Read replica trails a completed write**
+  Required behaviour: Keep claims, deduplication and active prompt resolution on the primary;
+  cursor-required reads cannot use a stale replica.
+
+- **PostgreSQL HA failover**
+  Required behaviour: Reconnect to the writer, renew listeners and resolve unknown commits by stable
+  IDs before continuing.
+
+- **Restore or promotion loses committed history**
+  Required behaviour: Pause dispatch, fence old workers, advance the recovery generation, rebuild
+  Redis and reconcile effects/accepted requests before resuming.
+
 
 Local gates use real PostgreSQL/Redis containers and synthetic tools: two or more
 independent workers, kill-at-boundary tests, complete Redis deletion, notification
@@ -654,7 +824,7 @@ Hosted gates additionally validate private connectivity, autoscaling, Entra toke
 refresh, scale-in/drain, database failover and backup restoration. Multi-worker
 execution does not establish database high availability. PostgreSQL HA uses a
 synchronous standby; select and test the required failure-domain configuration.
-[PostgreSQL HA](https://learn.microsoft.com/en-us/azure/postgresql/high-availability/concepts-high-availability)
+[PostgreSQL HA][line-source-4]
 
 ### Changes to the existing composition
 
@@ -696,11 +866,15 @@ an open decision; changing the chat transport does not resolve that boundary.
 
 ```mermaid
 flowchart TD
-    U["User · Authenticated browser chat"] --> A["Application backend<br/>Verified user and conversation"]
+    U["User · Authenticated browser chat"]
+    A["Application backend<br/>Verified user and conversation"]
+    U --> A
     A --> I["Input handling boundary<br/>Raw chat policy still unresolved"]
-    I -->|"Only permitted model input"| C["Application-owned agent loop<br/>External coordinator model"]
+    C["Application-owned agent loop<br/>External coordinator model"]
+    I -->|"Only permitted model input"| C
     C <-->|"Discover authorised tool definitions"| D["Tool registry<br/>Filter by user permissions"]
-    C -->|"Tool call + trusted run context"| G["Tool gateway<br/>Authorisation + argument validation"]
+    G["Tool gateway<br/>Authorisation + argument validation"]
+    C -->|"Tool call + trusted run context"| G
     G -->|"Visible-output tool"| V["Tool execution<br/>Permitted data and computation"]
     V --> O["Runtime output enforcement"]
     O -->|"Permitted payload"| C
@@ -751,10 +925,17 @@ Each registered operation has a trusted, versioned output policy. The runtime
 enforces that policy; neither the coordinator nor a tool's free-form response can
 choose to expose restricted content.
 
-| Output policy | What the coordinator receives | Processing and delivery |
-| --- | --- | --- |
-| Visible | Validated, permitted result data. | The coordinator can reason over results, request further computation and answer the user. Public data analysis is one example. |
-| Restricted | An allowlisted receipt such as an opaque job ID and fixed status; sanitised error codes on failure. | Internal processing produces a protected artifact, delivered directly to the user through an authenticated report route. |
+- **Visible**
+  What the coordinator receives: Validated, permitted result data.
+  Processing and delivery: The coordinator can reason over results, request further computation and
+  answer the user. Public data analysis is one example.
+
+- **Restricted**
+  What the coordinator receives: An allowlisted receipt such as an opaque job ID and fixed status;
+  sanitised error codes on failure.
+  Processing and delivery: Internal processing produces a protected artifact, delivered directly to
+  the user through an authenticated report route.
+
 
 Visible output must be permitted for the external model, not merely readable by
 the user. Mixed or uncertain payloads remain restricted. Metadata, filenames,
@@ -828,15 +1009,15 @@ retention and report verification belong to the tool and user.
 ## References
 
 - [Foundry Agent Service](https://learn.microsoft.com/en-us/azure/foundry/agents/overview)
-- [Deploy your own code as a hosted agent](https://learn.microsoft.com/en-us/azure/foundry/agents/quickstarts/quickstart-deploy-own-code)
-- [Agent Framework and Foundry integration](https://learn.microsoft.com/en-us/agent-framework/integrations/by-component/agent-services/foundry)
-- [Foundry networking](https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/agents-networking-deep-dive)
-- [Foundry data handling](https://learn.microsoft.com/en-us/azure/foundry/agents/data-privacy-security)
-- [Hosted-agent resilience](https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/long-running-agent-resilience)
+- [Deploy your own code as a hosted agent][line-source-5]
+- [Agent Framework and Foundry integration][line-source-6]
+- [Foundry networking][line-source-7]
+- [Foundry data handling][line-source-8]
+- [Hosted-agent resilience][line-source-9]
 - [Azure Database for PostgreSQL](https://learn.microsoft.com/en-us/azure/postgresql/overview)
 - [Azure Managed Redis](https://learn.microsoft.com/en-us/azure/redis/overview)
 - [Container Apps networking](https://learn.microsoft.com/en-us/azure/container-apps/networking)
-- [Container Apps managed identities](https://learn.microsoft.com/en-us/azure/container-apps/managed-identity)
+- [Container Apps managed identities][line-source-10]
 
 Feature availability, deployment regions and SDK compatibility must be verified
 when implementation begins. No security, reliability or cost claims have been
@@ -851,3 +1032,24 @@ Migration 005 records source provenance when publishing composed system definiti
 Runtime assets must reach every reader before activation and remain available for
 supported manifests. The pre-JSON runtime-v1 format has been removed. Local
 file profiles use startup snapshots; PostgreSQL profiles retain live activation.
+
+[line-source-1]:
+  https://learn.microsoft.com/en-us/azure/postgresql/high-availability/concepts-high-availability
+[line-source-2]:
+  https://learn.microsoft.com/en-us/azure/postgresql/read-replica/concepts-read-replicas
+[line-source-3]:
+  https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices
+[line-source-4]:
+  https://learn.microsoft.com/en-us/azure/postgresql/high-availability/concepts-high-availability
+[line-source-5]:
+  https://learn.microsoft.com/en-us/azure/foundry/agents/quickstarts/quickstart-deploy-own-code
+[line-source-6]:
+  https://learn.microsoft.com/en-us/agent-framework/integrations/by-component/agent-services/foundry
+[line-source-7]:
+  https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/agents-networking-deep-dive
+[line-source-8]:
+  https://learn.microsoft.com/en-us/azure/foundry/agents/data-privacy-security
+[line-source-9]:
+  https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/long-running-agent-resilience
+[line-source-10]:
+  https://learn.microsoft.com/en-us/azure/container-apps/managed-identity

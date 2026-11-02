@@ -13,10 +13,13 @@ output "project_id" {
 output "runtime_environment" {
   description = "Non-secret configuration for the local Foundry validation command."
   value = {
-    MODEL_PROVIDER          = "foundry"
-    MODEL_NAME              = azurerm_cognitive_deployment.coordinator.name
-    FOUNDRY_OPENAI_BASE_URL = "https://${azurerm_cognitive_account.foundry.custom_subdomain_name}.openai.azure.com/openai/v1/"
-    FOUNDRY_AUTH_MODE       = "azure_cli"
-    AZURE_TENANT_ID         = data.azurerm_client_config.current.tenant_id
+    MODEL_PROVIDER = "foundry"
+    MODEL_NAME     = azurerm_cognitive_deployment.coordinator.name
+    FOUNDRY_OPENAI_BASE_URL = format(
+      "https://%s.openai.azure.com/openai/v1/",
+      azurerm_cognitive_account.foundry.custom_subdomain_name,
+    )
+    FOUNDRY_AUTH_MODE = "azure_cli"
+    AZURE_TENANT_ID   = data.azurerm_client_config.current.tenant_id
   }
 }

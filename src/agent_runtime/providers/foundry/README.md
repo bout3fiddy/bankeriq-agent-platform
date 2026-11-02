@@ -111,13 +111,22 @@ request handling with local ASGI tests and synthetic identity providers.
 
 Sources checked on 30 October 2026:
 
-- [Microsoft function-calling guide](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/function-calling)
-- [Microsoft v1 Chat Completions reference](https://learn.microsoft.com/en-us/rest/api/microsoft-foundry/azureopenai/chat)
-- [Microsoft reasoning-model compatibility](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/reasoning)
-- [OpenAI Chat Completions reference](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)
+- [Microsoft function-calling guide][line-source-1]
+- [Microsoft v1 Chat Completions reference][line-source-2]
+- [Microsoft reasoning-model compatibility][line-source-3]
+- [OpenAI Chat Completions reference][line-source-4]
 
 Instructions now come from each `ModelRequest`, resolved and checkpointed before
 inference. The client retains no startup instruction string. See the
 [shared prompt guide](../../prompts/README.md) for fixed/shared resolver composition
 and prepared-step recovery. Local HTTP tests cover concurrent requests through a
 shared client; live Foundry propagation remains unvalidated.
+
+[line-source-1]:
+  https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/function-calling
+[line-source-2]:
+  https://learn.microsoft.com/en-us/rest/api/microsoft-foundry/azureopenai/chat
+[line-source-3]:
+  https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/reasoning
+[line-source-4]:
+  https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create

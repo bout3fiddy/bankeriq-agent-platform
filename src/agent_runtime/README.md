@@ -12,14 +12,28 @@ the self-hosted specialist is deferred.
 
 ## Scope
 
-| Logical component | Responsibility |
-| --- | --- |
-| Coordinator runtime | Own the model/tool loop, select per-run tools and continue from permitted results. |
-| Tool registry | Describe tools, schemas and policies; discover tools within the user's permissions. |
-| Tool gateway and output enforcement | Authorise calls, dispatch execution and enforce visible or restricted output policies. |
-| Tool implementations | Perform bounded operations and computation through the gateway. |
-| Conversation and job state | Persist ownership, permitted history, approvals, job transitions and recovery checkpoints. |
-| Durable job execution | Claim jobs, execute work, handle retries and cancellation, and recover interrupted execution. |
+- **Coordinator runtime**
+  Responsibility: Own the model/tool loop, select per-run tools and continue from permitted results.
+
+- **Tool registry**
+  Responsibility: Describe tools, schemas and policies; discover tools within the user's
+  permissions.
+
+- **Tool gateway and output enforcement**
+  Responsibility: Authorise calls, dispatch execution and enforce visible or restricted output
+  policies.
+
+- **Tool implementations**
+  Responsibility: Perform bounded operations and computation through the gateway.
+
+- **Conversation and job state**
+  Responsibility: Persist ownership, permitted history, approvals, job transitions and recovery
+  checkpoints.
+
+- **Durable job execution**
+  Responsibility: Claim jobs, execute work, handle retries and cancellation, and recover interrupted
+  execution.
+
 
 These are logical boundaries, not a decision to deploy separate services.
 Durability requires both persisted state and execution/recovery logic.
@@ -212,7 +226,7 @@ This controls provider-managed reasoning effort. Chat Completions replays the
 permitted transcript on every request. Responses API continuation items and
 their persistence remain future work. Tests verify configuration propagation
 through the real SDK with a local HTTP transport. See Microsoft's
-[reasoning model documentation](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/reasoning)
+[reasoning model documentation][line-source-1]
 for model-dependent settings and opaque reasoning state.
 
 A fake dispatcher can return pending approval/job receipts. The runner saves
@@ -327,7 +341,8 @@ boundary that checks ownership and current access.
 These are local tests with scripted inference and immediate execution whose
 result delivery can be delayed. Async dispatch, PostgreSQL job transport,
 persistent storage and production authentication remain untested. Separate live
-Foundry inference evidence is recorded in the [Azure guide](../../infra/azure/README.md#validation-evidence).
+Foundry inference evidence is recorded in the [Azure
+guide](../../infra/azure/README.md#validation-evidence).
 
 ## Workshop questions
 
@@ -403,3 +418,6 @@ agent_runtime/
 Import values from their defining modules, for example
 `from agent_runtime.tools.definitions import ToolDefinition` and
 `from agent_runtime.tools.registry import ToolRegistry`.
+
+[line-source-1]:
+  https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/reasoning

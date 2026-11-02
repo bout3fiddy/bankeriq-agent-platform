@@ -74,11 +74,8 @@ The server binds to `127.0.0.1:8088`; `--port` selects another local port.
 `Authorization: Bearer <BANKERIQ_DEMO_TOKEN>`. See the
 [request examples](../../agent_runtime/hosting/README.md) for create/start/resume.
 
-This profile admits exactly this synthetic prompt:
-
-```text
-Load the synthetic sample, calculate its total using tools, then prepare a report and return the total.
-```
+This profile admits the exact synthetic prompt defined in
+[`prompts/demo/input/1.0.0.json`](../../../prompts/demo/input/1.0.0.json).
 
 Authentication maps the test token to a fixed demo user. Other messages fail
 input admission before model access. This is an executable development profile;

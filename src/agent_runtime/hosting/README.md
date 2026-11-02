@@ -155,9 +155,18 @@ implementation work on either cloud.
 
 Sources checked on 30 October 2026:
 
-- [Foundry hosting requirements](https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/hosted-agent-contract)
-- [AgentCore custom agent hosting](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/getting-started-custom.html)
-- [Bedrock client-side tool use](https://docs.aws.amazon.com/bedrock/latest/userguide/tool-use-client-side.html)
-- [AgentCore HTTP requirements](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-http-protocol-contract.html)
+- [Foundry hosting requirements][line-source-1]
+- [AgentCore custom agent hosting][line-source-2]
+- [Bedrock client-side tool use][line-source-3]
+- [AgentCore HTTP requirements][line-source-4]
 - [ECS container hosting](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/Welcome.html)
 - [S3 access controls](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-management.html)
+
+[line-source-1]:
+  https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/hosted-agent-contract
+[line-source-2]:
+  https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/getting-started-custom.html
+[line-source-3]:
+  https://docs.aws.amazon.com/bedrock/latest/userguide/tool-use-client-side.html
+[line-source-4]:
+  https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-http-protocol-contract.html

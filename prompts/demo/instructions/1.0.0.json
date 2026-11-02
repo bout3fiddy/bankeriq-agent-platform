@@ -5,11 +5,17 @@
     "version": "1.0.0",
     "kind": "fragment",
     "title": "Synthetic validation instructions",
-    "description": "Preserve the exact existing synthetic workflow independently of production guidance.",
+    "description": "Synthetic validation instructions.",
     "owner": "BankerIQ runtime maintainers",
     "change_summary": "Initial versioned JSON definition.",
     "paragraphs": [
-      "You are validating a synthetic agent runtime. First call sample_values. After reading its result, call calculate with those values. After reading the calculation result, call build_report with that total. Wait for its receipt, then answer with the total and report status. Use each returned result before choosing the next call. Never invent tool results."
+      [
+        "You are validating a synthetic agent runtime. First call sample_values. After reading its",
+        "result, call calculate with those values. After reading the calculation result, call",
+        "build_report with that total. Wait for its receipt, then answer with the total and report",
+        "status. Use each returned result before choosing the next call. Never invent tool",
+        "results."
+      ]
     ]
   }
 }

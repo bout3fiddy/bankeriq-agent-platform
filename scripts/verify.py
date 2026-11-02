@@ -20,6 +20,8 @@ def main() -> None:
         [sys.executable, "-m", "scripts.format_python", "--check"],
         [sys.executable, "-m", "ruff", "check", *SCOPES],
         [sys.executable, "scripts/linting/check_readability.py"],
+        [sys.executable, "-m", "scripts.linting.check_json"],
+        [sys.executable, "-m", "scripts.linting.check_line_length"],
         ["uv", "run", "--locked", "basedpyright"],
     ]
 

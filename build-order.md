@@ -38,9 +38,11 @@ while adding infrastructure on `codex/runtime-infrastructure`.
    output policies and run statuses.
 2. **Tool registry (implemented)** — Register versioned definitions and schemas; discover tools
    filtered by permissions.
-3. **Output enforcement (completed outputs implemented)** — Produce model-visible results or restricted receipts;
+3. **Output enforcement (completed outputs implemented)** — Produce model-visible results or
+restricted receipts;
    sanitise failures and route artifact references separately.
-4. **Tool gateway (synchronous dispatch implemented)** — Validate calls, check permissions and approvals, dispatch
+4. **Tool gateway (synchronous dispatch implemented)** — Validate calls, check permissions and
+approvals, dispatch
    through a mock executor, and enforce output policy.
 5. **Conversation and run state (implemented)** — Define storage interfaces and an in-memory
    implementation for history, pending calls, checkpoints and waiting states.
@@ -55,12 +57,14 @@ while adding infrastructure on `codex/runtime-infrastructure`.
    connects the runtime components through visible and restricted outputs, denied
    calls, failures, cancellation, waiting and continuation. Checks actual model
    request fields and stored history for synthetic restricted payloads and artifact IDs.
-9. **Foundry model adapter (implemented; local and live tests)** — `src/agent_runtime/providers/foundry/` maps
+9. **Foundry model adapter (implemented; local and live tests)** —
+`src/agent_runtime/providers/foundry/` maps
    permitted history and discovered tools to v1 Chat Completions through the
    OpenAI SDK, then validates answers and function calls. Live Azure inference
    passed with regional `gpt-4o` version `2024-11-20` in Sweden Central.
 10. **Hosted-agent adapter (implemented; local ASGI tests)** — `src/agent_runtime/hosting/` handles
-    validated application commands; `src/agent_runtime/providers/foundry/hosting.py` exposes them through
+    validated application commands; `src/agent_runtime/providers/foundry/hosting.py` exposes them
+    through
     Microsoft's Invocations SDK. Authentication and input admission are required
     injected dependencies, supplied by local fakes in tests. Azure identity
     integration, deployment and lifecycle validation remain pending.
@@ -195,7 +199,8 @@ JSON authoring follow-up completed on 3 November 2026: [prompt definitions](prom
 now separate runtime/system roots, security rules, guidelines and synthetic demo
 text into versioned JSON compositions. Catalogs pin exact component versions and
 file hashes. Migration 005 preserves publication source provenance. The pre-JSON
-runtime-v1 compatibility files and composer have subsequently been removed. Application startup performs file parsing;
+runtime-v1 compatibility files and composer have subsequently been removed. Application startup
+performs file parsing;
 core receives immutable prompt values. Offline authoring commands validate, render
 and register new versions. Wheels and containers package the assets.
 
@@ -423,15 +428,29 @@ of Pi's durable package at commit `95485d32f19d5ab9dca81bf2d7299661347d3238`
 on 2 November 2026. Pi's tests were inspected, not executed. These are proposed
 BankerIQ adaptations; only groups marked implemented have execution evidence.
 
-| Reviewed mechanism | Planned adaptation and source |
-| --- | --- |
-| Intent and replay policy | Persist per-call intent and require saved/current policy to permit recovery. [Pi tool recovery](https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/src/harness/tool.ts#L181-L226). |
-| Atomic settlement | Commit conversation results, deduplication and the next queued job atomically in PostgreSQL. [Pi settlement](https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/src/harness/tool.ts#L828-L872). |
-| Persistent retry state | Preserve deadlines and restart counts; keep orderly shutdown distinct. [Pi task states](https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/src/types.ts#L657-L746). |
-| Durable identity | Deduplicate admission and bind IDs to matching intent. Pi's top-level request check is weaker than its nested-call check; use argument/version matching for BankerIQ. [Pi request admission](https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/src/harness/submissions.ts#L211-L240), [nested-call identity](https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/src/harness/tool.ts#L898-L946). |
-| Versioned checkpoints | Reject incompatible persisted work initially; introduce explicit migrations when needed. [Pi definitions](https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/src/types.ts#L364-L385), [compatibility tests](https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/test/harness-tasks-recovery.test.ts#L448-L525). |
+- **Intent and replay policy**
+  Planned adaptation and source: Persist per-call intent and require saved/current policy to permit
+  recovery. [Pi tool recovery][line-source-1].
 
-Pi assumes [one process owns storage](https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/README.md#L854-L883).
+- **Atomic settlement**
+  Planned adaptation and source: Commit conversation results, deduplication and the next queued job
+  atomically in PostgreSQL. [Pi settlement][line-source-2].
+
+- **Persistent retry state**
+  Planned adaptation and source: Preserve deadlines and restart counts; keep orderly shutdown
+  distinct. [Pi task states][line-source-3].
+
+- **Durable identity**
+  Planned adaptation and source: Deduplicate admission and bind IDs to matching intent. Pi's
+  top-level request check is weaker than its nested-call check; use argument/version matching for
+  BankerIQ. [Pi request admission][line-source-4], [nested-call identity][line-source-5].
+
+- **Versioned checkpoints**
+  Planned adaptation and source: Reject incompatible persisted work initially; introduce explicit
+  migrations when needed. [Pi definitions][line-source-6], [compatibility tests][line-source-7].
+
+
+Pi assumes [one process owns storage][line-source-8].
 Its startup recovery resets running tasks to pending. BankerIQ needs cross-process
 leases, ownership tokens and revision checks before reclaiming jobs. Existing
 `StateStore`, coordinator and continuation boundaries remain the starting point;
@@ -445,3 +464,20 @@ explains why idle-only flushing cannot guarantee recovery of accepted turns.
 [Container Apps scaling](https://learn.microsoft.com/en-us/azure/container-apps/scale-app)
 and the [KEDA PostgreSQL scaler](https://keda.sh/docs/2.21/scalers/postgresql/)
 inform deployment validation; availability in the actual host remains a gate.
+
+[line-source-1]:
+  https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/src/harness/tool.ts#L181-L226
+[line-source-2]:
+  https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/src/harness/tool.ts#L828-L872
+[line-source-3]:
+  https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/src/types.ts#L657-L746
+[line-source-4]:
+  https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/src/harness/submissions.ts#L211-L240
+[line-source-5]:
+  https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/src/harness/tool.ts#L898-L946
+[line-source-6]:
+  https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/src/types.ts#L364-L385
+[line-source-7]:
+  https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/test/harness-tasks-recovery.test.ts#L448-L525
+[line-source-8]:
+  https://github.com/earendil-works/pi/blob/95485d32f19d5ab9dca81bf2d7299661347d3238/packages/durable/README.md#L854-L883

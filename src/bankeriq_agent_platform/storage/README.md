@@ -54,13 +54,27 @@ It requires a read/write server with `target_session_attrs=read-write` and uses
 
 ## Record and transaction mapping
 
-| Operation | Records committed together |
-| --- | --- |
-| `admit(context, request_id, items)` | Tenant/request fingerprint, permitted user events, admission sequence, queued run, ready/blocked coordinator job, conversation cursor and projection dirty record. |
-| `save_checkpoint(...)` | Run revision/status/budgets/pending references, appended events, unique call outcomes and opaque delivery metadata, completed current synthetic job, pending approval/job records, next coordinator work, projection cursor and stable transition response. |
-| Terminal checkpoint | Above writes plus release of the active run and activation of the earliest queued turn and its blocked job. |
-| `record_approval(...)` | Exact scoped intent fingerprint, trusted decision, operation version, expiry and projection dirty cursor. |
-| `delete_conversation(...)` | Permanent tombstone, increased deletion generation, cancelled runs/jobs and dirty invalidation cursor. Physical deletion is disabled. |
+- **`admit(context, request_id, items)`**
+  Records committed together: Tenant/request fingerprint, permitted user events, admission sequence,
+  queued run, ready/blocked coordinator job, conversation cursor and projection dirty record.
+
+- **`save_checkpoint(...)`**
+  Records committed together: Run revision/status/budgets/pending references, appended events,
+  unique call outcomes and opaque delivery metadata, completed current synthetic job, pending
+  approval/job records, next coordinator work, projection cursor and stable transition response.
+
+- **Terminal checkpoint**
+  Records committed together: Above writes plus release of the active run and activation of the
+  earliest queued turn and its blocked job.
+
+- **`record_approval(...)`**
+  Records committed together: Exact scoped intent fingerprint, trusted decision, operation version,
+  expiry and projection dirty cursor.
+
+- **`delete_conversation(...)`**
+  Records committed together: Permanent tombstone, increased deletion generation, cancelled
+  runs/jobs and dirty invalidation cursor. Physical deletion is disabled.
+
 
 `create_run()` is the synchronous endpoint compatibility path: `run_id` serves as
 its stable request ID. Its legacy expected conversation revision does not reject

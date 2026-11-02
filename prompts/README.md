@@ -19,7 +19,10 @@ Never put credentials, customer records or confidential tool payloads in these f
 The checked-in `schemas/*.schema.v1.json` files describe the validated format.
 Every document has a `prompt` object containing `schema_version`, `id`, semantic
 `version`, `kind`, `title`, `description`, `owner` and `change_summary`.
-Fragments contain ordered `paragraphs`; sections and system/runtime roots contain
+Fragments contain ordered `paragraphs`; a paragraph can be a string or an array
+of source lines joined with one space. Use these arrays to keep JSON lines within
+100 characters, including indentation. Separate paragraphs retain blank lines.
+Sections and system/runtime roots contain
 ordered `includes` references. For example:
 
 ```json

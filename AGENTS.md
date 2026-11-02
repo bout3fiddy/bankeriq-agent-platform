@@ -14,6 +14,8 @@
   changing code.
 - Prefer focused, incremental changes and justify additional abstractions.
 - Use descriptive names and blank lines between logical stages.
+- Keep authored source, configuration and documentation lines at 100 characters
+  or fewer, including indentation. Follow STYLEGUIDE.md for generated-file and URL exceptions.
 - Add what-and-why comments around meaningful behaviour and non-obvious decisions.
 - Keep parsing, credentials, network access and scheduling separate from core logic.
 - Pass explicit inputs and dependencies; avoid catch-all mutable state.

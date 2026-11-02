@@ -141,12 +141,14 @@ conversation; later accepted turns wait in sequence.
 
 History pages and bounded context snapshots are materialised asynchronously from
 the journal, on size/time thresholds and idle. Redis loss can reconstruct accepted
-messages even before that materialisation. The PostgreSQL adapter implements `StateStore` and focused transactional admission
+messages even before that materialisation. The PostgreSQL adapter implements `StateStore` and
+focused transactional admission
 operations. Its bounded journal reads are available now; asynchronous history
 materialisation remains later work. See the
 [storage guide](src/bankeriq_agent_platform/storage/README.md).
 
-The storage adapter owns the [transaction boundaries](ARCHITECTURE.md#transaction-and-replication-boundaries),
+The storage adapter owns the [transaction
+boundaries](ARCHITECTURE.md#transaction-and-replication-boundaries),
 uniqueness constraints, lock order and primary routing. Commit projection work
 alongside state changes. Resolve unknown commits by stable IDs on the primary.
 Optional replicas serve explicitly lag-tolerant history/reporting; job ownership,

@@ -203,3 +203,20 @@ def test_application_default_and_explicit_compatibility_override() -> None:
     assert settings.model.instructions == settings.prompts.instructions(settings.prompts.resolve())
     explicit = load_settings({"MODEL_NAME": "synthetic", "MODEL_INSTRUCTIONS": "Explicit test"})
     assert explicit.model.instructions == "Explicit test"
+
+
+def test_wrapped_paragraphs_preserve_text(directory: Path) -> None:
+    before = load_catalog(directory)
+    reference = before.catalog.documents[0]
+    body = before.compile(reference).body
+
+    # Split the same paragraph differently in source. Only the catalog's file
+    # hash changes; model-visible spaces and paragraph breaks remain identical.
+    def rewrap(prompt) -> None:
+        prompt["paragraphs"] = [
+            (paragraph if isinstance(paragraph, str) else " ".join(paragraph)).split(" ")
+            for paragraph in prompt["paragraphs"]
+        ]
+
+    change_component(directory, rewrap)
+    assert load_catalog(directory).compile(reference).body == body

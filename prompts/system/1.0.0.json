@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "kind": "system",
     "title": "BankerIQ system guidance",
-    "description": "Project role, evidence standards and communication guidance under the runtime security rules.",
+    "description": "BankerIQ system guidance.",
     "owner": "BankerIQ runtime maintainers",
     "change_summary": "Initial versioned JSON definition.",
     "includes": [

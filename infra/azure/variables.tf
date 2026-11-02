@@ -38,7 +38,10 @@ variable "model_capacity" {
   default     = 10
 
   validation {
-    condition     = var.model_capacity >= 1 && var.model_capacity <= 10 && floor(var.model_capacity) == var.model_capacity
+    condition = (
+      var.model_capacity >= 1 && var.model_capacity <= 10 &&
+      floor(var.model_capacity) == var.model_capacity
+    )
     error_message = "Use 1 through 10 quota units for this bounded development deployment."
   }
 }

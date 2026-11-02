@@ -61,7 +61,7 @@
     },
     "Reference": {
       "additionalProperties": false,
-      "description": "Select an exact component; latest/range references would break old-step recovery.",
+      "description": "Pin an exact component version for reproducible recovery.",
       "properties": {
         "id": {
           "pattern": "^[a-z][a-z0-9.-]{0,95}$",

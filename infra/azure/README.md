@@ -15,17 +15,30 @@ responsibilities are described in [components.md](../../components.md).
 
 ## First model test
 
-| Resource | Purpose and timing |
-| --- | --- |
-| Resource group | Groups the environment's Foundry resources for access control and lifecycle management. |
-| Foundry account | An `AIServices` account with project management enabled and a custom subdomain. Provides the model endpoint. |
-| Model deployment | Makes a selected model/version available under the deployment name used by the coordinator. Configure its deployment type and capacity explicitly. |
-| Foundry project | Organises the future hosted agent and its connections. Create with the Foundry foundation; direct Chat Completions calls use the account endpoint. |
-| Identities and role assignments | Give deployment operators and runtime identities the scoped access they need. Exact roles depend on the selected authentication and hosting path. |
+- **Resource group**
+  Purpose and timing: Groups the environment's Foundry resources for access control and lifecycle
+  management.
+
+- **Foundry account**
+  Purpose and timing: An `AIServices` account with project management enabled and a custom
+  subdomain. Provides the model endpoint.
+
+- **Model deployment**
+  Purpose and timing: Makes a selected model/version available under the deployment name used by the
+  coordinator. Configure its deployment type and capacity explicitly.
+
+- **Foundry project**
+  Purpose and timing: Organises the future hosted agent and its connections. Create with the Foundry
+  foundation; direct Chat Completions calls use the account endpoint.
+
+- **Identities and role assignments**
+  Purpose and timing: Give deployment operators and runtime identities the scoped access they need.
+  Exact roles depend on the selected authentication and hosting path.
+
 
 Use AzureRM for supported resources and AzAPI where Foundry features require it.
 Microsoft documents both providers for the account, project and model deployment.
-See the [Foundry Terraform guide](https://learn.microsoft.com/en-us/azure/foundry/how-to/create-resource-terraform).
+See the [Foundry Terraform guide][line-source-1].
 
 Choose the region, model/version, deployment type and capacity after checking
 subscription quota, availability and processing-location requirements. The model
@@ -48,7 +61,7 @@ Keep keys out of source, normal Terraform outputs and generated configuration fi
 The defaults are West Europe, `gpt-4.1-mini` version `2025-04-14`, EU Data Zone
 Standard, and 10 capacity units. `deployment_type` also accepts regional
 `Standard`; global and provisioned deployment types are rejected. Microsoft's
-[deployment types guide](https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/deployment-types)
+[deployment types guide][line-source-2]
 describes the EU data zone and Azure geography processing boundaries.
 
 The approved regional test uses Sweden Central, `gpt-4o` version `2024-11-20`,
@@ -75,7 +88,8 @@ and inference role assignment. After quota and deployment authorisation are sett
 
 ```sh
 terraform -chdir=infra/azure apply development.tfplan
-terraform -chdir=infra/azure output -json runtime_environment > infra/azure/runtime.json
+terraform -chdir=infra/azure output -json runtime_environment | \
+  uv run python -m json.tool > infra/azure/runtime.json
 mkdir -p scratch/transcripts
 uv run bankeriq-runtime validate --provider foundry --config infra/azure/runtime.json \
   --transcript scratch/transcripts/foundry.md
@@ -138,18 +152,28 @@ the existing hosted-agent adapter and its tests. If Foundry hosting is retained,
 validate queue polling, private connectivity, shutdown and PostgreSQL recovery
 ownership before adding the following resources:
 
-| Resource | Purpose |
-| --- | --- |
-| Azure Container Registry | Stores the coordinator image; supply an immutable image digest to the deployment. |
-| Project registry connection and scoped identity roles | Let Foundry pull the image and access the deployed model. |
-| Guardrail policy | Supplies the account-level policy referenced by the hosted agent. |
-| Hosted-agent definition | Registers the image and runtime configuration in the Foundry project through AzAPI's data-plane resource. |
-| Monitoring resources and diagnostic settings | Collect approved operational events; telemetry fields and retention need an explicit application policy. |
+- **Azure Container Registry**
+  Purpose: Stores the coordinator image; supply an immutable image digest to the deployment.
+
+- **Project registry connection and scoped identity roles**
+  Purpose: Let Foundry pull the image and access the deployed model.
+
+- **Guardrail policy**
+  Purpose: Supplies the account-level policy referenced by the hosted agent.
+
+- **Hosted-agent definition**
+  Purpose: Registers the image and runtime configuration in the Foundry project through AzAPI's
+  data-plane resource.
+
+- **Monitoring resources and diagnostic settings**
+  Purpose: Collect approved operational events; telemetry fields and retention need an explicit
+  application policy.
+
 
 Build and publish the image as an application release step. Terraform manages
 the registry, connections and hosted-agent definition. Verify the resulting agent
 version is ready before invoking it. Microsoft's
-[hosted-agent Terraform guide](https://learn.microsoft.com/en-us/azure/foundry/agents/how-to/deploy-hosted-agent-terraform)
+[hosted-agent Terraform guide][line-source-3]
 describes the resource dependencies and deployment sequence.
 
 Live identity propagation, input admission, networking and Python/container
@@ -162,19 +186,60 @@ application integrations, reviewing plans before authorised applies. Regional
 availability, SKU, capacity, network reachability and SDK compatibility require
 verification before provisioning.
 
-| Component | Resources or decisions still needed |
-| --- | --- |
-| Durable persistence and queue | PostgreSQL Flexible Server, database and scoped application roles. Application migrations define journal, history pages, checkpoints, jobs, leases, retries, approvals and projection cursors. Admission and next-job creation commit together. |
-| Ephemeral sessions | Azure Managed Redis, private endpoint and scoped access. Main API read path for active context, cursor-aware updates, provisional streams and idle expiry. Rebuild from PostgreSQL journal/snapshots after loss. |
-| Shared system prompts | Application migrations now implement immutable versions, active bindings and per-step manifests in the same PostgreSQL database; Redis caches immutable prompt bodies. Separate admin publication permissions from worker read access. No additional Azure prompt service is required. |
-| API and workers, proposed | Container Apps workload-profiles environment with Consumption compute; separate API, coordinator and tool applications, identities and bounded replica counts. Maintenance initially shares a worker role. |
-| Runtime transport | PostgreSQL job rows and short transactional claims. LISTEN/NOTIFY is a wake-up optimisation with polling fallback. No DTS, Kafka or Service Bus resource in this design. |
-| Autoscaling | HTTP rules for the API; due-job metrics for workers. Validate Container Apps support/authentication for the KEDA PostgreSQL scaler; begin with fixed bounded replicas if unavailable. |
-| Images and release | Container Registry, managed image-pull identity, immutable digests and compatible worker revisions during drain/migration. |
-| Tool-owned reports | Private Blob storage, producing-tool identity and authenticated report endpoint belong to each tool's implementation. Runtime forwards opaque links without report-read permission; report resources are outside this phase. |
-| Browser application | Frontend/backend hosting and enterprise identity integration; hosting choices remain open. |
-| Network and secret management | VNet/subnets, private PostgreSQL connectivity, Redis private endpoint/DNS, egress controls and Key Vault where required. User-facing API ingress authenticates with Entra; queues and storage are internal. |
-| Monitoring and recovery | Azure Monitor/Log Analytics with approved fields, DB backups/PITR, retention settings and restore drills. General Purpose zone-redundant PostgreSQL HA is a production sizing decision; Burstable is for the synthetic pilot. |
+- **Durable persistence and queue**
+  Resources or decisions still needed: PostgreSQL Flexible Server, database and scoped application
+  roles. Application migrations define journal, history pages, checkpoints, jobs, leases, retries,
+  approvals and projection cursors. Admission and next-job creation commit together.
+
+- **Ephemeral sessions**
+  Resources or decisions still needed: Azure Managed Redis, private endpoint and scoped access. Main
+  API read path for active context, cursor-aware updates, provisional streams and idle expiry.
+  Rebuild from PostgreSQL journal/snapshots after loss.
+
+- **Shared system prompts**
+  Resources or decisions still needed: Application migrations now implement immutable versions,
+  active bindings and per-step manifests in the same PostgreSQL database; Redis caches immutable
+  prompt bodies. Separate admin publication permissions from worker read access. No additional Azure
+  prompt service is required.
+
+- **API and workers, proposed**
+  Resources or decisions still needed: Container Apps workload-profiles environment with Consumption
+  compute; separate API, coordinator and tool applications, identities and bounded replica counts.
+  Maintenance initially shares a worker role.
+
+- **Runtime transport**
+  Resources or decisions still needed: PostgreSQL job rows and short transactional claims.
+  LISTEN/NOTIFY is a wake-up optimisation with polling fallback. No DTS, Kafka or Service Bus
+  resource in this design.
+
+- **Autoscaling**
+  Resources or decisions still needed: HTTP rules for the API; due-job metrics for workers. Validate
+  Container Apps support/authentication for the KEDA PostgreSQL scaler; begin with fixed bounded
+  replicas if unavailable.
+
+- **Images and release**
+  Resources or decisions still needed: Container Registry, managed image-pull identity, immutable
+  digests and compatible worker revisions during drain/migration.
+
+- **Tool-owned reports**
+  Resources or decisions still needed: Private Blob storage, producing-tool identity and
+  authenticated report endpoint belong to each tool's implementation. Runtime forwards opaque links
+  without report-read permission; report resources are outside this phase.
+
+- **Browser application**
+  Resources or decisions still needed: Frontend/backend hosting and enterprise identity integration;
+  hosting choices remain open.
+
+- **Network and secret management**
+  Resources or decisions still needed: VNet/subnets, private PostgreSQL connectivity, Redis private
+  endpoint/DNS, egress controls and Key Vault where required. User-facing API ingress authenticates
+  with Entra; queues and storage are internal.
+
+- **Monitoring and recovery**
+  Resources or decisions still needed: Azure Monitor/Log Analytics with approved fields, DB
+  backups/PITR, retention settings and restore drills. General Purpose zone-redundant PostgreSQL HA
+  is a production sizing decision; Burstable is for the synthetic pilot.
+
 
 PostgreSQL owns accepted data and execution state. Redis serves active interaction;
 large history snapshots are materialised asynchronously and on idle from a small
@@ -184,7 +249,8 @@ the journal still reconstructs accepted turns. The
 ownership, async execution, proposed sizing and failure gates; the
 [build order](../../build-order.md) tracks each integration separately.
 The self-hosted specialist is deferred. Current tests use synthetic tools and
-mocked continuations, with both in-memory and real local PostgreSQL storage. No additional resources are provisioned
+mocked continuations, with both in-memory and real local PostgreSQL storage. No additional resources
+are provisioned
 by this design selection. Terraform state Blob storage remains a separate
 infrastructure responsibility from tool-owned report storage.
 
@@ -194,7 +260,8 @@ connection. Managed identity is preferred, with scaler authentication and token
 refresh verified against the actual deployed versions. Do not assume upstream
 KEDA feature support establishes Container Apps support.
 
-The planned [transaction and replication boundaries](../../ARCHITECTURE.md#transaction-and-replication-boundaries)
+The planned [transaction and replication
+boundaries](../../ARCHITECTURE.md#transaction-and-replication-boundaries)
 use one writable PostgreSQL primary. All state/queue writes, unknown-commit lookups,
 job ownership and active prompt resolution use its writer endpoint. Optional read
 replicas are asynchronous and serve only explicitly lag-tolerant history/reporting;
@@ -208,8 +275,8 @@ fence old workers, advance the recovery generation, rebuild Redis and reconcile
 external effects before queues reopen. Define any HA/read replicas through
 Terraform and review their plan and cost. The synthetic pilot provisions neither
 through this design; sharding and broker resources remain deferred.
-[Azure HA](https://learn.microsoft.com/en-us/azure/postgresql/high-availability/concepts-high-availability),
-[read replicas](https://learn.microsoft.com/en-us/azure/postgresql/read-replica/concepts-read-replicas)
+[Azure HA][line-source-4],
+[read replicas][line-source-5]
 
 Service references: [PostgreSQL](https://learn.microsoft.com/en-us/azure/postgresql/overview),
 [Azure Managed Redis](https://learn.microsoft.com/en-us/azure/redis/overview),
@@ -273,4 +340,17 @@ Central. Regional `gpt-4o-mini` still showed quota but Azure rejected deployment
 with `ServiceModelDeprecated`; its regional version retired on 31 March 2026.
 The successful `gpt-4o` version was selected after inspecting both quota and
 per-SKU retirement metadata. Check both again before repeating the test, following
-Microsoft's [model lifecycle guidance](https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-retirements).
+Microsoft's [model lifecycle guidance][line-source-6].
+
+[line-source-1]:
+  https://learn.microsoft.com/en-us/azure/foundry/how-to/create-resource-terraform
+[line-source-2]:
+  https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/deployment-types
+[line-source-3]:
+  https://learn.microsoft.com/en-us/azure/foundry/agents/how-to/deploy-hosted-agent-terraform
+[line-source-4]:
+  https://learn.microsoft.com/en-us/azure/postgresql/high-availability/concepts-high-availability
+[line-source-5]:
+  https://learn.microsoft.com/en-us/azure/postgresql/read-replica/concepts-read-replicas
+[line-source-6]:
+  https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-retirements

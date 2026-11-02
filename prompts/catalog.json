@@ -23,67 +23,67 @@
       "id": "rules.authority",
       "version": "1.0.0",
       "path": "rules/authority/1.0.0.json",
-      "sha256": "d8fec2b03fcd414d5a29b8be20fd60382b74605ba21aa8018973c93001540ac7"
+      "sha256": "96642313a49456ec7057746690f3264995ab1db7686379ef6897b323c967d9cd"
     },
     {
       "id": "rules.data-boundaries",
       "version": "1.0.0",
       "path": "rules/data-boundaries/1.0.0.json",
-      "sha256": "b3453796e9ecc4e19d0205c0481f8b394901e4c5a8a28863cae3075f8e007960"
+      "sha256": "7130a0171bda699cb071de915964ac9eaae2590266d65d9b25dac6e1bdc6b79a"
     },
     {
       "id": "rules.actions",
       "version": "1.0.0",
       "path": "rules/actions/1.0.0.json",
-      "sha256": "63ff885a877b24a823cebfcf33aef313884098a8becb89b14f6ca36a1bac8f8b"
+      "sha256": "8bdffe5361f209a792cfe5c0461a5bbbeff1856ff0884bdad7334cd3691e8330"
     },
     {
       "id": "runtime.tool-protocol",
       "version": "1.0.0",
       "path": "runtime/tool-protocol/1.0.0.json",
-      "sha256": "6eccea2d27b668e58091738f711ba4e33114987ea4caf6d55d8393a77b6d8456"
+      "sha256": "b6ea4d6e312dbfc1344ac17fd9cfd9af1eb5b0f70385ef7adb0d766a06485d47"
     },
     {
       "id": "bankeriq.runtime",
       "version": "1.0.0",
       "path": "runtime/1.0.0.json",
-      "sha256": "f93f28c5a2071e3dd246f8e98680ec87546e1d260cf0829cec7a759c526d8dd1"
+      "sha256": "872b374d86f568041403f85dabb433133ea746637ed95be0a3708d7afaa76547"
     },
     {
       "id": "system.role",
       "version": "1.0.0",
       "path": "system/role/1.0.0.json",
-      "sha256": "0686063d992472307b4882e3170f9fa61b163de10b4d3528dd0430168320aafd"
+      "sha256": "d5682bd636a2c3b9e4999c1ce21f82069b5dfedbcf9dcf421230f2c4a6ac0cd0"
     },
     {
       "id": "guidelines.evidence",
       "version": "1.0.0",
       "path": "guidelines/evidence/1.0.0.json",
-      "sha256": "ee0a92822a3c1031c16216dedcfe59cf447d1733a4e75809e72529fd7236c350"
+      "sha256": "4a6d40eb1c9cc240542e341b7d35f1f2e928a40f2387e8d7a5b34dc3c8467553"
     },
     {
       "id": "guidelines.responses",
       "version": "1.0.0",
       "path": "guidelines/responses/1.0.0.json",
-      "sha256": "2fd683e5a1dc116152ff62de439dc73a90d5be9c08127df66b89295cc8287eb6"
+      "sha256": "5e42f8f5bea74b437b316f9a31299eea58f6e22c5c4a463ee889247fbd692a12"
     },
     {
       "id": "bankeriq.system",
       "version": "1.0.0",
       "path": "system/1.0.0.json",
-      "sha256": "77fdd8e27cab2820863c7c17a97a41529911a2d5ed88b01a89cd1de04498c8c2"
+      "sha256": "f51faaa1d11cca19f19e8460eba155024600d38ffd45cb319d9cdcef17d3d6a1"
     },
     {
       "id": "demo.instructions",
       "version": "1.0.0",
       "path": "demo/instructions/1.0.0.json",
-      "sha256": "63650668c97209c7d3eefff3be3509a37a31aa929bfe6b0c33e03dab891d272f"
+      "sha256": "c62471b8e20d73813ae651300a9e213991ec1c314117e914f5373e994bf444b5"
     },
     {
       "id": "demo.input",
       "version": "1.0.0",
       "path": "demo/input/1.0.0.json",
-      "sha256": "632d7726742a98c15a1b8d2b79efdc97015b1af97500e80542c3c67eb40d2b1a"
+      "sha256": "79cb0e3b4a45c481722453181c4ca5c51aa59e3744974a6ad99928eda5caa34a"
     }
   ]
 }

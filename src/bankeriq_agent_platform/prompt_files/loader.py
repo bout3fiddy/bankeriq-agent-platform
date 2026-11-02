@@ -104,7 +104,10 @@ class PromptCatalog:
             prompt = document.prompt
 
             if isinstance(prompt, Fragment):
-                return "\n\n".join(prompt.paragraphs)
+                return "\n\n".join(
+                    paragraph if isinstance(paragraph, str) else " ".join(paragraph)
+                    for paragraph in prompt.paragraphs
+                )
 
             sections: list[str] = []
 

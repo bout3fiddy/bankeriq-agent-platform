@@ -9,7 +9,10 @@
     "owner": "BankerIQ runtime maintainers",
     "change_summary": "Initial versioned JSON definition.",
     "paragraphs": [
-      "Load the synthetic sample, calculate its total using tools, then prepare a report and return the total."
+      [
+        "Load the synthetic sample, calculate its total using tools, then prepare a report and",
+        "return the total."
+      ]
     ]
   }
 }
