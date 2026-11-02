@@ -40,6 +40,12 @@ updated tool discovery after a wait, and checks failure handling for truncated
 responses, invalid arguments, rate limits and timeouts. Live Azure calls remain
 untested.
 
+`test_hosting.py` exercises Microsoft's Invocations ASGI server in process. It
+covers create/start/resume requests, authenticated ownership, input admission,
+fixed errors, revision conflicts and simultaneous model calls from two sessions.
+Authentication uses fake tokens, and input policy and inference are synthetic.
+No server is deployed and no cloud identity is verified by these tests.
+
 The fake job provider delays delivery of an already-enforced gateway result;
 execution itself is synchronous. This suite does not establish production
 durability, authentication, network isolation or model behaviour. Those depend on

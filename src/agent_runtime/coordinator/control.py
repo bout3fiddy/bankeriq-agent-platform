@@ -26,5 +26,9 @@ class CoordinatorResult:
     """Run outcome and artifact references for the authenticated application."""
 
     run: RunState
+
+    # HTTP callers use this exact revision for their next user message. Reading
+    # the store again after completion could pick up a different caller's turn.
+    conversation_revision: int = field(kw_only=True)
     answer: str | None = field(default=None, repr=False)
     artifacts: tuple[ArtifactReference, ...] = ()

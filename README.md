@@ -28,6 +28,10 @@ delivery workflows, including failure and permission changes.
 The [Foundry model adapter](src/agent_runtime/providers/foundry/README.md) implements v1
 Chat Completions calls through the OpenAI SDK and is tested with a local HTTP
 transport. Azure resources and live model integration remain untested.
+The [hosting boundary](src/agent_runtime/hosting/README.md) exposes conversation
+creation, run start and continuation through Microsoft's Invocations SDK, tested
+locally with synthetic identity and input policy. Its worker pool allows separate
+sessions to execute concurrently while each coordinator loop remains synchronous.
 Python 3.14 is the local tooling baseline copied from MONKI; deployment runtime
 compatibility must be checked before selecting an Azure hosting target.
 
@@ -48,6 +52,6 @@ exist. Pre-commit runs static checks. See [STYLEGUIDE.md](STYLEGUIDE.md) and the
 
 ## Next step
 
-Validate inference against a configured Azure deployment and implement the hosted
-request boundary. Raw chat-input policy, persistent state, production delivery
-and durable recovery remain unresolved work.
+Validate inference and hosting against a configured Azure deployment, then wire
+production identity and input admission. Raw chat-input policy, persistent state,
+production delivery and durable recovery remain unresolved work.

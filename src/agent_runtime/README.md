@@ -4,7 +4,9 @@ Workshop and implementation workspace for the core agent runtime. Core data type
 tool registry, completed-output enforcement, synchronous tool gateway, in-memory
 state storage, coordinator loop and mocked event continuation under `durable/` are implemented.
 The Foundry model adapter implements inference calls with local HTTP tests;
-live Azure validation remains pending.
+live Azure validation remains pending. The hosting boundary exposes requests
+through Microsoft's Invocations SDK with synthetic authentication and input
+policy in local tests.
 Microsoft Foundry remains the initial coordinator target;
 the self-hosted specialist is deferred.
 
@@ -231,6 +233,19 @@ Tests exercise the SDK through a local HTTP transport, including the complete
 calculation, approval, report and continuation workflow. Live deployment
 compatibility and Azure inference remain untested.
 
+## Implemented hosting boundary
+
+`hosting/endpoint.py` handles conversation creation, run start and continuation.
+`hosting/requests.py` validates external JSON. `providers/foundry/hosting.py` exposes this
+through Microsoft's Invocations SDK with required authentication and input-policy
+dependencies. Local tests inject synthetic providers. See the
+[hosting guide](hosting/README.md) for request examples and the proposed AWS mapping.
+
+The async HTTP handler runs blocking coordinator work in a worker pool. Run
+results carry their checkpoint's conversation revision so callers can submit the
+next turn with a stale-write check. Artifact references remain separate from the
+answer and require the delivery application's access checks.
+
 ## Durable execution scaffolding
 
 `durable/continuation.py` owns event definitions, matching and the resolver
@@ -280,7 +295,8 @@ persisted delivery metadata remains future work. Tests exercise out-of-order
 completion, duplicate consumers, approval denial, permission revocation, output
 separation and budget limits across resumed runs.
 
-Execution remains synchronous. Async dependencies, concurrent tool dispatch,
+The coordinator remains synchronous; the HTTP hosting adapter runs it in a
+worker pool so separate sessions can overlap. Async dependencies, concurrent tool dispatch,
 Kafka transport and durable recovery remain unimplemented. A crash after claiming
 a wait can leave the run running, and a crash after execution still needs
 side-effect reconciliation. No automatic recovery or replay of such runs is provided.
@@ -340,6 +356,11 @@ agent_runtime/
       model.py        # One Foundry inference call per coordinator step
       messages.py     # Permitted history and tool results to API messages
       replies.py      # Provider completion and tool-argument validation
+      hosting.py      # Microsoft's Invocations server and HTTP error mapping
+  hosting/
+    access.py         # Verified principal and input/authentication failures
+    requests.py       # External request schemas and JSON validation
+    endpoint.py       # Bind callers and requests to the coordinator
   durable/
     continuation.py   # Completion events, matching and trusted resolver interface
     handler.py        # Claim waiting runs, resolve events and resume the coordinator

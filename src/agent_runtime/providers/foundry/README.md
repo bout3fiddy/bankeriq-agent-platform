@@ -93,7 +93,9 @@ service and is not a prerequisite for this inference API.
 This adapter supports synchronous, non-streaming, text/function Chat Completions.
 Model selection must verify support for this combination and the requested
 reasoning effort. Responses API continuation, streaming, context compaction,
-asynchronous model calls and hosted execution remain future work.
+asynchronous model calls remain future work. The separate
+[hosting adapter](../../hosting/README.md) implements Hosted Agents Invocations
+request handling with local ASGI tests and synthetic identity providers.
 
 Sources checked on 30 October 2026:
 

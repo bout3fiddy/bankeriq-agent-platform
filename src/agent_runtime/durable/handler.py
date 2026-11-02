@@ -69,7 +69,11 @@ class ContinuationHandler:
         # With two jobs, the first completion saves progress; the second makes
         # both results available to the next model call.
         if remaining:
-            return CoordinatorResult(checkpoint.run, artifacts=tuple(artifacts))
+            return CoordinatorResult(
+                checkpoint.run,
+                artifacts=tuple(artifacts),
+                conversation_revision=checkpoint.conversation.revision,
+            )
 
         return self._coordinator.continue_run(
             checkpoint, artifacts=tuple(artifacts), is_cancelled=is_cancelled
@@ -95,4 +99,8 @@ class ContinuationHandler:
         self, checkpoint: Checkpoint, artifacts: list[ArtifactReference]
     ) -> CoordinatorResult:
         checkpoint = self._save(checkpoint, RunStatus.CANCELLED)
-        return CoordinatorResult(checkpoint.run, artifacts=tuple(artifacts))
+        return CoordinatorResult(
+            checkpoint.run,
+            artifacts=tuple(artifacts),
+            conversation_revision=checkpoint.conversation.revision,
+        )

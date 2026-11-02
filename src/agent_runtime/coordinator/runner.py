@@ -153,7 +153,12 @@ class Coordinator:
                 checkpoint = self._save(
                     checkpoint, RunStatus.COMPLETED, (Message(MessageRole.ASSISTANT, reply.answer),)
                 )
-                return CoordinatorResult(checkpoint.run, reply.answer, tuple(artifacts))
+                return CoordinatorResult(
+                    checkpoint.run,
+                    reply.answer,
+                    tuple(artifacts),
+                    conversation_revision=checkpoint.conversation.revision,
+                )
 
             # With two calls left, a three-call batch stops before any execution.
             if checkpoint.run.tool_calls + len(reply.calls) > self._limits.tool_calls:
@@ -166,7 +171,11 @@ class Coordinator:
             seen_call_ids.update(call.call_id for call in reply.calls)
 
             if checkpoint.run.status in (RunStatus.WAITING, RunStatus.CANCELLED):
-                return CoordinatorResult(checkpoint.run, artifacts=tuple(artifacts))
+                return CoordinatorResult(
+                    checkpoint.run,
+                    artifacts=tuple(artifacts),
+                    conversation_revision=checkpoint.conversation.revision,
+                )
 
             # Saved tool results become the history for the next model request.
 
@@ -275,4 +284,8 @@ class Coordinator:
         self, checkpoint: Checkpoint, status: RunStatus, artifacts: list[ArtifactReference]
     ) -> CoordinatorResult:
         checkpoint = self._save(checkpoint, status)
-        return CoordinatorResult(checkpoint.run, artifacts=tuple(artifacts))
+        return CoordinatorResult(
+            checkpoint.run,
+            artifacts=tuple(artifacts),
+            conversation_revision=checkpoint.conversation.revision,
+        )

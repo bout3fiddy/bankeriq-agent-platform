@@ -28,9 +28,11 @@ planned except where marked implemented. Keep external I/O mocked until the adap
    permitted history and discovered tools to v1 Chat Completions through the
    OpenAI SDK, then validates answers and function calls. Live Azure inference
    and deployment/model compatibility remain untested.
-10. **Hosted-agent adapter** — Expose the coordinator through Foundry's
-    request/response protocol and map trusted request context into runtime inputs.
-
+10. **Hosted-agent adapter (implemented; local ASGI tests)** — `hosting/` handles
+    validated application commands; `providers/foundry/hosting.py` exposes them through
+    Microsoft's Invocations SDK. Authentication and input admission are required
+    injected dependencies, supplied by local fakes in tests. Azure identity
+    integration, deployment and lifecycle validation remain pending.
 Add meaningful component tests alongside each step; step 8 brings those components
 together for end-to-end validation.
 
