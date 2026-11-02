@@ -7,13 +7,40 @@ name = "bankeriq-agent-platform"
 version = "0.1.0"
 description = "Azure banking agent architecture and development scaffold"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "pydantic>=2.14.2",
+    "starlette>=1.10.0",
+]
+
+[project.scripts]
+bankeriq-runtime = "bankeriq_agent_platform.cli:main"
+
+[project.optional-dependencies]
+foundry-model = [
+    "azure-identity>=1.27.0",
+    "openai>=3.41.0",
+]
+foundry-hosting = [
+    "azure-ai-agentserver-invocations>=1.3.0",
+]
+demo = [
+    "httpx2>=2.16.0",
+]
 
 [dependency-groups]
-dev = ["basedpyright>=1.40.2", "pre-commit>=4", "pytest>=8", "ruff>=0.11"]
+dev = [
+    "azure-ai-agentserver-invocations>=1.3.0",
+    "azure-identity>=1.27.0",
+    "basedpyright>=1.40.2",
+    "httpx2>=2.16.0",
+    "openai>=3.41.0",
+    "pre-commit>=4",
+    "pytest>=8",
+    "ruff>=0.11",
+]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/bankeriq_agent_platform"]
+packages = ["src/bankeriq_agent_platform", "src/agent_runtime"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

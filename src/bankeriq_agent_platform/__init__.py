@@ -1,1 +1,1 @@
-"""Banking agent platform scaffold; runtime components are not implemented yet."""
+"""Application configuration and provider wiring for the agent runtime."""

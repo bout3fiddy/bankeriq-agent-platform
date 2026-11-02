@@ -13,7 +13,7 @@ def main() -> None:
 
     commands = [
         ["uv", "lock", "--check"],
-        [sys.executable, "-m", "ruff", "format", "--check", *SCOPES],
+        [sys.executable, "-m", "scripts.format_python", "--check"],
         [sys.executable, "-m", "ruff", "check", *SCOPES],
         [sys.executable, "scripts/linting/check_readability.py"],
         ["uv", "run", "--locked", "basedpyright"],
