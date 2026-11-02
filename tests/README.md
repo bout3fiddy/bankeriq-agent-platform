@@ -52,3 +52,8 @@ uv run python -m pytest tests/tooling -q
 Docker commands, transaction/failure coverage and explicit validation limits.
 Use a dedicated disposable database: tests apply migrations and advance its
 recovery generation. Without that environment variable these tests skip.
+
+`integration/test_prompts.py` adds shared-prompt propagation, administrative
+authorization, write rollback and prepared-step recovery tests against that same
+disposable database. `unit/prompts/` covers fixed-profile recovery. Foundry HTTP
+transport tests verify concurrent request-scoped instructions without live inference.

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from ..conversations.conversation import Conversation, ConversationItem
+from ..prompts.resolution import PromptResolver
 from ..runs.context import RunContext
 from ..runs.state import RunState, RunStatus
 from ..tools.results import ArtifactReference, PendingToolCall
@@ -87,8 +88,19 @@ class StateStore(Protocol):
         artifacts: tuple[ArtifactReference, ...] = (),
         expected_recovery_id: str | None = None,
         expected_deletion_generation: int = 0,
+        prompt_resolver: PromptResolver | None = None,
     ) -> Checkpoint:
-        """Atomically save progress; omitted budget counters retain their stored values."""
+        """Save progress; omitted counters retain their stored values.
+
+        A prompt_resolver reserves exactly one new model step and records its
+        manifest before inference. Replaying that transition retains the saved
+        version; the resolver checks its availability without changing the binding.
+        """
+
+        ...
+
+    def load_model_step(self, context: RunContext, step_number: int) -> Checkpoint:
+        """Recover a prepared step's exact manifest, budgets and context cursor."""
 
         ...
 

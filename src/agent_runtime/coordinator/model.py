@@ -6,6 +6,7 @@ from enum import StrEnum
 from typing import Protocol
 
 from ..conversations.conversation import ConversationItem
+from ..prompts.resolution import PromptManifest
 from ..tools.definitions import ToolCall
 from ..types.json_value import JsonValue
 
@@ -43,6 +44,8 @@ class ModelRequest:
     # Python None leaves the provider default unchanged. ReasoningEffort.NONE
     # explicitly requests disabled reasoning where the deployed model supports it.
     reasoning_effort: ReasoningEffort | None = None
+    instructions: str = field(default="", repr=False)
+    prompt_manifest: PromptManifest | None = None
 
 
 @dataclass(frozen=True, slots=True)

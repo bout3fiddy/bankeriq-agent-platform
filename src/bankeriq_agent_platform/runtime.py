@@ -9,6 +9,7 @@ from agent_runtime.durable.continuation import ContinuationResolver
 from agent_runtime.durable.handler import ContinuationHandler
 from agent_runtime.hosting.access import Principal
 from agent_runtime.hosting.endpoint import RuntimeEndpoint
+from agent_runtime.prompts.resolution import FixedPromptResolver, PromptResolver
 from agent_runtime.providers.hosts import Authenticator, HostFactory, RuntimeServer, select_host
 from agent_runtime.providers.models import ModelFactory, open_model
 from agent_runtime.runs.context import RunContext
@@ -32,6 +33,7 @@ def open_runtime(
     authenticate: Authenticator,
     prepare_input: Callable[[Principal, str], str],
     limits: RunLimits | None = None,
+    prompts: PromptResolver | None = None,
     models: Mapping[str, ModelFactory] | None = None,
     hosts: Mapping[str, HostFactory] | None = None,
 ) -> Iterator[RuntimeServer]:
@@ -55,6 +57,9 @@ def open_runtime(
             permissions_for,
             limits,
             reasoning_effort=settings.model.reasoning_effort,
+            prompts=prompts
+            if prompts is not None
+            else FixedPromptResolver(settings.model.instructions),
         )
         continuations = ContinuationHandler(store, coordinator, continuation_resolver)
         endpoint = RuntimeEndpoint(store, coordinator, continuations, prepare_input=prepare_input)

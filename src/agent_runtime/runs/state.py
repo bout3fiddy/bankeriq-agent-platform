@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
+from ..prompts.resolution import PromptManifest
 from ..tools.results import PendingToolCall
 from .context import RunContext
 
@@ -31,6 +32,7 @@ class RunState:
     revision: int = 0
     model_steps: int = 0
     tool_calls: int = 0
+    prompt_manifest: PromptManifest | None = None
 
     def __post_init__(self) -> None:
 

@@ -66,7 +66,6 @@ def connected_model(
             FoundryModelClient(
                 client,
                 deployment="coordinator-deployment",
-                instructions="Use permitted results to answer.",
                 supported_reasoning_efforts=efforts,
                 max_completion_tokens=2048,
             ),
@@ -76,7 +75,11 @@ def connected_model(
 
 def test_real_sdk_sends_discovered_function_schema_and_returns_answer() -> None:
     call = ToolCall("schema-snapshot", "unused", {"type": "object", "properties": {}})
-    request = ModelRequest(REQUEST.history, (ModelTool("calculate", "Total", call.arguments),))
+    request = ModelRequest(
+        REQUEST.history,
+        (ModelTool("calculate", "Total", call.arguments),),
+        instructions="Use permitted results to answer.",
+    )
 
     with connected_model(completion()) as (model, requests):
         reply = model.complete(request)
@@ -234,3 +237,36 @@ def test_connection_creation_is_lazy_and_has_a_bounded_timeout() -> None:
     ) as client:
         assert client.max_retries == 0
         assert client.timeout == 60
+
+
+def test_shared_client_keeps_concurrent_request_instructions_separate() -> None:
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    barrier = Barrier(2)
+    payloads: list[dict] = []
+
+    def respond(request: httpx2.Request) -> httpx2.Response:
+        payloads.append(json.loads(request.content))
+        barrier.wait(timeout=5)
+        return httpx2.Response(200, json=completion())
+
+    with OpenAI(
+        api_key="synthetic", http_client=httpx2.Client(transport=httpx2.MockTransport(respond))
+    ) as client:
+        model = FoundryModelClient(client, deployment="synthetic")
+
+        def infer(label: str) -> None:
+            request = ModelRequest(
+                (Message(MessageRole.USER, label),), (), instructions=f"Instructions {label}"
+            )
+            model.complete(request)
+
+        with ThreadPoolExecutor(max_workers=2) as workers:
+            list(workers.map(infer, ("session-a", "session-b")))
+
+    assert len(payloads) == 2
+
+    for payload in payloads:
+        system, message = payload["messages"]
+        assert system == {"role": "system", "content": f"Instructions {message['content']}"}

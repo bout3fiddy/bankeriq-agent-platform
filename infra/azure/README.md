@@ -166,7 +166,7 @@ verification before provisioning.
 | --- | --- |
 | Durable persistence and queue | PostgreSQL Flexible Server, database and scoped application roles. Application migrations define journal, history pages, checkpoints, jobs, leases, retries, approvals and projection cursors. Admission and next-job creation commit together. |
 | Ephemeral sessions | Azure Managed Redis, private endpoint and scoped access. Main API read path for active context, cursor-aware updates, provisional streams and idle expiry. Rebuild from PostgreSQL journal/snapshots after loss. |
-| Shared system prompts | Versioned application records and active bindings in the same PostgreSQL database; Redis caches immutable prompt bodies. Separate admin publication permissions from worker read access. No additional Azure prompt service is required. |
+| Shared system prompts | Application migrations now implement immutable versions, active bindings and per-step manifests in the same PostgreSQL database; Redis caches immutable prompt bodies. Separate admin publication permissions from worker read access. No additional Azure prompt service is required. |
 | API and workers, proposed | Container Apps workload-profiles environment with Consumption compute; separate API, coordinator and tool applications, identities and bounded replica counts. Maintenance initially shares a worker role. |
 | Runtime transport | PostgreSQL job rows and short transactional claims. LISTEN/NOTIFY is a wake-up optimisation with polling fallback. No DTS, Kafka or Service Bus resource in this design. |
 | Autoscaling | HTTP rules for the API; due-job metrics for workers. Validate Container Apps support/authentication for the KEDA PostgreSQL scaler; begin with fixed bounded replicas if unavailable. |

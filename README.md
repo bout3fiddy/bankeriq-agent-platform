@@ -85,13 +85,16 @@ being added on `codex/runtime-infrastructure`. The
 [PostgreSQL journal adapter](src/bankeriq_agent_platform/storage/README.md) now persists
 ordered admission, checkpoints, synthetic job records, results and approvals,
 with local PostgreSQL failure tests. The default executable retains in-memory
-state; application composition can inject the adapter. Shared system prompts are next. See the
+state; application composition can inject the adapter. Redis sessions and asynchronous
+history are next. See the
 [state ownership and session lifecycle](ARCHITECTURE.md#selected-state-and-execution-services).
 
-The planned [shared prompt architecture](ARCHITECTURE.md#shared-system-prompts-and-live-updates)
-lets every session inherit a globally published prompt, updated at each new model
-step. Versions are recorded for recovery; business-specific overlays remain later
-work. The current adapter still uses instructions fixed at startup.
+The [shared prompt system](src/agent_runtime/prompts/README.md) now resolves a
+published application/environment binding at each new model step and records its
+manifest before inference. Prepared steps retain their original version across
+recovery. Administration supports publication, activation, rollback and withdrawal;
+Foundry receives request-scoped instructions. The synthetic profile preserves its
+startup text through a fixed resolver. Business overlays remain later work.
 
 Tools own private Blob reports and authenticated download endpoints. The runtime
 forwards opaque links to the user without reading report contents. Tool-specific

@@ -5,6 +5,7 @@ from threading import RLock
 
 from ..conversations.conversation import Conversation, ConversationItem
 from ..conversations.history import snapshot_items
+from ..prompts.resolution import PromptResolver
 from ..runs.context import RunContext
 from ..runs.state import TERMINAL_STATUSES, RunState, RunStatus, validate_transition
 from ..tools.results import ArtifactReference, PendingToolCall
@@ -19,6 +20,7 @@ class InMemoryStateStore:
         self._conversations: dict[tuple[str, str], Conversation] = {}
         self._runs: dict[tuple[str, str], RunState] = {}
         self._artifacts: dict[tuple[str, str], tuple[ArtifactReference, ...]] = {}
+        self._prepared: dict[tuple[str, str, int], Checkpoint] = {}
         self._lock = RLock()
 
     @synchronized
@@ -138,6 +140,7 @@ class InMemoryStateStore:
         artifacts: tuple[ArtifactReference, ...] = (),
         expected_recovery_id: str | None = None,
         expected_deletion_generation: int = 0,
+        prompt_resolver: PromptResolver | None = None,
     ) -> Checkpoint:
 
         # Example: append a restricted completion receipt and change WAITING to
@@ -145,6 +148,23 @@ class InMemoryStateStore:
         # The lock covers validation and both replacements, so competing threads
         # cannot save an answer against stale history or observe a partial update.
         current = self.load_run(context)
+        prior = self._prepared.get((context.tenant_id, context.run_id, expected_run_revision))
+
+        if prompt_resolver is not None and prior is not None:
+            if (
+                prior.conversation.revision != expected_conversation_revision + 1
+                or model_steps != prior.run.model_steps
+                or status is not RunStatus.RUNNING
+                or items
+                or pending_calls
+                or artifacts
+                or tool_calls is not None
+            ):
+                raise StateConflictError("prepared step conflicts")
+
+            assert prior.run.prompt_manifest is not None
+            prompt_resolver.instructions(prior.run.prompt_manifest)
+            return prior
 
         if (
             current.conversation.revision != expected_conversation_revision
@@ -152,6 +172,19 @@ class InMemoryStateStore:
             or current.conversation.active_run_id != context.run_id
         ):
             raise StateConflictError("checkpoint changed or run is inactive")
+
+        if prompt_resolver is not None and current.run.pending_calls:
+            raise StateConflictError("model preparation requires resolved tool calls")
+
+        if prompt_resolver is not None and (
+            status is not RunStatus.RUNNING
+            or items
+            or pending_calls
+            or artifacts
+            or model_steps != current.run.model_steps + 1
+            or tool_calls is not None
+        ):
+            raise ValueError("prompt preparation must reserve exactly one model step")
 
         validate_transition(current.run.status, status)
 
@@ -164,6 +197,9 @@ class InMemoryStateStore:
             revision=current.run.revision + 1,
             model_steps=current.run.model_steps if model_steps is None else model_steps,
             tool_calls=current.run.tool_calls if tool_calls is None else tool_calls,
+            prompt_manifest=prompt_resolver.resolve()
+            if prompt_resolver is not None
+            else current.run.prompt_manifest,
         )
         conversation = replace(
             current.conversation,
@@ -177,7 +213,26 @@ class InMemoryStateStore:
         self._runs[(context.tenant_id, context.run_id)] = run
         key = (context.tenant_id, context.run_id)
         self._artifacts[key] = self._artifacts.get(key, ()) + artifacts
-        return Checkpoint(conversation, run)
+        result = Checkpoint(conversation, run)
+
+        if prompt_resolver is not None:
+            self._prepared[(context.tenant_id, context.run_id, expected_run_revision)] = result
+
+        return result
+
+    @synchronized
+    def load_model_step(self, context: RunContext, step_number: int) -> Checkpoint:
+        self.load_run(context)
+
+        for (tenant, run, _), checkpoint in self._prepared.items():
+            if (
+                tenant == context.tenant_id
+                and run == context.run_id
+                and checkpoint.run.model_steps == step_number
+            ):
+                return checkpoint
+
+        raise StateNotFoundError("prepared model step unavailable")
 
     @synchronized
     def deliveries(self, context: RunContext) -> tuple[ArtifactReference, ...]:

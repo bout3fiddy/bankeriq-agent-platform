@@ -11,7 +11,7 @@ Task groups run in this order: initial runtime → containerisation → PostgreS
 journal and job records → shared system prompts → Redis sessions and asynchronous
 history → durable workers → asynchronous coordinator and tools → recovery and
 scaling validation → Azure runtime deployment. Each group has its own task
-numbering. Shared system prompts are next.
+numbering. Redis sessions and asynchronous history are next.
 
 The selected stack is PostgreSQL plus ephemeral Redis. PostgreSQL contains durable
 conversation deltas, history snapshots and the message queue. Redis serves active
@@ -149,7 +149,7 @@ ownership, projection and production HA remain later groups.
 
 ## Shared system prompts
 
-Status: planned. Depends on PostgreSQL journal and job records.
+Status: implemented and locally validated. Depends on PostgreSQL journal and job records.
 
 1. **Separate instructions from client lifetime** — Add explicit resolved
    instructions and a prompt manifest to the provider-neutral model request. Keep
@@ -176,9 +176,20 @@ Status: planned. Depends on PostgreSQL journal and job records.
    unauthorised publication is denied, client instructions cannot race between
    sessions, and prompt text never changes trusted tool permissions.
 
-Completion requires a single publication to affect every newly resolved model
-step without restarting sessions, with each step's exact instructions recoverable.
-The admin surface can be a management command/API; no browser admin UI is needed.
+Completed: one activation affects every newly resolved model step without
+restarting sessions. Prepared steps retain their exact manifest and recoverable
+instructions. The separate management API supports immutable publication,
+revision-checked activation/rollback and withdrawal. The
+[prompt guide](src/agent_runtime/prompts/README.md) documents composition,
+authorization, retention, reproduction commands and validation limits.
+
+Evidence: `uv run python scripts/verify.py` passed all 275 tests and static checks
+with local PostgreSQL 17.11 enabled. Fifteen shared-prompt PostgreSQL scenarios
+cover propagation, prepared-step recovery, concurrent activation, rollback and
+lost commit acknowledgements. Local HTTP tests
+verify concurrent request-scoped instructions through one Foundry client. Tool
+permissions and restricted-output boundaries remain enforced by application code.
+Live model behavior, production admin authentication and Redis remain later work.
 
 ## Redis sessions and asynchronous history
 

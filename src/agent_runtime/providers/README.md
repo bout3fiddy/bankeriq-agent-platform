@@ -37,7 +37,8 @@ the application's secret configuration. Credentials are resolved only by the
 selected Foundry factory. `MODEL_NAME` identifies the
 configured model/deployment for the selected adapter. Optional common settings:
 
-- `MODEL_INSTRUCTIONS`: application-owned instructions.
+- `MODEL_INSTRUCTIONS`: application-owned text for the default fixed prompt resolver.
+  Shared deployments inject a published-prompt resolver into `open_runtime()`.
 - `MODEL_MAX_OUTPUT_TOKENS`: positive output budget, default 4096.
 - `MODEL_REASONING_EFFORT`: an explicit `ReasoningEffort` value; omission keeps the
   provider default.

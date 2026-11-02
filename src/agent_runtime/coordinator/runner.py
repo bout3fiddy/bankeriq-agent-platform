@@ -6,6 +6,7 @@ from typing import Protocol
 from ..conversations.conversation import ConversationItem
 from ..conversations.messages import Message, MessageRole
 from ..policy.output import EnforcedOutput, enforce_failure
+from ..prompts.resolution import FixedPromptResolver, PromptResolver, PromptUnavailableError
 from ..runs.context import RunContext
 from ..runs.state import RunStatus
 from ..storage.interface import Checkpoint, StateConflictError, StateStore
@@ -39,6 +40,7 @@ class Coordinator:
         limits: RunLimits | None = None,
         *,
         reasoning_effort: ReasoningEffort | None = None,
+        prompts: PromptResolver | None = None,
     ) -> None:
         self._store = store
         self._registry = registry
@@ -47,6 +49,7 @@ class Coordinator:
         self._permissions_for = permissions_for
         self._limits = limits if limits is not None else RunLimits()
         self._reasoning_effort = reasoning_effort
+        self._prompts = prompts if prompts is not None else FixedPromptResolver()
 
     def start(
         self,
@@ -146,11 +149,16 @@ class Coordinator:
             # Count the attempt before calling the provider. A wait/resume keeps
             # this count, so repeated job events cannot reset the model budget.
             checkpoint = self._save(
-                checkpoint, RunStatus.RUNNING, model_steps=checkpoint.run.model_steps + 1
+                checkpoint,
+                RunStatus.RUNNING,
+                model_steps=checkpoint.run.model_steps + 1,
+                prompt_resolver=self._prompts,
             )
 
             try:
                 reply, definitions = self._request_model(checkpoint)
+            except PromptUnavailableError:
+                raise
             except Exception:
 
                 # Provider exceptions may contain private context; save status only.
@@ -215,8 +223,14 @@ class Coordinator:
 
         # Full history includes the last batch's permitted results, e.g. {"total": 2}.
         # Future context management will select/compact history here.
+        assert checkpoint.run.prompt_manifest is not None
+        instructions = self._prompts.instructions(checkpoint.run.prompt_manifest)
         request = ModelRequest(
-            checkpoint.conversation.items, model_tools, reasoning_effort=self._reasoning_effort
+            checkpoint.conversation.items,
+            model_tools,
+            reasoning_effort=self._reasoning_effort,
+            instructions=instructions,
+            prompt_manifest=checkpoint.run.prompt_manifest,
         )
         return self._model.complete(request), definitions
 
@@ -293,6 +307,7 @@ class Coordinator:
         model_steps: int | None = None,
         tool_calls: int | None = None,
         artifacts: tuple[ArtifactReference, ...] = (),
+        prompt_resolver: PromptResolver | None = None,
     ) -> Checkpoint:
         return self._store.save_checkpoint(
             checkpoint.run.context,
@@ -306,6 +321,7 @@ class Coordinator:
             artifacts=artifacts,
             expected_recovery_id=checkpoint.conversation.recovery_id,
             expected_deletion_generation=checkpoint.conversation.deletion_generation,
+            prompt_resolver=prompt_resolver,
         )
 
     def _finish(

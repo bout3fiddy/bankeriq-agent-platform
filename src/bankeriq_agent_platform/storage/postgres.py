@@ -14,6 +14,7 @@ from psycopg.types.json import Jsonb
 
 from agent_runtime.conversations.conversation import Conversation, ConversationItem
 from agent_runtime.conversations.messages import Message, MessageRole
+from agent_runtime.prompts.resolution import PromptManifest, PromptResolver, PromptScope
 from agent_runtime.runs.context import RunContext
 from agent_runtime.runs.state import TERMINAL_STATUSES, RunState, RunStatus, validate_transition
 from agent_runtime.storage.interface import (
@@ -210,6 +211,7 @@ class PostgresStateStore:
         artifacts: tuple[ArtifactReference, ...] = (),
         expected_recovery_id: str | None = None,
         expected_deletion_generation: int = 0,
+        prompt_resolver: PromptResolver | None = None,
     ) -> Checkpoint:
         """Commit bounded delta, budgets, results/delivery and next synthetic work together.
 
@@ -235,6 +237,7 @@ class PostgresStateStore:
                 tool_calls,
                 plain(artifacts),
             ]
+            + (["prepare-prompt-v1"] if prompt_resolver is not None else [])
         )
 
         def transaction(connection: Database) -> Checkpoint:
@@ -248,7 +251,13 @@ class PostgresStateStore:
                 if prior["fingerprint"] != digest:
                     raise StateConflictError("transition ID reused with different checkpoint")
 
-                return self._response(connection, context, prior["response"])
+                replay = self._response(connection, context, prior["response"])
+
+                if prompt_resolver is not None:
+                    assert replay.run.prompt_manifest is not None
+                    prompt_resolver.instructions(replay.run.prompt_manifest)
+
+                return replay
 
             if head["deletion_generation"] != expected_deletion_generation:
                 raise StateConflictError("checkpoint deletion generation changed")
@@ -262,6 +271,19 @@ class PostgresStateStore:
             ):
                 raise StateConflictError("checkpoint changed or run is inactive")
 
+            if prompt_resolver is not None and current.run.pending_calls:
+                raise StateConflictError("model preparation requires resolved tool calls")
+
+            if prompt_resolver is not None and (
+                status is not RunStatus.RUNNING
+                or items
+                or pending_calls
+                or artifacts
+                or model_steps != current.run.model_steps + 1
+                or tool_calls is not None
+            ):
+                raise ValueError("prompt preparation must reserve exactly one model step")
+
             validate_transition(current.run.status, status)
             run = replace(
                 current.run,
@@ -270,6 +292,9 @@ class PostgresStateStore:
                 revision=current.run.revision + 1,
                 model_steps=current.run.model_steps if model_steps is None else model_steps,
                 tool_calls=current.run.tool_calls if tool_calls is None else tool_calls,
+                prompt_manifest=prompt_resolver.resolve()
+                if prompt_resolver is not None
+                else current.run.prompt_manifest,
             )
 
             if run.model_steps < current.run.model_steps or run.tool_calls < current.run.tool_calls:
@@ -329,9 +354,33 @@ class PostgresStateStore:
                 "INSERT INTO transitions VALUES (%s, %s, %s, %s, %s, %s)",
                 (*self._key(context), operation_id, digest, Jsonb(response)),
             )
+
+            if prompt_resolver is not None:
+                self._write(
+                    connection,
+                    "INSERT INTO model_step_prompts VALUES (%s, %s, %s, %s, %s)",
+                    (*self._key(context), run.model_steps, operation_id),
+                )
+
             return self._response(connection, context, response)
 
         return self._retry(transaction)
+
+    def load_model_step(self, context: RunContext, step_number: int) -> Checkpoint:
+        with self._connect() as connection:
+            self._head(connection, context)
+            row = connection.execute(
+                "SELECT t.response FROM model_step_prompts s JOIN transitions t "
+                "ON (s.tenant_id, s.operation_id) = (t.tenant_id, t.operation_id) "
+                "WHERE s.tenant_id = %s AND s.conversation_id = %s AND s.run_id = %s "
+                "AND s.step_number = %s",
+                (*self._key(context), step_number),
+            ).fetchone()
+
+            if row is None:
+                raise StateNotFoundError("prepared model step unavailable")
+
+            return self._response(connection, context, row["response"])
 
     def record_approval(
         self,
@@ -548,6 +597,12 @@ class PostgresStateStore:
         self, connection: Database, context: RunContext, response: dict[str, Any]
     ) -> Checkpoint:
         data = response["run"]
+        manifest_data = data.get("prompt_manifest")
+        manifest = (
+            PromptManifest(**{**manifest_data, "scope": PromptScope(**manifest_data["scope"])})
+            if manifest_data
+            else None
+        )
         pending = tuple(
             PendingToolCall(call["call_id"], WaitReason(call["reason"]), call["reference_id"])
             for call in data["pending_calls"]
@@ -559,6 +614,7 @@ class PostgresStateStore:
             data["revision"],
             data["model_steps"],
             data["tool_calls"],
+            manifest,
         )
         return Checkpoint(self._conversation(connection, context, response["head"], run=True), run)
 

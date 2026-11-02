@@ -20,7 +20,6 @@ class FoundryModelClient:
         client: OpenAI,
         *,
         deployment: str,
-        instructions: str,
         supported_reasoning_efforts: frozenset[ReasoningEffort] = frozenset(),
         max_completion_tokens: int = 4096,
     ) -> None:
@@ -30,7 +29,6 @@ class FoundryModelClient:
         # rate limits/timeouts cannot silently multiply those attempts.
         self._client = client.with_options(max_retries=0)
         self._deployment = deployment
-        self._instructions = instructions
         self._supported_reasoning_efforts = supported_reasoning_efforts
         self._max_completion_tokens = max_completion_tokens
 
@@ -46,7 +44,7 @@ class FoundryModelClient:
             raise FoundryModelError("reasoning effort is unsupported by this deployment")
 
         messages = encode_messages(request.history)
-        messages.insert(0, {"role": "system", "content": self._instructions})
+        messages.insert(0, {"role": "system", "content": request.instructions})
 
         # strict=False preserves registry schemas with optional arguments.
         # The gateway's validator checks actual arguments before execution.

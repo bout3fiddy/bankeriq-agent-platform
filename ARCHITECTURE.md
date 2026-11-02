@@ -118,8 +118,9 @@ loss can delay progress but cannot remove queued work.
 
 The following are target record groups. Versioned journal, checkpoint, synthetic
 job, result, approval and bounded history-page migrations now exist in the
-[storage adapter](src/bankeriq_agent_platform/storage/README.md); shared prompts,
-history materialisation and worker lifecycle remain later groups. Related writes
+[storage adapter](src/bankeriq_agent_platform/storage/README.md), including shared
+prompt versions and bindings. History materialisation and worker lifecycle remain
+later groups. Related writes
 use one PostgreSQL database.
 
 | Records | Contents and invariants |
@@ -406,6 +407,13 @@ executes. Results correlate by call ID and resume the model once the group settl
 
 ### Shared system prompts and live updates
 
+The [shared prompt group](src/agent_runtime/prompts/README.md) is implemented with
+local PostgreSQL and synthetic inference validation. Immutable publication,
+revision-checked activation/rollback, withdrawal and per-step manifests are
+available. Local caches hold immutable bodies; Redis and business overlays remain
+later work. The management surface is a separate application API with an injected
+trusted authorizer. Live-model behavior and production identity are unvalidated.
+
 Prompt resolution belongs between loading a run checkpoint and constructing its
 model request. Each session inherits the deployment environment's active global
 binding; it does not receive a permanent private copy at creation. Publishing one
@@ -487,14 +495,12 @@ conversation memory. Recompose instructions plus bounded history plus current
 permitted tool definitions for each step. Track prompt version/hash in operational
 metadata; full prompt bodies belong in the access-controlled prompt store.
 
-The existing Foundry adapter captures `ModelSettings.instructions` at startup and
-prepends it to each request. Extend the provider-neutral `ModelRequest` with
-resolved instructions and their manifest, supplied by an application-owned prompt
-resolver. The adapter translates that immutable request into provider roles; it
-must not mutate a shared client's instruction string between sessions. Preserve
-fixed startup instructions for the synthetic in-memory profile while adding the
-published-prompt path. Credentials, publication and cache/database I/O stay outside
-core model and conversation types.
+The Foundry adapter now reads explicit instructions and a prompt manifest from
+`ModelRequest`. It translates request-scoped instructions into the system role
+without mutating shared client state. `open_runtime()` accepts a prompt resolver;
+the default fixed resolver retains the synthetic startup instructions. Shared
+resolution and publication clients live in the application storage adapter,
+while core prompt types and composition have no database or SDK dependencies.
 
 For future business overlays, add an explicitly assigned profile binding and
 version to the same manifest. Start with one optional overlay per session. Verify
@@ -656,8 +662,9 @@ and continuation handler through explicit dependencies. Preserve those policy an
 provider boundaries. The current coordinator loops synchronously, dispatches tool
 calls sequentially and saves results after a batch; continuations use local fakes.
 
-PostgreSQL storage and transactional synthetic job records are implemented. Next
-add shared prompt publication and request-scoped resolution. Extract one resumable model-step
+PostgreSQL storage, transactional synthetic job records and shared prompt
+publication/resolution are implemented. Next add Redis and history projection.
+The later asynchronous coordinator group extracts one resumable model-step
 boundary from `Coordinator._run_loop`, preserving existing behaviour with the
 in-memory profile. Add an async model adapter and queued tool
 dispatcher, and adapt `ContinuationHandler` to durable result groups. Do not create

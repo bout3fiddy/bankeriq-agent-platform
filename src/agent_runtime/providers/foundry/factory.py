@@ -50,7 +50,6 @@ def open_foundry_model(
         yield FoundryModelClient(
             client,
             deployment=settings.model,
-            instructions=settings.instructions,
             supported_reasoning_efforts=efforts,
             max_completion_tokens=settings.max_output_tokens,
         )

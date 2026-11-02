@@ -171,6 +171,11 @@ bounded history cursors and the real coordinator's synthetic restricted-report
 approval/job continuation without private payloads in database or model context.
 
 No HA failover, restore, production credentials/roles, latency/throughput claims,
-Redis projection, shared prompt resolution, worker claiming/heartbeats/retries,
+Redis projection, worker claiming/heartbeats/retries,
 parallel tool execution, replicas, sharding or broker transport are implemented
 or validated by this group.
+
+The subsequent [shared prompt group](../../agent_runtime/prompts/README.md) adds
+migration 004 and per-step manifest preparation to this adapter. Global prompt
+bodies remain in immutable version records; prepared checkpoints retain manifests
+and context cursors. Existing checkpoints without manifests remain readable.

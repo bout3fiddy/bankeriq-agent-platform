@@ -60,9 +60,8 @@ with create_foundry_client(
     model = FoundryModelClient(
         client,
         deployment=os.environ["FOUNDRY_MODEL_DEPLOYMENT"],
-        instructions="Use the available tools and permitted results to help the user.",
     )
-    # Pass model into Coordinator(..., model=model, ...).
+    # Pass model and a PromptResolver into Coordinator(..., model=model, prompts=resolver, ...).
     # Keep the client open for the coordinator's lifetime, including resumed runs.
 ```
 
@@ -116,3 +115,9 @@ Sources checked on 30 October 2026:
 - [Microsoft v1 Chat Completions reference](https://learn.microsoft.com/en-us/rest/api/microsoft-foundry/azureopenai/chat)
 - [Microsoft reasoning-model compatibility](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/reasoning)
 - [OpenAI Chat Completions reference](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)
+
+Instructions now come from each `ModelRequest`, resolved and checkpointed before
+inference. The client retains no startup instruction string. See the
+[shared prompt guide](../../prompts/README.md) for fixed/shared resolver composition
+and prepared-step recovery. Local HTTP tests cover concurrent requests through a
+shared client; live Foundry propagation remains unvalidated.

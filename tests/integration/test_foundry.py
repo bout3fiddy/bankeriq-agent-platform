@@ -52,7 +52,7 @@ def test_http_tool_cycles_approval_and_report_delivery() -> None:
         api_key="synthetic-key",
         http_client=httpx2.Client(transport=httpx2.MockTransport(respond)),
     ) as client:
-        model = FoundryModelClient(client, deployment="coordinator", instructions="Use tools.")
+        model = FoundryModelClient(client, deployment="coordinator")
         runtime.coordinator = Coordinator(
             runtime.store, runtime.registry, runtime.events, model, runtime.access.permissions_for
         )
@@ -117,7 +117,7 @@ def test_provider_failures_end_the_run_before_tool_execution(failure: str) -> No
         api_key="synthetic-key",
         http_client=httpx2.Client(transport=httpx2.MockTransport(respond)),
     ) as client:
-        model = FoundryModelClient(client, deployment="coordinator", instructions="Use tools.")
+        model = FoundryModelClient(client, deployment="coordinator")
         runtime.coordinator = Coordinator(
             runtime.store, runtime.registry, runtime.events, model, runtime.access.permissions_for
         )

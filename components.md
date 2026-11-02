@@ -1,7 +1,7 @@
 # Logical components
 
 Design updated 2 November 2026. This catalogue describes target responsibilities;
-the PostgreSQL journal and synthetic job-record adapter is implemented; Redis
+the PostgreSQL journal, synthetic job records and shared prompt system are implemented; Redis
 and asynchronous worker integrations remain planned.
 Current runtime implementation and test coverage are tracked in the
 [build order](build-order.md). Several components can
@@ -76,8 +76,11 @@ Authorised admin operations publish, activate and roll back versions with audit
 records and optimistic concurrency. Newly resolved steps use the latest version;
 in-flight steps and retries retain their recorded manifest. The context builder
 combines runtime instructions, the global prompt, permitted history and tool
-definitions, keeping prompts outside chat history. Existing startup instructions
-are fixed for the lifetime of the current Foundry client; live resolution is planned.
+definitions, keeping prompts outside chat history. Foundry receives immutable
+request-scoped instructions; the synthetic profile uses a fixed resolver. The
+[implemented prompt system](src/agent_runtime/prompts/README.md) includes durable
+manifests, scoped publication/activation and withdrawal. Redis prompt caching
+and production management authentication remain later work.
 
 Business/user-class overlays are deferred. Their future selection comes from
 trusted application context and retains the global layer. Prompt changes cannot
