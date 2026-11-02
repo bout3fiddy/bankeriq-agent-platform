@@ -12,6 +12,7 @@ from psycopg.errors import DeadlockDetected, SerializationFailure, UniqueViolati
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
+from agent_runtime.conversations.context import ContextBudgetExceeded
 from agent_runtime.conversations.conversation import Conversation, ConversationItem
 from agent_runtime.conversations.messages import Message, MessageRole
 from agent_runtime.prompts.resolution import PromptManifest, PromptResolver, PromptScope
@@ -195,7 +196,7 @@ class PostgresStateStore:
             )
             self._write(
                 connection,
-                "INSERT INTO admissions VALUES (%s, %s, %s, %s, %s, %s)",
+                "INSERT INTO admissions VALUES (%s, %s, %s, %s, %s, %s, %s)",
                 (
                     context.tenant_id,
                     request_id,
@@ -203,6 +204,7 @@ class PostgresStateStore:
                     context.run_id,
                     digest,
                     sequence,
+                    head["cursor"] + len(encoded),
                 ),
             )
             self._append(connection, context, head, encoded, f"admit:{request_id}")
@@ -222,7 +224,7 @@ class PostgresStateStore:
             # If the process dies after commit, the retry finds request-b and its
             # job together. Projection work survives a future cache refresh failure.
             self._job(connection, context, 0, "ready" if active else "blocked")
-            self._dirty(connection, context, head)
+            self._dirty(connection, context, head, encoded)
             return self._load(connection, context, head)
 
         return self._retry(transaction)
@@ -426,7 +428,7 @@ class PostgresStateStore:
                     expected_conversation_revision,
                 ),
             )
-            self._dirty(connection, context, head)
+            self._dirty(connection, context, head, encoded)
 
             # Retain the small response metadata and run snapshot for stable-ID
             # recovery. _response reconstructs history from the saved cursor;
@@ -539,7 +541,7 @@ class PostgresStateStore:
             head["cursor"] += 1
             self._write(
                 connection,
-                "UPDATE conversations SET cursor = %s WHERE tenant_id = %s "
+                "UPDATE conversations SET cursor = %s, last_activity = now() WHERE tenant_id = %s "
                 "AND conversation_id = %s",
                 (head["cursor"], *self._scope(context)),
             )
@@ -602,7 +604,7 @@ class PostgresStateStore:
             return tuple(ArtifactReference(**row["delivery"]) for row in rows)
 
     def history_page(self, context: RunContext, *, after: int = 0, limit: int = 100) -> HistoryPage:
-        """Read a bounded journal page; asynchronous materialisation is a later group."""
+        """Read a bounded journal page; session history also supports materialised pages."""
 
         # history_page(context, after=10, limit=2) might return event cursors 11
         # and 13: cursor 12 may represent a metadata-only checkpoint. Resume with
@@ -680,7 +682,9 @@ class PostgresStateStore:
         self._generation(connection)
         row = connection.execute(
             "SELECT tenant_id, conversation_id, user_id, revision, admission_sequence, "
-            "cursor, active_run_id, deletion_generation, deleted FROM conversations "
+            "cursor, active_run_id, deletion_generation, deleted, "
+            "extract(epoch FROM (now() - last_activity))::double precision AS idle_seconds "
+            "FROM conversations "
             "WHERE tenant_id = %s AND conversation_id = %s FOR UPDATE",
             self._scope(context),
         ).fetchone()
@@ -740,21 +744,16 @@ class PostgresStateStore:
         self, connection: Database, context: RunContext, head: dict[str, Any], *, run: bool = False
     ) -> Conversation:
 
-        # Sort by turn before journal sequence: a queued input can be journalled
-        # before the previous turn's final answer. Limit before decoding; oversized
-        # context fails explicitly until bounded context selection is implemented.
-        rows = connection.execute(
-            "SELECT e.payload FROM conversation_events e JOIN runs r USING "
-            "(tenant_id, conversation_id, run_id) WHERE e.tenant_id = %s "
-            "AND e.conversation_id = %s AND e.sequence <= %s "
-            "AND (%s = false OR r.admission_sequence <= (SELECT admission_sequence FROM runs "
-            "WHERE tenant_id = %s AND conversation_id = %s AND run_id = %s)) "
-            "ORDER BY r.admission_sequence, e.sequence LIMIT 1001",
-            (*self._scope(context), head["cursor"], run, *self._key(context)),
-        ).fetchall()
+        complete = True
 
-        if len(rows) > 1000 or sum(len(str(row["payload"])) for row in rows) > 1048576:
-            raise ValueError("context exceeds bound; use paginated history")
+        try:
+            rows = self._recent_events(connection, context, head, run=run)
+        except ContextBudgetExceeded:
+
+            # Context size cannot roll back a committed logical result. Return
+            # bounded metadata and let the coordinator explicitly block inference.
+            rows = []
+            complete = False
 
         return Conversation(
             context.tenant_id,
@@ -765,7 +764,28 @@ class PostgresStateStore:
             head["active_run_id"],
             head["deletion_generation"],
             head["recovery_id"],
+            context_complete=complete,
         )
+
+    def _recent_events(
+        self, connection: Database, context: RunContext, head: dict[str, Any], *, run: bool
+    ) -> list[dict[str, Any]]:
+        from .history import recent_records
+
+        # Read newest turns first, with one sentinel beyond the hard read bound.
+        # Queued turns remain excluded from a run's context even if they were
+        # admitted before its final answer. Drop a clipped oldest turn as a unit.
+        rows = connection.execute(
+            "SELECT e.sequence, e.run_id, r.admission_sequence, e.payload "
+            "FROM conversation_events e JOIN runs r USING "
+            "(tenant_id, conversation_id, run_id) WHERE e.tenant_id = %s "
+            "AND e.conversation_id = %s AND e.sequence <= %s "
+            "AND (%s = false OR r.admission_sequence <= (SELECT admission_sequence FROM runs "
+            "WHERE tenant_id = %s AND conversation_id = %s AND run_id = %s)) "
+            "ORDER BY r.admission_sequence DESC, e.sequence DESC LIMIT 201",
+            (*self._scope(context), head["cursor"], run, *self._key(context)),
+        ).fetchall()
+        return recent_records(list(reversed(rows)), incomplete_first=len(rows) == 201)
 
     def _append(
         self,
@@ -802,21 +822,40 @@ class PostgresStateStore:
             (head["cursor"], *self._scope(context)),
         )
 
-    def _dirty(self, connection: Database, context: RunContext, head: dict[str, Any]) -> None:
+    def _dirty(
+        self,
+        connection: Database,
+        context: RunContext,
+        head: dict[str, Any],
+        encoded: list[dict[str, Any]] | None = None,
+    ) -> None:
+        from .history import encoded_size
 
-        # If cursor 14 arrives while a future projector is applying cursor 12,
-        # keep 14 as the dirty target and retain the old projected_cursor. This
-        # adapter only records pending work; a later projector acknowledges the
-        # particular cursor it actually materialised without dropping newer work.
+        # Cursor 14 arriving after materialisation of 12 keeps 14 dirty. Counters
+        # cover only this committed delta, so admission never scans or rewrites
+        # old history. Reset the timer only when previously acknowledged work
+        # becomes dirty again; steady traffic cannot postpone the time trigger.
         self._write(
             connection,
             "INSERT INTO projection_work (tenant_id, conversation_id, dirty_cursor, "
-            "deletion_generation, recovery_id) "
-            "VALUES (%s, %s, %s, %s, %s) ON CONFLICT (tenant_id, conversation_id) "
-            "DO UPDATE SET dirty_cursor = EXCLUDED.dirty_cursor, "
+            "deletion_generation, recovery_id, pending_events, pending_bytes) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (tenant_id, conversation_id) "
+            "DO UPDATE SET dirty_since = CASE WHEN "
+            "projection_work.dirty_cursor <= projection_work.projected_cursor AND "
+            "projection_work.dirty_cursor <= projection_work.cache_cursor THEN now() "
+            "ELSE projection_work.dirty_since END, dirty_cursor = EXCLUDED.dirty_cursor, "
+            "pending_events = projection_work.pending_events + EXCLUDED.pending_events, "
+            "pending_bytes = projection_work.pending_bytes + EXCLUDED.pending_bytes, "
             "deletion_generation = EXCLUDED.deletion_generation, recovery_id = "
             "EXCLUDED.recovery_id",
-            (*self._scope(context), head["cursor"], head["deletion_generation"], self.recovery_id),
+            (
+                *self._scope(context),
+                head["cursor"],
+                head["deletion_generation"],
+                self.recovery_id,
+                len(encoded or []),
+                sum(encoded_size(item) for item in (encoded or [])),
+            ),
         )
 
     def _job(self, connection: Database, context: RunContext, revision: int, status: str) -> None:

@@ -4,7 +4,7 @@ from collections import OrderedDict
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from threading import RLock
-from typing import Any, LiteralString
+from typing import Any, LiteralString, Protocol
 
 import psycopg
 from psycopg import Connection
@@ -93,15 +93,29 @@ class _PromptDatabase:
         return self.scope.application, self.scope.environment
 
 
+class PromptBodyCache(Protocol):
+    """Optional immutable body cache; availability and bindings always use the primary."""
+
+    def get(self, manifest: PromptManifest) -> str | None: ...
+
+    def put(self, manifest: PromptManifest, body: str) -> None: ...
+
+
 class PostgresPromptResolver(_PromptDatabase):
     """Read current bindings on every resolution; cache at most 64 immutable version bodies."""
 
     def __init__(
-        self, dsn: str, scope: PromptScope, *, catalog: PromptCatalog | None = None
+        self,
+        dsn: str,
+        scope: PromptScope,
+        *,
+        catalog: PromptCatalog | None = None,
+        body_cache: PromptBodyCache | None = None,
     ) -> None:
         super().__init__(dsn, scope, catalog=catalog)
         self._bodies: OrderedDict[tuple[str, str], str] = OrderedDict()
         self._lock = RLock()
+        self._body_cache = body_cache
 
     def resolve(self) -> PromptManifest:
 
@@ -182,6 +196,16 @@ class PostgresPromptResolver(_PromptDatabase):
             with self._lock:
                 body = self._bodies.get(key)
 
+                # A second process can reuse v7's immutable body from Redis.
+                # Validate its hash before adoption; corruption falls back to
+                # the primary. The availability check above still fences v7
+                # immediately after withdrawal, regardless of cache contents.
+                if body is None and self._body_cache is not None:
+                    body = self._body_cache.get(manifest)
+
+                    if body is not None and content_hash(body) != manifest.content_hash:
+                        body = None
+
                 if body is None:
                     record = connection.execute(
                         "SELECT body FROM prompt_versions WHERE application = %s "
@@ -190,7 +214,11 @@ class PostgresPromptResolver(_PromptDatabase):
                     ).fetchone()
                     assert record is not None
                     body = record["body"]
-                    self._bodies[key] = body
+
+                    if self._body_cache is not None:
+                        self._body_cache.put(manifest, body)
+
+                self._bodies[key] = body
 
                 # With 64 cached bodies, accessing v7 refreshes its position.
                 # Loading a 65th distinct body removes the least recently used

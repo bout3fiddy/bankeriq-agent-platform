@@ -55,6 +55,12 @@ Foundry explicitly for live inference. [Azure Terraform](infra/azure/README.md)
 defines the development resources; repeat live validation after provisioning a
 supported model with available quota.
 
+The [Redis session and history adapter](src/bankeriq_agent_platform/sessions/README.md)
+adds disposable UI views, provisional input reconciliation, durable acceptance,
+bounded asynchronous history projection and optional immutable prompt caching.
+Explicit projection/cleanup calls require application scheduling; worker execution
+ownership remains the next group. Local tests use real PostgreSQL and Redis.
+
 ## Development
 
 Install [uv](https://docs.astral.sh/uv/), then run:

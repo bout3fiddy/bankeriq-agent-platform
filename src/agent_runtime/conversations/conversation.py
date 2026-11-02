@@ -21,3 +21,8 @@ class Conversation:
     active_run_id: str | None = None
     deletion_generation: int = 0
     recovery_id: str | None = None
+
+    # Durable settlement can exceed the model window. Keep its results committed
+    # and mark the derived view incomplete; callers must page history or compact
+    # before another model step. Never infer from an empty/truncated current turn.
+    context_complete: bool = True

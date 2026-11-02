@@ -139,23 +139,24 @@ can have a null fingerprint; new adapter writes require the original intent.
 Individual application events are limited to 60,000 encoded bytes, deltas to
 100 items/128 KiB, and database event rows to 64 KiB. Checkpoint/transition JSON
 has a 256 KiB database bound. Budgets cannot decrease. The history-page table
-allows at most 100 cursor positions/1 MiB per page. Materialisation and snapshots
-remain in the later history group; current history reads page the durable journal.
-`history_page()` returns items, resume/durable cursors and both generations.
-Metadata-only changes can leave gaps in event sequence; resume with the returned
-cursor. Run context reconstruction rejects more than 1,000 events or 1 MiB;
-semantic compaction and recent-context selection are deferred. Rejection rolls
-back a write that would exceed the context bound. Growing transcripts are never
-rewritten into conversation or checkpoint JSON.
+allows at most 100 cursor positions/1 MiB per page. The
+[session/history adapter](../sessions/README.md) now materialises pages at a smaller
+800,000-byte application bound, with version-1 snapshots and atomic cursor progress.
+Migrations 006/007 add snapshot storage, admission cursors, dirty counters and due-work
+indexes. Existing `history_page()` still reads the journal; the session API prefers
+materialised pages. Metadata-only transitions can leave event-sequence gaps.
+
+Recent context selects whole turns up to 200 items/256 KiB, excluding later queued
+turns from an active run. An oversized newest turn keeps its committed outcomes
+and reports incomplete context; further inference fails explicitly. Semantic
+compaction remains deferred. Growing transcripts are never rewritten into checkpoints.
 
 Projection work coalesces to the latest durable cursor, including state changes
-without text. No code advances its projected cursor yet. The later projector must
-write bounded immutable pages and advance its cursor in one transaction, preserving
-newer dirty work. Cleanup must remain disabled until durable pages/snapshots cover
-the events and all active-run, result/delivery, approval, audit and request replay
-retention windows permit removal. Retain request fingerprints and stable response
-identities for the supported retry window. Physical removal must be bounded and
-idempotent; backups and tool-owned reports require separate retention policies.
+without text. The explicit projector commits bounded immutable pages, snapshots and
+progress together, preserving newer dirty work. No journal pruning is implemented.
+Removal requires coverage plus all active-run, result/delivery, approval, audit and
+request replay retention windows. Retain stable response identities for supported
+retries; backup and tool-owned report retention require separate policies.
 
 Tombstones retain ownership and prevent conversation ID reuse, late writes and
 history reads. Deletion invalidation carries an increased generation. Each adapter
@@ -185,7 +186,7 @@ bounded history cursors and the real coordinator's synthetic restricted-report
 approval/job continuation without private payloads in database or model context.
 
 No HA failover, restore, production credentials/roles, latency/throughput claims,
-Redis projection, worker claiming/heartbeats/retries,
+worker claiming/heartbeats/retries,
 parallel tool execution, replicas, sharding or broker transport are implemented
 or validated by this group.
 

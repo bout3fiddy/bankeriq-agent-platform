@@ -11,7 +11,7 @@ Task groups run in this order: initial runtime → containerisation → PostgreS
 journal and job records → shared system prompts → Redis sessions and asynchronous
 history → durable workers → asynchronous coordinator and tools → recovery and
 scaling validation → Azure runtime deployment. Each group has its own task
-numbering. Redis sessions and asynchronous history are next.
+numbering. Durable PostgreSQL workers are next.
 
 The selected stack is PostgreSQL plus ephemeral Redis. PostgreSQL contains durable
 conversation deltas, history snapshots and the message queue. Redis serves active
@@ -21,7 +21,7 @@ Accepted work always has a recoverable PostgreSQL input record. See the
 The [transaction and replication boundaries](ARCHITECTURE.md#transaction-and-replication-boundaries)
 define atomic writes, primary-only reads and recovery requirements for the groups
 below. The PostgreSQL journal adapter and its local failure tests are implemented;
-later worker, cache and deployment guarantees remain pending.
+later worker and deployment guarantees remain pending.
 DTS and separate brokers are outside this sequence. Tools own confidential Blob
 reports and authenticated downloads. Container Apps is proposed for worker hosting;
 the earlier Foundry Hosted Agents target remains a separate compatibility decision.
@@ -149,7 +149,7 @@ independent process admission/recovery, lost commit acknowledgements, duplicate
 and conflicting IDs, stale revisions, ordered context, approvals, tombstones,
 recovery generations and restricted-output isolation. Run the reproducible Docker
 commands in the storage guide. Automatic recovery of running execution, worker
-ownership, projection and production HA remain later groups.
+ownership and production HA remain later groups. Projection was added in the Redis group.
 
 ## Shared system prompts
 
@@ -193,7 +193,8 @@ cover propagation, prepared-step recovery, concurrent activation, rollback and
 lost commit acknowledgements. Local HTTP tests
 verify concurrent request-scoped instructions through one Foundry client. Tool
 permissions and restricted-output boundaries remain enforced by application code.
-Live model behavior, production admin authentication and Redis remain later work.
+Live model behavior and production admin authentication remain later work.
+Redis immutable-body caching was subsequently added in the session group.
 
 JSON authoring follow-up completed on 3 November 2026: [prompt definitions](prompts/README.md)
 now separate runtime/system roots, security rules and guidelines into versioned
@@ -213,7 +214,7 @@ has not been evaluated.
 
 ## Redis sessions and asynchronous history
 
-Status: planned. Depends on PostgreSQL records and shared system prompts.
+Status: implemented and locally validated. Depends on PostgreSQL records and shared system prompts.
 
 1. **Serve active views** — Hydrate recent context from a PostgreSQL snapshot plus
    journal tail, then serve API reads from tenant/conversation Redis keys. Page old
@@ -247,7 +248,23 @@ Status: planned. Depends on PostgreSQL records and shared system prompts.
 
 Completion requires Redis to be disposable and large conversations to avoid
 synchronous full-history writes. Persisting small durable deltas remains required.
-The projection loop can run explicitly in tests until durable workers exist.
+The projection loop runs explicitly until durable workers exist. The
+[session guide](src/bankeriq_agent_platform/sessions/README.md) documents API wiring,
+limits, projection/cleanup loops, retention and reproducible container commands.
+Immutable prompt bodies also have an optional Redis cache; primary checks remain required.
+
+Implemented: bounded snapshots/pages, durable dirty discovery, cursor/generation fences,
+provisional reconciliation, recent complete-turn context and explicit context overflow.
+Local synthetic tests cover Redis loss, restart, concurrent hydration, stale updates,
+projection rollback/unknown commits, tenant/output isolation, busy conversations,
+idle races, fair projection scans and immutable prompt cache corruption/withdrawal.
+No automatic scheduler, worker execution ownership or journal pruning is added.
+
+Executed on 3 November 2026: the full verification gate passed 324 tests and static
+checks with PostgreSQL 17.11 and Redis 7.4.12 enabled, including 21 session scenarios.
+The rebuilt synthetic container passed its offline/HTTP/shutdown checks; wheel
+inspection confirmed packaged Lua and migrations. The session guide records local
+read/projection samples and limits. No cloud or live-model calls were made.
 
 ## Durable PostgreSQL workers
 

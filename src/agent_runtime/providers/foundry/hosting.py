@@ -7,6 +7,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from ...conversations.context import ContextBudgetExceeded
 from ...hosting.access import AuthenticationRequired, InputRejected, Principal
 from ...hosting.endpoint import RuntimeEndpoint
 from ...hosting.requests import InvalidInvocation, Invocation, parse_invocation
@@ -50,6 +51,8 @@ def create_hosted_server(
             return _error(400, "invalid_request")
         except StateNotFoundError:
             return _error(404, "state_unavailable")
+        except ContextBudgetExceeded:
+            return _error(422, "context_limit_exceeded")
         except StateConflictError:
             return _error(409, "state_conflict")
         except Exception:

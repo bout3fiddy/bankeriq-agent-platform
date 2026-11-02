@@ -13,7 +13,16 @@ from ..storage.interface import StateStore
 from ..tools.results import WaitReason
 from ..types.json_value import JsonValue
 from .access import Principal
-from .requests import CreateConversationRequest, Invocation, StartRunRequest
+from .requests import (
+    AdmitInputRequest,
+    CreateConversationRequest,
+    HistoryReadRequest,
+    InvalidInvocation,
+    Invocation,
+    SessionReadRequest,
+    StartRunRequest,
+)
+from .sessions import SessionAccess
 
 
 class RuntimeEndpoint:
@@ -26,11 +35,13 @@ class RuntimeEndpoint:
         continuations: ContinuationHandler,
         *,
         prepare_input: Callable[[Principal, str], str],
+        sessions: SessionAccess | None = None,
     ) -> None:
         self._store = store
         self._coordinator = coordinator
         self._continuations = continuations
         self._prepare_input = prepare_input
+        self._sessions = sessions
 
     def invoke(self, principal: Principal, command: Invocation) -> dict[str, JsonValue]:
         """Create a conversation, start one turn, or resolve a trusted pending event."""
@@ -48,6 +59,31 @@ class RuntimeEndpoint:
                 "conversation_id": conversation.conversation_id,
                 "revision": conversation.revision,
             }
+
+        if isinstance(command, (SessionReadRequest, HistoryReadRequest, AdmitInputRequest)):
+            if self._sessions is None:
+                raise InvalidInvocation("session operations are not configured")
+
+            context = RunContext(
+                principal.tenant_id,
+                principal.user_id,
+                command.conversation_id,
+                command.run_id if isinstance(command, AdmitInputRequest) else "",
+            )
+
+            if isinstance(command, SessionReadRequest):
+                return self._sessions.read(context, minimum_cursor=command.minimum_cursor)
+
+            if isinstance(command, HistoryReadRequest):
+                return self._sessions.history_page(
+                    context, after=command.after, limit=command.limit
+                )
+
+            text = self._prepare_input(principal, command.message)
+            operation = (
+                self._sessions.stage if command.action == "stage_input" else self._sessions.admit
+            )
+            return operation(context, request_id=command.request_id, text=text)
 
         # The caller selects conversation/run IDs. Storage checks ownership using
         # the authenticated principal on every start or resume operation.

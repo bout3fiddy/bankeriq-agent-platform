@@ -12,11 +12,16 @@ class RunLimits:
 
     model_steps: int = 8
     tool_calls: int = 16
+    context_items: int = 200
+    context_bytes: int = 262144
 
     def __post_init__(self) -> None:
 
         # Zero tool calls permits a text-only run. At least one model step is
         # needed to answer; negative budgets indicate invalid configuration.
+        if self.context_items < 1 or self.context_bytes < 1:
+            raise ValueError("context bounds must be positive")
+
         if self.model_steps < 1 or self.tool_calls < 0:
             raise ValueError("model_steps must be positive and tool_calls nonnegative")
 

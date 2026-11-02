@@ -162,3 +162,9 @@ This evidence checks composition, storage and authorization behavior with script
 models and local HTTP transports. Live model adherence, production admin identity,
 Azure database roles/networking, Redis, business overlays, queued worker recovery
 and parallel tool execution remain unvalidated or deferred.
+
+Optional shared body caching now uses `RedisPromptBodies` from the
+[session adapter](../../bankeriq_agent_platform/sessions/README.md). Inject it as
+`body_cache` into `PostgresPromptResolver`. Scope/version/hash keying, hash validation,
+primary availability/withdrawal checks and database fallback preserve resolution.
+Bindings and composed model context are never cached in Redis.

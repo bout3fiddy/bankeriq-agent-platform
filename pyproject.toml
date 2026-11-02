@@ -26,6 +26,9 @@ validation = [
 postgres = [
     "psycopg[binary]>=3.2",
 ]
+redis = [
+    "redis>=5,<8",
+]
 
 [dependency-groups]
 dev = [
@@ -37,6 +40,7 @@ dev = [
     "pre-commit>=4",
     "psycopg[binary]>=3.2",
     "pytest>=8",
+    "redis>=5,<8",
     "ruff>=0.11",
 ]
 

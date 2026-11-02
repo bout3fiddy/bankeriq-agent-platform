@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from typing import Protocol
 
+from ..conversations.context import ContextBudgetExceeded, bounded_context
 from ..conversations.conversation import ConversationItem
 from ..conversations.messages import Message, MessageRole
 from ..policy.output import EnforcedOutput, enforce_failure
@@ -148,6 +149,8 @@ class Coordinator:
         # to request another tool or answer "The total is 2". The step budget
         # includes the model call that produces the answer.
         for _ in range(self._limits.model_steps - checkpoint.run.model_steps):
+            if not checkpoint.conversation.context_complete:
+                raise ContextBudgetExceeded("current turn requires compaction before inference")
 
             # Example callback: is_cancelled=lambda: cancel_event.is_set().
             if is_cancelled is not None and is_cancelled():
@@ -167,7 +170,7 @@ class Coordinator:
 
             try:
                 reply, definitions = self._request_model(checkpoint)
-            except PromptUnavailableError:
+            except PromptUnavailableError, ContextBudgetExceeded:
 
                 # A withdrawn v7 or unavailable prompt primary blocks the call.
                 # Retain the prepared checkpoint for explicit recovery instead
@@ -243,15 +246,22 @@ class Coordinator:
 
         # The store supplies run-specific history, including the last permitted
         # result, e.g. {"total": 2}. PostgreSQL excludes later queued inputs here;
-        # future context management will select or compact long histories.
+        # bounded_context selects complete recent turns before the model call.
         # Reconstruct the version prepared above. Calling resolve() here could
         # select v8 after the checkpoint recorded v7 and break exact recovery.
         # Request-local fields also let simultaneous sessions use different
         # prepared versions through the same model client.
         assert checkpoint.run.prompt_manifest is not None
         instructions = self._prompts.instructions(checkpoint.run.prompt_manifest)
-        request = ModelRequest(
+        history = bounded_context(
             checkpoint.conversation.items,
+            instructions=instructions,
+            tools=model_tools,
+            max_items=self._limits.context_items,
+            max_bytes=self._limits.context_bytes,
+        )
+        request = ModelRequest(
+            history,
             model_tools,
             reasoning_effort=self._reasoning_effort,
             instructions=instructions,

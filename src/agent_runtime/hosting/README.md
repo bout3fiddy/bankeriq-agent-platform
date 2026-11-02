@@ -170,3 +170,10 @@ Sources checked on 30 October 2026:
   https://docs.aws.amazon.com/bedrock/latest/userguide/tool-use-client-side.html
 [line-source-4]:
   https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-http-protocol-contract.html
+
+With an injected `SessionAccess`, the endpoint also accepts `read_session`,
+`read_history`, `stage_input` and `admit_input`. Authenticated identity supplies scope;
+input policy runs before both input commands. Admission returns queued acceptance
+without model execution. The [session guide](../../bankeriq_agent_platform/sessions/README.md)
+documents fields, cursor reconciliation and real-container tests. Without that optional
+dependency, these commands fail explicitly. Oversized model context returns HTTP 422.

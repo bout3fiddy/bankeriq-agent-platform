@@ -79,8 +79,8 @@ combines runtime instructions, the global prompt, permitted history and tool
 definitions, keeping prompts outside chat history. Foundry receives immutable
 request-scoped instructions; synthetic validation uses the same catalog. The
 [implemented prompt system](src/agent_runtime/prompts/README.md) includes durable
-manifests, scoped publication/activation and withdrawal. Redis prompt caching
-and production management authentication remain later work.
+manifests, scoped publication/activation and withdrawal. Optional Redis body caching
+is implemented; production management authentication remains later work.
 
 Business/user-class overlays are deferred. Their future selection comes from
 trusted application context and retains the global layer. Prompt changes cannot
@@ -234,3 +234,13 @@ fixtures and scoring. It runs through `open_runtime()` with the application prom
 catalog. `bankeriq_agent_platform.server.LocalServer` remains reusable startup wiring.
 The application wheel excludes the harness; the synthetic Docker image copies it
 explicitly and starts `python -m tests.validation`.
+
+## Implemented session/history boundary
+
+The [session adapter](src/bankeriq_agent_platform/sessions/README.md) owns Redis clients,
+scoped display state, provisional input and fixed-code progress. `PostgresHistory`
+owns bounded materialisation, page reads and dirty/idle discovery. Trusted application
+code schedules explicit calls; core runtime receives only the session interface.
+Every UI read checks primary ownership/generation/cursor before using cached content.
+The coordinator selects bounded complete-turn context and blocks oversized inference;
+permitted outcomes remain durable and pageable. Worker ownership is still deferred.

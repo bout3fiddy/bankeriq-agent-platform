@@ -34,7 +34,35 @@ class ResumeRunRequest(InvocationRequest):
     reference_id: str = Field(min_length=1, max_length=256)
 
 
-type Invocation = CreateConversationRequest | StartRunRequest | ResumeRunRequest
+class SessionReadRequest(InvocationRequest):
+    action: Literal["read_session"]
+    conversation_id: str = Field(min_length=1, max_length=256)
+    minimum_cursor: int = Field(default=0, ge=0)
+
+
+class HistoryReadRequest(InvocationRequest):
+    action: Literal["read_history"]
+    conversation_id: str = Field(min_length=1, max_length=256)
+    after: int = Field(default=0, ge=0)
+    limit: int = Field(default=100, ge=1, le=100)
+
+
+class AdmitInputRequest(InvocationRequest):
+    action: Literal["stage_input", "admit_input"]
+    conversation_id: str = Field(min_length=1, max_length=256)
+    run_id: str = Field(min_length=1, max_length=256)
+    request_id: str = Field(min_length=1, max_length=256)
+    message: str = Field(min_length=1, max_length=32000, repr=False)
+
+
+type Invocation = (
+    CreateConversationRequest
+    | StartRunRequest
+    | ResumeRunRequest
+    | SessionReadRequest
+    | HistoryReadRequest
+    | AdmitInputRequest
+)
 
 # The action selects the matching request class. For example, start_run requires
 # a message and a revision; resume_run requires a matching pending-event reference.

@@ -61,3 +61,7 @@ transport tests verify concurrent request-scoped instructions without live infer
 `validation/` contains the repository-only synthetic application, scripted model,
 tools, request fixtures and smoke-test scoring. Run `uv run python -m tests.validation validate`.
 It uses the application's normal prompt catalog; it is excluded from the application wheel.
+
+Real Redis/PostgreSQL session tests live in `integration/test_sessions.py`. Follow the
+[session guide](../src/bankeriq_agent_platform/sessions/README.md) for disposable
+containers and both required environment variables. No model or cloud access is used.

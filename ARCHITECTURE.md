@@ -140,9 +140,9 @@ loss can delay progress but cannot remove queued work.
 The following are target record groups. Versioned journal, checkpoint, synthetic
 job, result, approval and bounded history-page migrations now exist in the
 [storage adapter](src/bankeriq_agent_platform/storage/README.md), including shared
-prompt versions and bindings. History materialisation and worker lifecycle remain
-later groups. Related writes
-use one PostgreSQL database.
+prompt versions and bindings. Bounded history materialisation and Redis sessions
+are implemented; worker lifecycle remains the next group. Related writes use one
+PostgreSQL database.
 
 - **Conversations**
   Contents and invariants: Tenant/owner, revision, next sequence, active run, latest snapshot
@@ -399,6 +399,14 @@ work stays within the existing PostgreSQL worker design.
 
 ### Active sessions, idle snapshots and reconnects
 
+Implemented locally through the [session adapter](src/bankeriq_agent_platform/sessions/README.md).
+Projection and cleanup require explicit calls; no scheduler or worker ownership exists yet.
+Session admission refreshes immediately; other transitions repair on read or projection.
+Every cached read checks a primary head. The refill lease is advisory and contenders can
+hydrate independently. Recent context is bounded to 200 items/256 KiB with complete-turn
+selection; provider token accounting and semantic compaction remain future work.
+The numbered lifecycle below describes the target; automatic dispatch remains pending.
+
 1. On a miss, hydrate recent history from the latest PostgreSQL snapshot plus
    journal tail. Page older history on demand. A short Redis refill lock reduces
    duplicate loads; durable cursor checks still decide correctness.
@@ -499,7 +507,7 @@ executes. Results correlate by call ID and resume the model once the group settl
 The [shared prompt group](src/agent_runtime/prompts/README.md) is implemented with
 local PostgreSQL and synthetic inference validation. Immutable publication,
 revision-checked activation/rollback, withdrawal and per-step manifests are
-available. Local caches hold immutable bodies; Redis and business overlays remain
+available. Local and optional Redis caches hold immutable bodies; business overlays remain
 later work. The management surface is a separate application API with an injected
 trusted authorizer. Live-model behavior and production identity are unvalidated.
 
@@ -834,7 +842,8 @@ provider boundaries. The current coordinator loops synchronously, dispatches too
 calls sequentially and saves results after a batch; continuations use local fakes.
 
 PostgreSQL storage, transactional synthetic job records and shared prompt
-publication/resolution are implemented. Next add Redis and history projection.
+publication/resolution, Redis sessions and bounded history projection are implemented.
+Next add durable PostgreSQL workers.
 The later asynchronous coordinator group extracts one resumable model-step
 boundary from `Coordinator._run_loop`, preserving existing behaviour with the
 in-memory profile. Add an async model adapter and queued tool
