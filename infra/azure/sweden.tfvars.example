@@ -1,0 +1,7 @@
+# Regional test settings, verified against subscription quota on 2 November 2026.
+# Copy to development.tfvars and supply subscription_id through TF_VAR_subscription_id.
+location        = "swedencentral"
+deployment_type = "Standard"
+model_name      = "gpt-4o"
+model_version   = "2024-11-20"
+model_capacity  = 10

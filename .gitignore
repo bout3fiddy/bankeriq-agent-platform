@@ -20,3 +20,8 @@ htmlcov/
 .terraform/
 *.tfstate
 *.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+infra/azure/runtime.env
+infra/azure/runtime.json
