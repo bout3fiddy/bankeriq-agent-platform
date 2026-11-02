@@ -36,13 +36,17 @@ def open_foundry_model(
     # SDK imports are deliberately lazy. Registering Foundry as an available
     # choice must work in an installation that uses another provider's SDK.
     from .connection import create_foundry_client
+    from .credentials import foundry_credential
     from .model import FoundryModelClient
 
-    with create_foundry_client(
-        base_url=environment["FOUNDRY_OPENAI_BASE_URL"],
-        api_key=environment["AZURE_OPENAI_API_KEY"],
-        timeout_seconds=timeout,
-    ) as client:
+    with (
+        foundry_credential(environment) as credential,
+        create_foundry_client(
+            base_url=environment["FOUNDRY_OPENAI_BASE_URL"],
+            api_key=credential,
+            timeout_seconds=timeout,
+        ) as client,
+    ):
         yield FoundryModelClient(
             client,
             deployment=settings.model,
