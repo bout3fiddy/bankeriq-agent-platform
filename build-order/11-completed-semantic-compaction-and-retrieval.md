@@ -306,7 +306,8 @@ splits source text at sentence/line boundaries. Coverage normally advances by co
 exceptionally large turns use a completed prefix with explicit retained original-input coverage.
 An indivisible oversized latest exchange fails before dispatch. Tool pairs remain intact.
 Background scheduling, Redis model-context caching and automatic retention/deletion remain
-unimplemented. Compaction permits no journal deletion; group 13 owns storage lifecycle.
+unimplemented. Compaction permits no journal deletion;
+[group 14](14-planned-storage-lifecycle-and-capacity-controls.md) owns storage lifecycle.
 
 The previous process-local 65-second pacer is removed. Genuine provider throttling uses durable
 retry deadlines and existing attempt budgets. Available provider capacity remains a throughput

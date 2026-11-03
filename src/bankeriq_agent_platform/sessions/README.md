@@ -226,7 +226,8 @@ be served by current readers.
 [Group 08 measurements](../../../build-order/08-completed-recovery-and-scaling-validation.md)
 compare fixed-size progress updates at 10 and 3,000 retained turns, including SQL reads,
 WAL, Redis traffic, CPU and memory. This does not bound durable database growth; storage
-retention and capacity controls remain planned in group 13.
+retention and capacity controls remain planned in
+[group 14](../../../build-order/14-planned-storage-lifecycle-and-capacity-controls.md).
 
 ## Activity retention evidence (3 November 2026)
 

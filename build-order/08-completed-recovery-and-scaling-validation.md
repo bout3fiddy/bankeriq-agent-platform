@@ -114,4 +114,5 @@ The restore receipt/acceptance ledgers are synthetic; production cutover require
 actual durable provider receipts and acknowledged-request reconciliation. Optional
 replica history/reporting remains disabled until controlled-lag tests exist. Azure HA
 and hosted shutdown remain group 09 gates. Storage retention, quotas and growth alerts
-remain planned in group 13; current cleanup preserves all durable recovery evidence.
+remain planned in [group 14](14-planned-storage-lifecycle-and-capacity-controls.md);
+current cleanup preserves all durable recovery evidence.

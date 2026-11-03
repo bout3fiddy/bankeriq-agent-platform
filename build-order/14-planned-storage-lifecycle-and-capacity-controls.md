@@ -3,8 +3,10 @@
 Status: planned. Part of Operational reliability and capacity management. Depends on
 PostgreSQL journal/job records, Redis sessions/history and asynchronous coordinator/tool
 execution (groups 03, 05–07). Coordinate load measurements and recovery scenarios with
-[group 08](08-completed-recovery-and-scaling-validation.md). This item does not change the
-current next group or authorise implementation, deployment or cloud provisioning.
+[group 08](08-completed-recovery-and-scaling-validation.md) and the concurrent-session
+measurements in [group 12](12-planned-concurrent-sessions-streaming-and-memory-quality.md).
+Renumbered from 13 to 14 on 4 November 2026 to make room for workforce onboarding.
+This item does not authorise implementation, deployment or cloud provisioning.
 
 ## Purpose and current boundary
 
@@ -19,6 +21,8 @@ policy decisions during this group's implementation; none are selected by this p
 1. **Define retention and recovery windows** — Inventory conversation events, snapshots,
    history pages, runs, jobs, results, approvals, prompt manifests/versions, semantic summary
    versions, compaction attempts, retrieval receipts, deduplication records and audit evidence.
+   Include local identity/membership records and access audits introduced by
+   [group 13](13-planned-workforce-identity-and-access-onboarding.md), when available.
    Define retention by record class and tenant policy, including
    deletion holds and dependencies. Specify supported retry, reconnect and recovery windows
    and the response to requests older than those windows. Retain referenced prompt versions
@@ -46,12 +50,22 @@ policy decisions during this group's implementation; none are selected by this p
    logical deletion alone does not guarantee immediate filesystem space reclamation.
    Consider larger primary capacity before write sharding. Add read replicas only for
    measured lag-tolerant demand; they do not increase write capacity. Tenant sharding remains
-   conditional work in [group 12](12-planned-follow-up-runtime-work.md).
+   conditional work within this group, as specified below.
 6. **Coordinate recovery and operations** — Define cleanup scheduling, concurrency, permissions
    and safe audit records. Exercise quota/accounting and retention behavior after restore,
    recovery-generation changes and Redis loss. Preserve reconciliation evidence for external
    effects. Document how database, backup and any archive retention interact. Confidential
    tool-owned reports retain their separate storage and lifecycle ownership.
+
+## Conditional capacity option: tenant sharding
+
+Implement trusted tenant routing only after measured write bottlenecks justify it. Co-locate
+all tenant conversation, queue, checkpoint and deduplication records. Test fenced shard moves,
+recovery-generation changes and prompt resolution from the authoritative configuration writer.
+Splitting one tenant needs a separate design. Preserve atomic local transitions and reject
+stale routing/owners; do not assume cross-shard transactions. Record the measured need and
+an explicit implementation decision before enabling this option. Without that evidence,
+complete the storage lifecycle gates on the existing primary and leave sharding planned.
 
 ## Acceptance gates
 

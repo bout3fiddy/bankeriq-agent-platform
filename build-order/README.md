@@ -60,13 +60,18 @@ file determine execution eligibility. Follow-up groups remain after infrastructu
   [planned](10-planned-reviewed-composite-business-tools.md)
 - 11 — Semantic compaction and history retrieval
   [completed](11-completed-semantic-compaction-and-retrieval.md)
-- 12 — Follow-up runtime work
-  [planned](12-planned-follow-up-runtime-work.md)
+- 12 — Concurrent sessions, streaming and memory quality
+  [planned](12-planned-concurrent-sessions-streaming-and-memory-quality.md)
+- 13 — Workforce identity and access onboarding
+  [planned](13-planned-workforce-identity-and-access-onboarding.md)
 
 Completed: [Semantic compaction and history
 retrieval](11-completed-semantic-compaction-and-retrieval.md), including automatic compaction and
-hosted latency validation. Next: [Follow-up runtime work](12-planned-follow-up-runtime-work.md).
-Group 10 remains planned for later at the user's request.
+hosted latency validation. Next: [Concurrent sessions, streaming and memory
+quality](12-planned-concurrent-sessions-streaming-and-memory-quality.md).
+Group 13 then adds bank workforce sign-in and controlled onboarding. Group 10 remains planned
+for later at the user's request. Broker transport and business prompt overlays remain
+[deferred options](deferred-options.md), with no implementation slot selected.
 
 Use exactly three statuses: `planned`, `in-progress` and `completed`.
 `planned` means work has not started. Mark a group `in-progress` as soon as work
@@ -78,13 +83,14 @@ Keep filenames, Status paragraphs and index entries aligned. See
 ## Operational reliability and capacity management
 
 Cross-cutting work for sustained operation, horizontal scalability and infrastructure
-state growth. [Group 08](08-completed-recovery-and-scaling-validation.md) owns recovery
-and horizontal scaling validation. The item below owns storage lifecycle and capacity
-controls; its dependencies determine execution order. Existing group numbers and the
-next-group selection remain unchanged.
+state growth. [Group 08](08-completed-recovery-and-scaling-validation.md) owns earlier recovery
+and horizontal scaling evidence. Group 12 extends measured concurrent-session operation,
+streaming, observability and safe releases. The item below owns database growth, retention,
+quotas, archival and storage capacity controls, including conditional tenant sharding.
+It was renumbered from 13 to 14 on 4 November 2026; its dependencies determine execution order.
 
-- 13 — Storage lifecycle and capacity controls
-  [planned](13-planned-storage-lifecycle-and-capacity-controls.md)
+- 14 — Storage lifecycle and capacity controls
+  [planned](14-planned-storage-lifecycle-and-capacity-controls.md)
 
 ## Scope boundary
 
