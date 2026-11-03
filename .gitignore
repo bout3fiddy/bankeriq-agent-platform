@@ -12,7 +12,7 @@ htmlcov/
 /build/
 /dist/
 /scratch/
-/build-order/evidence/
+/build-order/
 .env
 .env.*
 !.env.example

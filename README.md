@@ -28,6 +28,10 @@ Foundry inference with synthetic tools and in-memory state. The
 [build order](build-order/README.md) separates this completed milestone
 from subsequent infrastructure milestones and later runtime features.
 
+The complete `build-order/` folder is local and gitignored, including plans and evidence.
+Its links work in checkouts that contain those local files. Fresh clones use the tracked
+architecture, component guides and performance register until the roadmap is supplied.
+
 This repository contains design documentation, core runtime data types, a
 permission-filtered tool registry, completed-output enforcement, a synchronous
 tool gateway, conversation/run state, an in-memory store with atomic checkpoint

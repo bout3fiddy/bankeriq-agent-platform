@@ -15,6 +15,9 @@
 - For roadmap work, read [build-order/AGENTS.md](build-order/AGENTS.md) and the
   [build-order index](build-order/README.md), then the selected task-group file.
   Keep group statuses, evidence and index links aligned when work changes.
+  The entire build-order folder is local and gitignored. Preserve it across worktree
+  moves and merges; never force-add it. A fresh clone needs the local roadmap supplied
+  before executing a numbered group. Ordinary runtime work can use tracked component guides.
 - For performance targets, measurements or optimisation, read
   [performance/AGENTS.md](performance/AGENTS.md) and
   [performance/REQUIREMENTS.md](performance/REQUIREMENTS.md). Keep dated evidence
