@@ -48,6 +48,9 @@ applicable nested instructions in the source directories you change.
 - Record executed commands, service versions, outcomes and gaps. Model/tool permission
   checks and output isolation require behavioural evidence; design references alone
   do not validate implementation. Keep secrets and private data out of all examples.
+- Keep generated transcripts and raw artifacts in the gitignored `evidence/` folder.
+  Preserve them locally; do not force-add them. Keep reproducible commands, results and
+  limitations in tracked group files. Evidence links require the local validation artifacts.
 - Add new requirements to the relevant group or a separate explicitly scoped group,
   with dependencies and acceptance gates. Keep conditional work labelled conditional.
 
