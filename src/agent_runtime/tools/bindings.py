@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from ..policy.output import VisibleOutputFilter
 from ..runs.context import RunContext
 from ..types.json_value import JsonValue
+from .definitions import ToolCall
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,3 +40,9 @@ class ToolBinding:
     handler: ToolHandler
     validate_arguments: ArgumentValidator
     visible_filter: VisibleOutputFilter | None = None
+
+    # A durable payment adapter receives the original call and operation identity:
+    # lambda context, call, operation_id: provider.pay(call.arguments, key=operation_id).
+    # Recovery reuses that key after a timeout. The ordinary handler remains useful
+    # for pure calculations and for the synchronous in-memory profile.
+    durable_handler: Callable[[RunContext, ToolCall, str], ExecutionOutput] | None = None

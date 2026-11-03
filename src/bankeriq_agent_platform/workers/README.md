@@ -4,7 +4,7 @@
 PostgreSQL jobs, journal, checkpoints and projection records. `Worker` owns threads,
 heartbeats, polling and draining. Core runtime types contain no scheduler or clients.
 `open_runtime()` and the in-memory profile retain their synchronous behaviour.
-Real asynchronous model/tool dispatch and tool-group joins belong to group 07.
+The [asynchronous profile](asynchronous.md) adds model/tool dispatch and tool-group joins.
 
 ## Admission and reconstruction
 
@@ -37,8 +37,9 @@ Conflicting configurations fail. A short database advisory lock serializes capac
 reservation across processes. Indexed due/expired scans and `SKIP LOCKED` conversation
 locks select work; conversation, run and job locks follow the journal's order.
 Queue and per-queue tenant capacity count unexpired leases. All execution occurs after
-commit, with no database locks held. This implementation has one enrolled synthetic
-checkpoint task per run; concurrent real tool groups remain group 07.
+commit, with no database locks held. The base queue has one enrolled synthetic checkpoint task
+per run; the orchestration
+queue extends its settlement boundary for concurrent children.
 
 Each claim increments its attempt and ownership token and uses a unique owner ID.
 Database time controls expiry, retry deadlines and renewal. Heartbeats cannot revive
@@ -136,7 +137,7 @@ docker rm -f bankeriq-workers-postgres bankeriq-workers-redis
 Executed counts and service versions are recorded in the
 [group evidence](../../../build-order/06-completed-durable-postgresql-workers.md).
 HA failover, restoration, production authentication/network isolation, throughput SLOs,
-cloud hosting, semantic compaction and real asynchronous orchestration remain deferred.
+cloud hosting and semantic compaction remain deferred.
 
 ## Failure inspection and recovery controls
 

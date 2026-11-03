@@ -5,7 +5,7 @@ with Redis for active sessions, replace the earlier Durable Task Scheduler choic
 This document specifies the target design. The
 [PostgreSQL journal and synthetic job-record adapter](src/bankeriq_agent_platform/storage/README.md)
 is implemented and locally validated. Redis sessions and synthetic durable workers
-are implemented; real queued coordinator/tool execution and hosted scaling remain future work.
+and queued coordinator/tool execution are implemented locally; hosted scaling remains future work.
 The completed runtime milestone at
 `2fa515b` and local container evidence remain in [build-order/README.md](build-order/README.md).
 
@@ -262,8 +262,10 @@ The application never dual-writes a transition to database replicas.
   version must already exist.
 
 
-Every transition affecting the conversation view also advances durable projection
-work in that transaction. Restricted payloads never enter these records. Tool
+Journal transitions advance durable projection work in that transaction. Individual
+child settlements retain bounded outcomes in jobs until the ordered join; safe child
+status is read directly from the primary for the refreshed progress view. Restricted payloads
+never enter these records. Tool
 effects, Foundry requests, Redis updates and client delivery happen outside database
 transactions. For example, a tool result and its continuation either both commit
 or both roll back; the tool's earlier external effect requires its own recovery.
@@ -404,12 +406,12 @@ work stays within the existing PostgreSQL worker design.
 
 Implemented locally through the [session adapter](src/bankeriq_agent_platform/sessions/README.md).
 Projection and cleanup can run as bounded maintenance callbacks in the synthetic worker.
-Durable synthetic execution uses PostgreSQL leases; real coordinator/tool scheduling is deferred.
+Durable execution uses PostgreSQL leases; async model/tool scheduling is implemented locally.
 Session admission refreshes immediately; other transitions repair on read or projection.
 Every cached read checks a primary head. The refill lease is advisory and contenders can
 hydrate independently. Recent context is bounded to 200 items/256 KiB with complete-turn
 selection; provider token accounting and semantic compaction remain future work.
-The numbered lifecycle below describes the target; automatic dispatch remains pending.
+The numbered lifecycle below describes the configured application lifecycle.
 
 1. On a miss, hydrate recent history from the latest PostgreSQL snapshot plus
    journal tail. Page older history on demand. A short Redis refill lock reduces

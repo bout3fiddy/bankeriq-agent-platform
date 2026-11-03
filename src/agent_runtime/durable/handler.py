@@ -5,10 +5,17 @@ from collections.abc import Callable
 from ..conversations.conversation import ConversationItem
 from ..coordinator.control import CoordinatorResult
 from ..coordinator.runner import Coordinator
+from ..policy.output import EnforcedOutput
 from ..runs.context import RunContext
-from ..runs.state import RunStatus
-from ..storage.interface import Checkpoint, StateStore
-from ..tools.results import ArtifactReference, PendingToolCall
+from ..runs.state import RunState, RunStatus
+from ..storage.interface import Checkpoint, StateConflictError, StateStore
+from ..tools.results import (
+    ArtifactReference,
+    PendingToolCall,
+    RestrictedReceipt,
+    ToolFailure,
+    VisibleResult,
+)
 from .continuation import (
     ContinuationEvent,
     ContinuationResolver,
@@ -90,6 +97,38 @@ class ContinuationHandler:
         return self._coordinator.continue_run(
             checkpoint, artifacts=tuple(artifacts), is_cancelled=is_cancelled
         )
+
+    @staticmethod
+    def child_outcome(
+        run: RunState,
+        call_id: str,
+        items: tuple[ConversationItem, ...],
+        artifacts: tuple[ArtifactReference, ...],
+    ) -> EnforcedOutput:
+        """Validate an already enforced child result before the durable group joins.
+
+        A worker settling call-b cannot satisfy call-a's wait. The storage adapter
+        serializes this check with child settlement and schedules the same next
+        coordinator boundary once every ordered outcome exists.
+        """
+
+        if run.status != RunStatus.WAITING or call_id not in {
+            pending.call_id for pending in run.pending_calls
+        }:
+            raise StateConflictError("child does not belong to a waiting parent")
+
+        if len(items) != 1 or not isinstance(
+            items[0], (VisibleResult, RestrictedReceipt, ToolFailure)
+        ):
+            raise ValueError("child requires one enforced terminal outcome")
+
+        if items[0].call_id != call_id or len(artifacts) > 1:
+            raise StateConflictError("child outcome identity differs")
+
+        if artifacts and artifacts[0].call_id != call_id:
+            raise StateConflictError("child delivery identity differs")
+
+        return EnforcedOutput(items[0], artifacts[0] if artifacts else None)
 
     def _save(
         self,

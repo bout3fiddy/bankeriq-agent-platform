@@ -70,6 +70,9 @@ class JobInspection:
     run_budget: int
     unknown_effect: bool
     allowed_actions: tuple[str, ...]
+    parent_run_id: str = ""
+    group_id: str | None = None
+    call_id: str | None = None
 
 
 class RecoveryControls:
@@ -142,6 +145,9 @@ class RecoveryControls:
             row["run_budget"],
             row["effect_pending"],
             actions,
+            context.run_id,
+            row["group_id"],
+            row["call_id"],
         )
 
     def apply(

@@ -2,7 +2,7 @@
 
 Design updated 2 November 2026. This catalogue describes target responsibilities;
 the PostgreSQL journal, shared prompts, Redis sessions and synthetic durable workers
-are implemented. Real asynchronous coordinator/tool integrations remain planned.
+and asynchronous coordinator/tool execution are implemented and locally validated.
 Current runtime implementation and test coverage are tracked in the
 [build order](build-order/README.md). Several components can
 share an application. Selected Azure services and state ownership are recorded in
@@ -62,7 +62,7 @@ by default, including repeated calls to the same tool, within configured capacit
 and resource-conflict limits. Trusted model instructions explain batching and
 requesting dependent calls after their inputs arrive. Distinct call IDs preserve
 each result and retry identity; one continuation resumes the model after the group
-settles. The current implementation still runs a synchronous loop.
+settles. The synchronous in-memory profile remains available alongside the queued profile.
 
 ## Shared prompts and context assembly
 
@@ -253,4 +253,5 @@ The synthetic worker boundary now supplies safe tenant-scoped inspection and aud
 retry/reconciliation commands. Current access, approval, version, replay and budget
 checks gate recovery. Process-loss accounting stops crash loops; orderly drain refunds
 undispatched claims. Unknown effects retain their operation identity when work stops.
-Real model/tool orchestration consumes these controls in group 07.
+Model/tool orchestration consumes these controls through the same queue owner.
+See the [queued profile](src/bankeriq_agent_platform/workers/asynchronous.md).

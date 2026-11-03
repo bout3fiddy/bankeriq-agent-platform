@@ -36,7 +36,7 @@ class Coordinator:
         store: StateStore,
         registry: ToolRegistry,
         gateway: ToolDispatcher,
-        model: ModelClient,
+        model: ModelClient | None,
         permissions_for: Callable[[RunContext], frozenset[str]],
         limits: RunLimits | None = None,
         *,
@@ -229,7 +229,16 @@ class Coordinator:
     def _request_model(
         self, checkpoint: Checkpoint
     ) -> tuple[ModelReply, tuple[ToolDefinition, ...]]:
-        """Ask the model and retain the exact tool versions offered on this step."""
+        if self._model is None:
+            raise ValueError("synchronous inference requires a model client")
+
+        request, definitions = self.prepare_request(checkpoint)
+        return self._model.complete(request), definitions
+
+    def prepare_request(
+        self, checkpoint: Checkpoint
+    ) -> tuple[ModelRequest, tuple[ToolDefinition, ...]]:
+        """Reconstruct a prepared request with its saved prompt and current access."""
 
         # Example injected reader:
         # def permissions_for(context):
@@ -238,6 +247,9 @@ class Coordinator:
         # Passing permissions_for=permissions_for makes every model request use
         # current trusted grants. Removing reports.create after step one removes
         # that tool from step two even if the global prompt still requests it.
+        if not checkpoint.conversation.context_complete:
+            raise ContextBudgetExceeded("current turn requires compaction before inference")
+
         permissions = self._permissions_for(checkpoint.run.context)
         definitions = self._registry.discover(permissions)
         model_tools = tuple(
@@ -267,7 +279,7 @@ class Coordinator:
             instructions=instructions,
             prompt_manifest=checkpoint.run.prompt_manifest,
         )
-        return self._model.complete(request), definitions
+        return request, definitions
 
     def _execute_tools(
         self,

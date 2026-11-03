@@ -46,4 +46,4 @@ Horizontal worker capacity remains bounded by PostgreSQL and model/tool quotas.
 Include the long-lived workload above, the
 [worker recovery gates](06-completed-durable-postgresql-workers.md#worker-recovery-extensions)
 and the ownership/slow-client gates from
-[asynchronous execution](07-planned-asynchronous-coordinator-and-tools.md).
+[asynchronous execution](07-completed-asynchronous-coordinator-and-tools.md).

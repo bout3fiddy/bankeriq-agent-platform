@@ -1,6 +1,6 @@
 """Versioned recovery envelope and trusted compatible handler registrations."""
 
-from collections.abc import Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Literal
@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from agent_runtime.conversations.conversation import ConversationItem
 from agent_runtime.runs.context import RunContext
 from agent_runtime.runs.state import RunStatus
+from agent_runtime.tools.definitions import ToolCall
 from agent_runtime.tools.results import ArtifactReference, PendingToolCall
 from bankeriq_agent_platform.storage.codec import strict_json
 
@@ -50,6 +51,20 @@ class Recovery(BaseModel):
 
 
 @dataclass(frozen=True)
+class ChildTask:
+    """A pinned call and trusted execution policy; resource keys never come from the model.
+
+    Two calculate calls with identical arguments retain different call IDs. A trusted
+    binder can assign resource_key="account-17" to serialize conflicting operations
+    across runs in the same tenant. Omitting the key permits bounded parallelism.
+    """
+
+    call: ToolCall
+    recovery: Recovery
+    resource_key: str | None = None
+
+
+@dataclass(frozen=True)
 class Completion:
     """An enforced delta and optional next synthetic task, committed together.
 
@@ -64,6 +79,11 @@ class Completion:
     pending: tuple[PendingToolCall, ...] = ()
     artifacts: tuple[ArtifactReference, ...] = ()
     next_task: Recovery | None = None
+    children: tuple[ChildTask, ...] = ()
+    failure_policy: Literal["wait_all", "fail_fast"] = "wait_all"
+    prepare_model: bool = False
+    model_steps: int | None = None
+    tool_calls: int | None = None
 
 
 @dataclass(frozen=True)
@@ -86,6 +106,8 @@ class Handler:
     idempotent: bool = False
     replay_allowed: bool = False
     reconcile: Callable[[RunContext, Recovery], Completion | None] | None = None
+    async_execute: Callable[[RunContext, Recovery], Awaitable[Completion]] | None = None
+    approval_required: Callable[[RunContext, Recovery], bool] = lambda context, state: False
     approval_valid: Callable[[RunContext, Recovery], bool] = lambda context, state: True
 
 

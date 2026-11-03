@@ -77,3 +77,14 @@ class ModelClient(Protocol):
         """Run one model step; provider errors may raise exceptions."""
 
         ...
+
+
+class AsyncModelClient(Protocol):
+    """Application adapters own async transports, credentials and finite timeouts.
+
+    For example, async def complete(request) can await a local HTTP provider and
+    return ModelReply(calls=(call_a, call_b)). The runtime awaits one bounded step;
+    it never retains that coroutine while tool jobs or approvals are waiting.
+    """
+
+    async def complete(self, request: ModelRequest) -> ModelReply: ...

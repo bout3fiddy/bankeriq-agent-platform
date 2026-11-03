@@ -69,7 +69,7 @@ planned BankerIQ requirements, with acceptance evidence owned by each group:
   owns inspectable failure reasons, bounded crash recovery and authorised operator
   controls, informed by [Pi's crash-loop corrections][pi-crash-history]. Follow-up
   acceptance evidence is recorded separately from the original worker tests.
-- [Group 07](07-planned-asynchronous-coordinator-and-tools.md) adds explicit child
+- [Group 07](07-completed-asynchronous-coordinator-and-tools.md) adds explicit child
   ownership, integration with worker recovery and slow-consumer bounds, informed
   by Pi's [ownership changes][pi-ownership-history] and
   [folded watch updates][pi-watch-history]. PostgreSQL remains the authority

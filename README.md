@@ -63,7 +63,8 @@ leased execution, restart reconstruction, atomic settlement and bounded maintena
 Worker recovery also exposes scoped failure inspection, bounded crash recovery and
 idempotent operator controls with durable audit decisions.
 Local tests use real PostgreSQL/Redis and independent worker processes. Real
-asynchronous coordinator/tool execution remains the next group.
+asynchronous coordinator/tool execution is implemented in the
+[queued profile](src/bankeriq_agent_platform/workers/asynchronous.md).
 
 ## Development
 

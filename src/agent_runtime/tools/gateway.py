@@ -40,7 +40,49 @@ class ToolGateway:
             # their text out of the model response and ordinary application logs.
             return enforce_failure(call.call_id)
 
-    def _dispatch(self, call: ToolCall, version: str, context: RunContext) -> EnforcedOutput:
+    def can_dispatch(self, call: ToolCall, *, version: str, context: RunContext) -> bool:
+        """Read current access without consuming approval or contacting the tool.
+
+        Recovery controls use this check before accepting an operator retry.
+        Execution repeats every check and consumes the exact approval at dispatch.
+        For example, revoking reports.create while a child is stopped makes its
+        retry ineligible even when the original intent was valid.
+        """
+
+        try:
+            definition = self._registry.resolve(
+                call.tool_name, version, self._access.permissions_for(context)
+            )
+            binding = self._bindings.get((definition.name, definition.version))
+
+            if binding is None:
+                return False
+
+            binding.validate_arguments(call.arguments)
+            return self._access.can_access(context, definition, call)
+        except Exception:
+            return False
+
+    def dispatch_durable(
+        self, call: ToolCall, *, version: str, context: RunContext, operation_id: str
+    ) -> EnforcedOutput:
+        """Let the durable owner retain uncertainty when a handler raises.
+
+        If a payment times out after dispatch, the worker records its original
+        operation identity for reconciliation. Only explicit policy denials and
+        validated results establish known outcomes; raw exception text is never saved.
+        """
+
+        return self._dispatch(call, version, context, operation_id=operation_id)
+
+    def _dispatch(
+        self,
+        call: ToolCall,
+        version: str,
+        context: RunContext,
+        *,
+        operation_id: str | None = None,
+    ) -> EnforcedOutput:
         permissions = self._access.permissions_for(context)
 
         try:
@@ -83,7 +125,11 @@ class ToolGateway:
         # return ExecutionOutput(private_payload, artifact_id="report-17");
         # enforce_output converts a restricted operation to a fixed receipt and
         # sends report-17 through separate delivery metadata before returning.
-        output = binding.handler(context, call.arguments)
+        output = (
+            binding.durable_handler(context, call, operation_id)
+            if operation_id is not None and binding.durable_handler is not None
+            else binding.handler(context, call.arguments)
+        )
         return enforce_output(
             definition,
             call.call_id,

@@ -167,16 +167,23 @@ class SessionService:
         context: RunContext,
         *,
         sequence: int,
+        attempt: int = 0,
+        model_tokens: str = "",
         status: Literal["queued", "running", "waiting", "completed", "failed", "cancelled"],
     ) -> None:
-        if sequence < 1 or status not in {
-            "queued",
-            "running",
-            "waiting",
-            "completed",
-            "failed",
-            "cancelled",
-        }:
+        if (
+            sequence < 1
+            or attempt < 0
+            or status
+            not in {
+                "queued",
+                "running",
+                "waiting",
+                "completed",
+                "failed",
+                "cancelled",
+            }
+        ):
             raise ValueError("invalid provisional progress")
 
         # Verify this run exists and is owned; callers supply fixed status codes,
@@ -184,7 +191,8 @@ class SessionService:
         with self.store._connect() as connection:
             head = self.store._head(connection, context)
             row = connection.execute(
-                "SELECT 1 FROM runs WHERE tenant_id = %s AND conversation_id = %s AND run_id = %s",
+                "SELECT admission_sequence FROM runs WHERE tenant_id = %s "
+                "AND conversation_id = %s AND run_id = %s",
                 self.store._key(context),
             ).fetchone()
 
@@ -195,10 +203,14 @@ class SessionService:
             "progress",
             head,
             sequence=str(sequence),
+            progress_generation=str(row["admission_sequence"]),
+            attempt=str(attempt),
             progress=json.dumps(
                 {
                     "run_id": context.run_id,
                     "sequence": sequence,
+                    "attempt": attempt,
+                    "model_tokens": model_tokens,
                     "status": status,
                     "provisional": True,
                 }

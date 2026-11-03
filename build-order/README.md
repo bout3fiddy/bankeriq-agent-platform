@@ -12,7 +12,8 @@ journal and job records → shared system prompts → Redis sessions and asynchr
 history → durable workers → asynchronous coordinator and tools → recovery and
 scaling validation → Azure runtime deployment. Each group has its own task
 numbering. Durable PostgreSQL workers are complete, including failure inspection,
-bounded crash recovery and authorised controls. Asynchronous execution is next.
+bounded crash recovery and authorised controls. Asynchronous execution is complete;
+recovery and horizontal scaling validation is next.
 
 The selected stack is PostgreSQL plus ephemeral Redis. PostgreSQL contains durable
 conversation deltas, history snapshots and the message queue. Redis serves active
@@ -24,7 +25,7 @@ The transaction and replication
 define atomic writes, primary-only reads and recovery requirements for the groups
 below. The PostgreSQL journal adapter and its local failure tests are implemented;
 synthetic worker ownership and recovery are now validated locally.
-Real asynchronous orchestration and deployment remain pending.
+Asynchronous orchestration is locally validated. Deployment remains pending.
 DTS and separate brokers are outside this sequence. Tools own confidential Blob
 reports and authenticated downloads. Container Apps is proposed for worker hosting;
 the earlier Foundry Hosted Agents target remains a separate compatibility decision.
@@ -49,7 +50,7 @@ file determine execution eligibility. Follow-up groups remain after infrastructu
 - 06 — Durable PostgreSQL workers
   [completed](06-completed-durable-postgresql-workers.md)
 - 07 — Asynchronous coordinator and tool queues
-  [planned](07-planned-asynchronous-coordinator-and-tools.md)
+  [completed](07-completed-asynchronous-coordinator-and-tools.md)
 - 08 — Recovery and horizontal scaling validation
   [planned](08-planned-recovery-and-scaling-validation.md)
 - 09 — Azure runtime deployment
@@ -61,7 +62,7 @@ file determine execution eligibility. Follow-up groups remain after infrastructu
 - 12 — Follow-up runtime work
   [planned](12-planned-follow-up-runtime-work.md)
 
-Next: [asynchronous execution](07-planned-asynchronous-coordinator-and-tools.md).
+Next: [recovery and scaling](08-planned-recovery-and-scaling-validation.md).
 
 Use exactly three statuses: `planned`, `in-progress` and `completed`.
 `planned` means work has not started. Mark a group `in-progress` as soon as work

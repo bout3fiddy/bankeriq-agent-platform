@@ -34,7 +34,7 @@ for durable jobs or approvals without holding an execution slot.
    continuation, with cancellation and partial-failure rules. Retry unfinished
    effects only under saved/current replay policy and idempotency guarantees;
    ambiguous effects require reconciliation. Apply the parent/child ownership and
-   failure policies from [group 07](07-planned-asynchronous-coordinator-and-tools.md)
+   failure policies from [group 07](07-completed-asynchronous-coordinator-and-tools.md)
    to nested composites. Validate the reviewed dependency graph as acyclic before
    child admission; reject self-waits, descendant-to-ancestor waits and longer
    cycles, including implicit parent waits for children. A terminal or cancelled

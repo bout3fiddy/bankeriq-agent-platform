@@ -159,6 +159,10 @@ class PostgresQueue:
                 "AND r.active AND c.active_run_id=j.run_id "
                 "AND j.status IN ('ready','retry','reconcile','approval') "
                 "AND j.due_at<=clock_timestamp() "
+                "AND (j.resource_key IS NULL OR NOT EXISTS (SELECT 1 FROM jobs busy "
+                "WHERE busy.tenant_id=j.tenant_id AND busy.resource_key=j.resource_key "
+                "AND busy.job_id<>j.job_id AND (busy.effect_pending OR "
+                "(busy.status='leased' AND busy.lease_expiry>clock_timestamp())))) "
                 "ORDER BY j.due_at,j.job_id LIMIT 64 FOR UPDATE OF c SKIP LOCKED",
                 (queue, versions, limits["tenant_concurrency"]),
             ).fetchall()
@@ -405,6 +409,11 @@ class PostgresQueue:
         if not self.store._retry(transaction):
             self.settle(lease, Completion(RunStatus.FAILED), reason=reason)
 
+    def approval_granted(self, lease: Lease) -> bool:
+        with self.store._connect() as connection:
+            row = self._owned(connection, lease)
+            return row["approval_fingerprint"] is not None
+
     def approval_current(self, lease: Lease) -> bool:
         with self.store._connect() as connection:
             self._owned(connection, lease)
@@ -464,22 +473,20 @@ class PostgresQueue:
 
         payload = plain(completion)
         payload["next_task"] = completion.next_task.encode() if completion.next_task else None
+        payload["children"] = [
+            {
+                "call": plain(child.call),
+                "recovery": child.recovery.encode(),
+                "resource_key": child.resource_key,
+            }
+            for child in completion.children
+        ]
 
         if reason != FailureReason.NONE:
             payload["failure_reason"] = reason.value
 
         digest = fingerprint(payload)
-        change = self.store.checkpoint_change(
-            lease.context,
-            expected_conversation_revision=lease.checkpoint.conversation.revision,
-            expected_run_revision=lease.checkpoint.run.revision,
-            expected_recovery_id=lease.checkpoint.conversation.recovery_id,
-            expected_deletion_generation=lease.checkpoint.conversation.deletion_generation,
-            status=completion.status,
-            items=completion.items,
-            pending_calls=completion.pending,
-            artifacts=completion.artifacts,
-        )
+        change = self._completion_change(lease, completion)
 
         if completion.next_task:
             completion.next_task.encode()
@@ -510,8 +517,7 @@ class PostgresQueue:
             checkpoint = change(connection)
             self.store._fault("worker_after_output")
 
-            if completion.next_task:
-                self._attach(connection, checkpoint, completion.next_task)
+            self._install_next(connection, checkpoint, completion)
 
             self.store._fault("worker_after_next")
             response = connection.execute(
@@ -541,6 +547,30 @@ class PostgresQueue:
             return checkpoint
 
         return self.store._retry(transaction)
+
+    def _completion_change(self, lease: Lease, completion: Completion):
+        return self.store.checkpoint_change(
+            lease.context,
+            expected_conversation_revision=lease.checkpoint.conversation.revision,
+            expected_run_revision=lease.checkpoint.run.revision,
+            expected_recovery_id=lease.checkpoint.conversation.recovery_id,
+            expected_deletion_generation=lease.checkpoint.conversation.deletion_generation,
+            status=completion.status,
+            items=completion.items,
+            pending_calls=completion.pending,
+            artifacts=completion.artifacts,
+            model_steps=completion.model_steps,
+            tool_calls=completion.tool_calls,
+        )
+
+    def _install_next(
+        self, connection: Database, checkpoint: Checkpoint, completion: Completion
+    ) -> None:
+        if completion.children or completion.prepare_model:
+            raise ValueError("asynchronous completion requires the orchestration queue")
+
+        if completion.next_task:
+            self._attach(connection, checkpoint, completion.next_task)
 
     def pause(
         self,

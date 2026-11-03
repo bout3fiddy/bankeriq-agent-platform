@@ -2,8 +2,10 @@
 
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
+from typing import TYPE_CHECKING
 
 from agent_runtime.coordinator.control import RunLimits
+from agent_runtime.coordinator.model import AsyncModelClient
 from agent_runtime.coordinator.runner import Coordinator, ToolDispatcher
 from agent_runtime.durable.continuation import ContinuationResolver
 from agent_runtime.durable.handler import ContinuationHandler
@@ -15,10 +17,17 @@ from agent_runtime.providers.hosts import Authenticator, HostFactory, RuntimeSer
 from agent_runtime.providers.models import ModelFactory, open_model
 from agent_runtime.runs.context import RunContext
 from agent_runtime.storage.interface import StateStore
+from agent_runtime.tools.definitions import ToolCall, ToolDefinition
+from agent_runtime.tools.gateway import ToolGateway
 from agent_runtime.tools.registry import ToolRegistry
 
 from .configuration import RuntimeSettings
 from .providers import hosting_providers, model_providers
+
+if TYPE_CHECKING:
+    from .storage.postgres import PostgresStateStore
+    from .workers.coordinator import QueuedCoordinator
+    from .workers.state import ChildTask, Recovery
 
 
 @contextmanager
@@ -83,3 +92,37 @@ def open_runtime(
             store, coordinator, continuations, prepare_input=prepare_input, sessions=sessions
         )
         yield create_host(endpoint, authenticate)
+
+
+def compose_queued_runtime(
+    *,
+    store: PostgresStateStore,
+    registry: ToolRegistry,
+    gateway: ToolGateway,
+    model: AsyncModelClient,
+    permissions_for: Callable[[RunContext], frozenset[str]],
+    prompts: PromptResolver,
+    bind: Callable[[RunContext, ToolCall, ToolDefinition, Recovery], ChildTask],
+    limits: RunLimits | None = None,
+    fail_fast: bool = False,
+) -> QueuedCoordinator:
+    """Explicit asynchronous profile with application-owned clients and worker lifecycle.
+
+    Supply an AsyncModelClient whose async context manager is owned by startup,
+    a PostgresStateStore, and the same ToolGateway and permission source used by
+    open_runtime(). The returned runtime only admits and reconstructs work. Start
+    AsyncWorker instances separately with its handler registrations and queue limits.
+    The ordinary open_runtime() path retains its synchronous in-memory behavior.
+    """
+
+    from .workers.coordinator import QueuedCoordinator
+    from .workers.groups import OrchestrationQueue
+
+    selected_limits = limits or RunLimits()
+    queue = OrchestrationQueue(store, prompts)
+    coordinator = Coordinator(
+        store, registry, gateway, None, permissions_for, selected_limits, prompts=prompts
+    )
+    return QueuedCoordinator(
+        queue, coordinator, model, gateway, limits=selected_limits, bind=bind, fail_fast=fail_fast
+    )

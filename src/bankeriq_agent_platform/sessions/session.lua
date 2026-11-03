@@ -45,6 +45,20 @@ elseif op == 'stage' then
 elseif op == 'reconcile' then
     for _, key in ipairs(incoming.keys) do state.pending[key] = nil end
 elseif op == 'progress' then
+    -- A later run/attempt starts a new disposable sequence. Late producers from
+    -- an older attempt cannot replace the current run's display after reconnect.
+    local generation = state.progress_generation or '0'
+    local attempt = state.progress_attempt or '0'
+    if older(incoming.progress_generation, generation) then return false end
+    if incoming.progress_generation == generation and older(incoming.attempt, attempt) then
+        return false
+    end
+    if generation ~= incoming.progress_generation or attempt ~= incoming.attempt then
+        state.progress = {}
+        state.progress_sequence = '0'
+    end
+    state.progress_generation = incoming.progress_generation
+    state.progress_attempt = incoming.attempt
     if not older(state.progress_sequence, incoming.sequence) then return false end
     table.insert(state.progress, incoming.progress)
     if #state.progress > 32 then table.remove(state.progress, 1) end
