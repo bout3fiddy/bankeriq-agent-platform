@@ -1,5 +1,11 @@
 # Persistent operator test deployment
 
+Source refactor note (4 November 2026): the repository now uses `agent_harness`,
+`agent_runtime` and `agent_platform`. This structural change has not been deployed.
+The image/digests and historical evidence below retain their original meaning. HTTP chat
+commands remain compatible; container-side Python diagnostics must use the source version
+matching the deployed image until an explicitly authorised application upgrade occurs.
+
 This environment is authorised to remain running for non-sensitive conversations and
 idle-cache experiments. It incurs ongoing Azure charges until explicitly stopped and
 removed. It is a single-operator test deployment, using the existing group-09 harness.

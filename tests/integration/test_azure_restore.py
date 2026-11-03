@@ -4,13 +4,13 @@ from uuid import uuid4
 
 import pytest
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.runs.state import RunStatus
-from agent_runtime.storage.interface import StateConflictError
-from bankeriq_agent_platform.storage.connections import PrimaryConnections
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.workers.queue import PostgresQueue
-from bankeriq_agent_platform.workers.state import Completion, Handler, Handlers, Recovery
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.runs.state import RunStatus
+from agent_harness.storage.interface import StateConflictError
+from agent_runtime.storage.connections import PrimaryConnections
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.workers.queue import PostgresQueue
+from agent_runtime.workers.state import Completion, Handler, Handlers, Recovery
 from tests.azure.recovery import prepare_restore
 
 from .test_postgres import context as context

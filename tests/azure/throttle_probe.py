@@ -10,13 +10,14 @@ from azure.identity import ManagedIdentityCredential, get_bearer_token_provider
 from openai import OpenAI, RateLimitError
 from psycopg.conninfo import make_conninfo
 
-from agent_runtime.prompts.resolution import PromptScope
-from agent_runtime.runs.context import RunContext
-from bankeriq_agent_platform.azure.connections import token_connection
-from bankeriq_agent_platform.storage.connections import PrimaryConnections
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.storage.prompts import PostgresPromptResolver
-from bankeriq_agent_platform.workers.controls import ControlRequest, RecoveryActor, RecoveryControls
+from agent_harness.prompts.resolution import PromptScope
+from agent_harness.runs.context import RunContext
+from agent_platform.azure.connections import token_connection
+from agent_platform.prompt_files.loader import load_catalog
+from agent_runtime.storage.connections import PrimaryConnections
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.storage.prompts import PostgresPromptResolver
+from agent_runtime.workers.controls import ControlRequest, RecoveryActor, RecoveryControls
 from tests.azure.pilot import Access, NoModel, composition
 
 
@@ -60,7 +61,7 @@ def inspect_stopped(credential):
     )
     store = PostgresStateStore(source.dsn, connections=source)
     prompts = PostgresPromptResolver(
-        source.dsn, PromptScope("bankeriq", "pilot"), connections=source
+        source.dsn, PromptScope("bankeriq", "pilot"), catalog=load_catalog(), connections=source
     )
     runtime, handlers = composition(store, prompts, NoModel(), Access(tenant, users))
     actor = RecoveryActor(tenant, next(iter(users)))

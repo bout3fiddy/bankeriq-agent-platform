@@ -11,16 +11,16 @@ import psycopg
 from psycopg import sql
 from psycopg.conninfo import make_conninfo
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.runs.context import RunContext
-from agent_runtime.runs.state import RunStatus
-from agent_runtime.storage.interface import StateConflictError
-from bankeriq_agent_platform.sessions.cache import RedisSessions
-from bankeriq_agent_platform.sessions.service import SessionService
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore, migrate
-from bankeriq_agent_platform.workers.queue import PostgresQueue
-from bankeriq_agent_platform.workers.runner import Worker
-from bankeriq_agent_platform.workers.state import Completion, Handler, Handlers, Recovery
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.runs.context import RunContext
+from agent_harness.runs.state import RunStatus
+from agent_harness.storage.interface import StateConflictError
+from agent_runtime.sessions.cache import RedisSessions
+from agent_runtime.sessions.service import SessionService
+from agent_runtime.storage.postgres import PostgresStateStore, migrate
+from agent_runtime.workers.queue import PostgresQueue
+from agent_runtime.workers.runner import Worker
+from agent_runtime.workers.state import Completion, Handler, Handlers, Recovery
 
 
 def run(base: str, container: str, output: Path) -> None:

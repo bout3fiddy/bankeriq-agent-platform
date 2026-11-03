@@ -10,16 +10,17 @@ from dataclasses import replace
 import psycopg
 import pytest
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.coordinator.model import ModelContextOverflow, ModelRateLimited, ModelReply
-from agent_runtime.runs.state import RunStatus
-from agent_runtime.storage.interface import StateConflictError
-from agent_runtime.tools.definitions import ToolCall
-from agent_runtime.tools.results import PendingToolCall, VisibleResult, WaitReason
-from bankeriq_agent_platform.memory.recovery import ContextRecovery
-from bankeriq_agent_platform.memory.service import active_items
-from bankeriq_agent_platform.storage.codec import plain
-from bankeriq_agent_platform.workers.asynchronous import AsyncWorker
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.coordinator.model import ModelContextOverflow, ModelRateLimited, ModelReply
+from agent_harness.memory.assembly import assemble_request, select_prefix
+from agent_harness.memory.projection import active_items
+from agent_harness.runs.state import RunStatus
+from agent_harness.storage.codec import plain
+from agent_harness.storage.interface import StateConflictError
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.results import PendingToolCall, VisibleResult, WaitReason
+from agent_runtime.memory.recovery import ContextRecovery
+from agent_runtime.workers.asynchronous import AsyncWorker
 
 from .semantic_process import composition
 from .test_async_groups import step
@@ -105,7 +106,9 @@ def test_headroom_threshold_includes_output_and_has_hysteresis(store, context, c
     parts = prepare(store, context, context_window=6000)
     memory = parts[2]
     policy, key = memory.policy(context)
-    raw = memory._request(memory.storage.read(parts[5], key), parts[6], policy)
+    raw = assemble_request(
+        memory.storage.read(parts[5], key), parts[6], policy, memory.context_budget.output
+    )
     free = (
         memory.context_budget.window
         - memory.context_budget.count(raw)
@@ -165,7 +168,7 @@ def workflow(store, context):
 def prepare_workflow(store, context):
     workflow(store, context)
     runtime, handlers, memory, extractor = composition(store, context_window=3000)
-    from bankeriq_agent_platform.workers.state import Recovery
+    from agent_runtime.workers.state import Recovery
 
     runtime.queue.attach(
         context, Recovery(kind="model_prepare", operation_id="prepare-workflow", idempotent=True)
@@ -249,7 +252,7 @@ def test_partial_prefix_cannot_consume_outstanding_approval_or_job(store, contex
     # Prefix selection is independently callable while the owner is waiting.
     # A cut may consume settled earlier pairs, but the unresolved call and its
     # approval/job reference must remain reconstructible from the primary.
-    prefix = memory._prefix(active, (), policy, "Select memory.", None, None)
+    prefix = select_prefix(active, (), policy, "Select memory.", None, None, memory.summary_budget)
     cut = prefix["events"][-1]["sequence"]
     suffix = [row for row in active["events"] if row["sequence"] > cut]
     assert [row["payload"]["type"] for row in suffix][-2:] == ["ToolCall", "PendingToolCall"]
@@ -373,8 +376,8 @@ def test_real_rate_limit_persists_deadline_and_releases_worker(store, context, d
 
 
 def test_retirement_links_and_prior_versions_survive_publication_and_retrieval(store, context, dsn):
-    from agent_runtime.conversations.semantic import MemoryFact
-    from bankeriq_agent_platform.memory.retrieval import HistoryRetrieval
+    from agent_harness.memory.semantic import MemoryFact
+    from agent_runtime.memory.retrieval import HistoryRetrieval
 
     for number, text in enumerate(("Budget: EUR 1200.", "Budget correction: CHF 1500.")):
         ctx = replace(context, run_id=f"budget-{number}")

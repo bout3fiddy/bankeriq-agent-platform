@@ -3,6 +3,100 @@ revision = 5
 requires-python = ">=3.14"
 
 [[package]]
+name = "agent-platform"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "pydantic" },
+    { name = "starlette" },
+]
+
+[package.optional-dependencies]
+azure-runtime = [
+    { name = "aiohttp" },
+    { name = "certifi" },
+    { name = "pyjwt", extra = ["crypto"] },
+    { name = "redis-entraid" },
+    { name = "uvicorn" },
+]
+foundry-hosting = [
+    { name = "azure-ai-agentserver-invocations" },
+]
+foundry-model = [
+    { name = "azure-identity" },
+    { name = "openai" },
+    { name = "tiktoken" },
+]
+postgres = [
+    { name = "psycopg", extra = ["binary"] },
+    { name = "psycopg-pool" },
+]
+redis = [
+    { name = "redis" },
+]
+validation = [
+    { name = "httpx2" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "azure-ai-agentserver-invocations" },
+    { name = "azure-identity" },
+    { name = "basedpyright" },
+    { name = "httpx2" },
+    { name = "openai" },
+    { name = "pre-commit" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "psycopg-pool" },
+    { name = "pyjwt", extra = ["crypto"] },
+    { name = "pytest" },
+    { name = "redis" },
+    { name = "redis-entraid" },
+    { name = "ruff" },
+    { name = "tiktoken" },
+    { name = "uvicorn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiohttp", marker = "extra == 'azure-runtime'", specifier = ">=3.13,<4" },
+    { name = "azure-ai-agentserver-invocations", marker = "extra == 'foundry-hosting'", specifier = ">=1.3.0" },
+    { name = "azure-identity", marker = "extra == 'foundry-model'", specifier = ">=1.27.0" },
+    { name = "certifi", marker = "extra == 'azure-runtime'", specifier = ">=2026.1.4" },
+    { name = "httpx2", marker = "extra == 'validation'", specifier = ">=2.16.0" },
+    { name = "openai", marker = "extra == 'foundry-model'", specifier = ">=3.41.0" },
+    { name = "psycopg", extras = ["binary"], marker = "extra == 'postgres'", specifier = ">=3.2" },
+    { name = "psycopg-pool", marker = "extra == 'postgres'", specifier = ">=3.2,<4" },
+    { name = "pydantic", specifier = ">=2.14.2" },
+    { name = "pyjwt", extras = ["crypto"], marker = "extra == 'azure-runtime'", specifier = ">=2.10,<3" },
+    { name = "redis", marker = "extra == 'redis'", specifier = ">=5,<8" },
+    { name = "redis-entraid", marker = "extra == 'azure-runtime'", specifier = ">=1,<2" },
+    { name = "starlette", specifier = ">=1.10.0" },
+    { name = "tiktoken", marker = "extra == 'foundry-model'", specifier = ">=0.12,<1" },
+    { name = "uvicorn", marker = "extra == 'azure-runtime'", specifier = ">=0.35,<1" },
+]
+provides-extras = ["foundry-model", "foundry-hosting", "validation", "postgres", "redis", "azure-runtime"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "azure-ai-agentserver-invocations", specifier = ">=1.3.0" },
+    { name = "azure-identity", specifier = ">=1.27.0" },
+    { name = "basedpyright", specifier = ">=1.40.2" },
+    { name = "httpx2", specifier = ">=2.16.0" },
+    { name = "openai", specifier = ">=3.41.0" },
+    { name = "pre-commit", specifier = ">=4" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
+    { name = "psycopg-pool", specifier = ">=3.2,<4" },
+    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10,<3" },
+    { name = "pytest", specifier = ">=8" },
+    { name = "redis", specifier = ">=5,<8" },
+    { name = "redis-entraid", specifier = ">=1,<2" },
+    { name = "ruff", specifier = ">=0.11" },
+    { name = "tiktoken", specifier = ">=0.12,<1" },
+    { name = "uvicorn", specifier = ">=0.35,<1" },
+]
+
+[[package]]
 name = "aiohappyeyeballs"
 version = "2.7.1"
 source = { registry = "https://pypi.org/simple" }
@@ -255,100 +349,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/95/33/feadb708d9b8de6cc846118f287110d069ebeaee2d3abf9433695c2800ae/azure_monitor_opentelemetry_exporter-1.0.0b58.tar.gz", hash = "sha256:5152d75bd9780fef02fcc9550e0323ba3f661a8fcba017ea04b027151ae0932e", size = 362674, upload-time = "2026-10-07T17:35:54.445Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/55/fe/a010e943605fc017b1030159851e48e715fb5616675447f0d8c0a74de4e6/azure_monitor_opentelemetry_exporter-1.0.0b58-py2.py3-none-any.whl", hash = "sha256:cf036f7a99515d4e6626f3c33e5ac1ae633731882239542353e1f4a17285e9fc", size = 257459, upload-time = "2026-10-07T17:35:56.218Z" },
-]
-
-[[package]]
-name = "bankeriq-agent-platform"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "pydantic" },
-    { name = "starlette" },
-]
-
-[package.optional-dependencies]
-azure-runtime = [
-    { name = "aiohttp" },
-    { name = "certifi" },
-    { name = "pyjwt", extra = ["crypto"] },
-    { name = "redis-entraid" },
-    { name = "uvicorn" },
-]
-foundry-hosting = [
-    { name = "azure-ai-agentserver-invocations" },
-]
-foundry-model = [
-    { name = "azure-identity" },
-    { name = "openai" },
-    { name = "tiktoken" },
-]
-postgres = [
-    { name = "psycopg", extra = ["binary"] },
-    { name = "psycopg-pool" },
-]
-redis = [
-    { name = "redis" },
-]
-validation = [
-    { name = "httpx2" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "azure-ai-agentserver-invocations" },
-    { name = "azure-identity" },
-    { name = "basedpyright" },
-    { name = "httpx2" },
-    { name = "openai" },
-    { name = "pre-commit" },
-    { name = "psycopg", extra = ["binary"] },
-    { name = "psycopg-pool" },
-    { name = "pyjwt", extra = ["crypto"] },
-    { name = "pytest" },
-    { name = "redis" },
-    { name = "redis-entraid" },
-    { name = "ruff" },
-    { name = "tiktoken" },
-    { name = "uvicorn" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiohttp", marker = "extra == 'azure-runtime'", specifier = ">=3.13,<4" },
-    { name = "azure-ai-agentserver-invocations", marker = "extra == 'foundry-hosting'", specifier = ">=1.3.0" },
-    { name = "azure-identity", marker = "extra == 'foundry-model'", specifier = ">=1.27.0" },
-    { name = "certifi", marker = "extra == 'azure-runtime'", specifier = ">=2026.1.4" },
-    { name = "httpx2", marker = "extra == 'validation'", specifier = ">=2.16.0" },
-    { name = "openai", marker = "extra == 'foundry-model'", specifier = ">=3.41.0" },
-    { name = "psycopg", extras = ["binary"], marker = "extra == 'postgres'", specifier = ">=3.2" },
-    { name = "psycopg-pool", marker = "extra == 'postgres'", specifier = ">=3.2,<4" },
-    { name = "pydantic", specifier = ">=2.14.2" },
-    { name = "pyjwt", extras = ["crypto"], marker = "extra == 'azure-runtime'", specifier = ">=2.10,<3" },
-    { name = "redis", marker = "extra == 'redis'", specifier = ">=5,<8" },
-    { name = "redis-entraid", marker = "extra == 'azure-runtime'", specifier = ">=1,<2" },
-    { name = "starlette", specifier = ">=1.10.0" },
-    { name = "tiktoken", marker = "extra == 'foundry-model'", specifier = ">=0.12,<1" },
-    { name = "uvicorn", marker = "extra == 'azure-runtime'", specifier = ">=0.35,<1" },
-]
-provides-extras = ["foundry-model", "foundry-hosting", "validation", "postgres", "redis", "azure-runtime"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "azure-ai-agentserver-invocations", specifier = ">=1.3.0" },
-    { name = "azure-identity", specifier = ">=1.27.0" },
-    { name = "basedpyright", specifier = ">=1.40.2" },
-    { name = "httpx2", specifier = ">=2.16.0" },
-    { name = "openai", specifier = ">=3.41.0" },
-    { name = "pre-commit", specifier = ">=4" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
-    { name = "psycopg-pool", specifier = ">=3.2,<4" },
-    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10,<3" },
-    { name = "pytest", specifier = ">=8" },
-    { name = "redis", specifier = ">=5,<8" },
-    { name = "redis-entraid", specifier = ">=1,<2" },
-    { name = "ruff", specifier = ">=0.11" },
-    { name = "tiktoken", specifier = ">=0.12,<1" },
-    { name = "uvicorn", specifier = ">=0.35,<1" },
 ]
 
 [[package]]

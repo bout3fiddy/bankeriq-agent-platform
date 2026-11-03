@@ -2,9 +2,9 @@
 
 from uuid import UUID
 
-from agent_runtime.storage.interface import StateConflictError
-from bankeriq_agent_platform.storage.connections import PrimaryConnections
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
+from agent_harness.storage.interface import StateConflictError
+from agent_runtime.storage.connections import PrimaryConnections
+from agent_runtime.storage.postgres import PostgresStateStore
 
 
 def prepare_restore(connections: PrimaryConnections, recovery_id: str) -> bool:

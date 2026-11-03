@@ -4,11 +4,11 @@ import json
 from datetime import UTC, datetime
 from typing import TextIO
 
-from agent_runtime.conversations.conversation import ConversationItem
-from agent_runtime.conversations.messages import Message
-from agent_runtime.storage.interface import Checkpoint
-from agent_runtime.tools.definitions import ToolCall
-from agent_runtime.tools.results import RestrictedReceipt, ToolFailure, VisibleResult
+from agent_harness.conversations.conversation import ConversationItem
+from agent_harness.conversations.messages import Message
+from agent_harness.storage.interface import Checkpoint
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.results import RestrictedReceipt, ToolFailure, VisibleResult
 
 from .trace import explain_history
 

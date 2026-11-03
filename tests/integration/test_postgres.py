@@ -11,22 +11,22 @@ import psycopg
 import pytest
 from psycopg import sql
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.coordinator.model import ModelReply
-from agent_runtime.coordinator.runner import Coordinator
-from agent_runtime.durable.handler import ContinuationHandler
-from agent_runtime.prompts.resolution import FixedPromptResolver
-from agent_runtime.runs.context import RunContext
-from agent_runtime.runs.state import RunStatus
-from agent_runtime.storage.interface import Checkpoint, StateConflictError, StateNotFoundError
-from agent_runtime.tools.definitions import ToolCall
-from agent_runtime.tools.results import (
+from agent_harness.continuations.handler import ContinuationHandler
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.coordinator.model import ModelReply
+from agent_harness.coordinator.runner import Coordinator
+from agent_harness.prompts.resolution import FixedPromptResolver
+from agent_harness.runs.context import RunContext
+from agent_harness.runs.state import RunStatus
+from agent_harness.storage.interface import Checkpoint, StateConflictError, StateNotFoundError
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.results import (
     ArtifactReference,
     PendingToolCall,
     RestrictedReceipt,
     WaitReason,
 )
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore, migrate
+from agent_runtime.storage.postgres import PostgresStateStore, migrate
 
 from .harness import CONTEXT, PRIVATE_BODY, RuntimeHarness, event_for, inspect_fields
 
@@ -280,9 +280,9 @@ def test_terminal_activation_rolls_back_together(
 
 PROCESS = """
 import os, sys
-from agent_runtime.runs.context import RunContext
-from agent_runtime.conversations.messages import Message, MessageRole
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
+from agent_harness.runs.context import RunContext
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_runtime.storage.postgres import PostgresStateStore
 s = PostgresStateStore(os.environ['BANKERIQ_TEST_POSTGRES_DSN'])
 c = RunContext(sys.argv[1], 'user', 'chat', sys.argv[2])
 s.admit(c, request_id=sys.argv[2], items=(Message(MessageRole.USER, sys.argv[2]),))
@@ -312,8 +312,8 @@ def test_independent_process_admission_and_restart(
     # admitting processes exit. No inherited Python state supplies either record.
     check = """
 import os, sys
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from agent_runtime.runs.context import RunContext
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_harness.runs.context import RunContext
 import psycopg
 s = PostgresStateStore(os.environ['BANKERIQ_TEST_POSTGRES_DSN'])
 with psycopg.connect(os.environ['BANKERIQ_TEST_POSTGRES_DSN']) as db:

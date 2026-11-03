@@ -19,13 +19,13 @@ import psycopg
 from psycopg import sql
 from psycopg.conninfo import make_conninfo
 
-from agent_runtime.runs.context import RunContext
-from bankeriq_agent_platform.sessions.cache import RedisSessions
-from bankeriq_agent_platform.sessions.service import SessionService
-from bankeriq_agent_platform.storage.history import ProjectionPolicy
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore, migrate
-from bankeriq_agent_platform.workers.queue import PostgresQueue
-from bankeriq_agent_platform.workers.scaling import pressure
+from agent_harness.runs.context import RunContext
+from agent_runtime.sessions.cache import RedisSessions
+from agent_runtime.sessions.service import SessionService
+from agent_runtime.storage.history import ProjectionPolicy
+from agent_runtime.storage.postgres import PostgresStateStore, migrate
+from agent_runtime.workers.queue import PostgresQueue
+from agent_runtime.workers.scaling import pressure
 from tests.integration.async_process import composition
 
 

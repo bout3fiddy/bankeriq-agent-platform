@@ -6,10 +6,10 @@ from statistics import median
 from time import perf_counter
 from uuid import uuid4
 
-from agent_runtime.runs.context import RunContext
-from bankeriq_agent_platform.sessions.cache import RedisSessions
-from bankeriq_agent_platform.sessions.service import SessionService
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore, migrate
+from agent_harness.runs.context import RunContext
+from agent_runtime.sessions.cache import RedisSessions
+from agent_runtime.sessions.service import SessionService
+from agent_runtime.storage.postgres import PostgresStateStore, migrate
 
 
 def main() -> None:

@@ -5,16 +5,16 @@ from typing import cast
 
 import pytest
 
-from agent_runtime.policy.output import enforce_failure, enforce_output
-from agent_runtime.tools.definitions import OutputPolicy, ToolDefinition
-from agent_runtime.tools.results import (
+from agent_harness.policy.output import enforce_failure, enforce_output
+from agent_harness.tools.definitions import OutputPolicy, ToolDefinition
+from agent_harness.tools.results import (
     ArtifactReference,
     RestrictedReceipt,
     ToolErrorCode,
     ToolFailure,
     VisibleResult,
 )
-from agent_runtime.types.json_value import JsonValue
+from agent_harness.types.json_value import JsonValue
 
 
 def definition(policy: OutputPolicy) -> ToolDefinition:

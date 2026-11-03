@@ -10,19 +10,17 @@ from time import monotonic
 import httpx2
 from openai import AsyncOpenAI
 
-from agent_runtime.conversations.retirement import select_memory
-from agent_runtime.conversations.semantic import MemoryFact, TokenBudget, summary_candidates
-from agent_runtime.coordinator.model import ModelRateLimited
-from agent_runtime.prompts.resolution import FixedPromptResolver
+from agent_harness.coordinator.model import ModelRateLimited
+from agent_harness.memory.assembly import SUMMARY_INSTRUCTIONS, summary_request
+from agent_harness.memory.projection import HistoryPolicy
+from agent_harness.memory.retirement import select_memory
+from agent_harness.memory.semantic import MemoryFact, TokenBudget, summary_candidates
+from agent_harness.prompts.resolution import FixedPromptResolver
+from agent_runtime.memory.service import SemanticMemory
+from agent_runtime.memory.storage import SemanticStore
 from agent_runtime.providers.foundry.model import AsyncFoundryModelClient
 from agent_runtime.providers.foundry.tokens import FoundryTokenCounter
-from bankeriq_agent_platform.memory.service import (
-    SUMMARY_INSTRUCTIONS,
-    HistoryPolicy,
-    SemanticMemory,
-)
-from bankeriq_agent_platform.memory.storage import SemanticStore
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
+from agent_runtime.storage.postgres import PostgresStateStore
 from tests.azure.exec_transport import LocalRelayTransport
 
 
@@ -74,7 +72,9 @@ async def main(args):
 
         for repetition in range(5):
             for name, sources, expected in cases:
-                request = memory._summary_request(sources, SUMMARY_INSTRUCTIONS, prompts.resolve())
+                request = summary_request(
+                    sources, SUMMARY_INSTRUCTIONS, prompts.resolve(), memory.summary_budget.output
+                )
                 memory.summary_budget.require(request)
 
                 for attempt in range(1, 4):

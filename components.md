@@ -17,6 +17,8 @@ The self-hosted specialist is deferred. See
 
 ## Browser chat client
 
+Source location: `frontend/` (reserved; UI implementation remains planned).
+
 Displays conversations, streamed answers, approval requests, job progress and
 authenticated report links. Sends user messages and explicit approval decisions
 to the application backend. It does not decide permissions or hold business-tool
@@ -24,6 +26,10 @@ credentials. Restricted report content stays separate from model conversation
 history, even when displayed in the same application.
 
 ## Application backend
+
+Source location: `src/agent_platform/`. `api/queued.py` owns the admission/history/SSE
+routes; `identity/entra.py` validates current pilot tokens, and `composition.py` wires the
+harness and runtime. Workforce onboarding and the full browser application remain planned.
 
 Owns the interface between the browser and runtime. Binds authenticated users to
 conversations, accepts messages, starts runs and delivers response events. Checks
@@ -45,6 +51,9 @@ replay protection. The model can propose an action but cannot grant access or
 approve it. Access is rechecked at execution and delivery, including after waits.
 
 ## Coordinator runtime
+
+The agent loop and policy live in `src/agent_harness/`. Durable execution and adapters
+live in `src/agent_runtime/`; source packages are separate from deployed service roles.
 
 Owns the agent loop: prepare permitted context, call the external model, discover
 relevant authorised tools, dispatch calls and continue from visible results or
@@ -79,7 +88,7 @@ in-flight steps and retries retain their recorded manifest. The context builder
 combines runtime instructions, the global prompt, permitted history and tool
 definitions, keeping prompts outside chat history. Foundry receives immutable
 request-scoped instructions; synthetic validation uses the same catalog. The
-[implemented prompt system](src/agent_runtime/prompts/README.md) includes durable
+[implemented prompt system](src/agent_harness/prompts/README.md) includes durable
 manifests, scoped publication/activation and withdrawal. Optional Redis body caching
 is implemented; production management authentication remains later work.
 
@@ -87,7 +96,7 @@ Business/user-class overlays are deferred. Their future selection comes from
 trusted application context and retains the global layer. Prompt changes cannot
 grant permissions, remove output enforcement or change tool concurrency limits.
 
-The [semantic memory adapter](src/bankeriq_agent_platform/memory/README.md)
+The [semantic memory adapter](src/agent_runtime/memory/README.md)
 selects source-linked excerpts, publishes versioned PostgreSQL summaries and assembles
 summary-plus-tail context at the prepared run's fixed visibility boundary. Separate model
 budgets cover summary generation and coordinator requests, including prompts and tools.
@@ -156,7 +165,7 @@ messages even before that materialisation. The PostgreSQL adapter implements `St
 focused transactional admission
 operations. Its bounded journal reads are available now; asynchronous history
 materialisation is implemented. See the
-[storage guide](src/bankeriq_agent_platform/storage/README.md).
+[storage guide](src/agent_runtime/storage/README.md).
 
 The storage adapter owns the [transaction
 boundaries](ARCHITECTURE.md#transaction-and-replication-boundaries),
@@ -238,7 +247,7 @@ this component is introduced.
 ### Prompt file authoring
 
 `prompts/` owns versioned instruction text and exact composition references.
-`bankeriq_agent_platform.prompt_files` validates bounded JSON assets at startup
+`agent_platform.prompt_files` validates bounded JSON assets at startup
 and supplies immutable definitions to core. Shared publication stores rendered
 system bodies and source provenance; retained runtime assets support old steps.
 See the [authoring workflow](prompts/README.md).
@@ -247,20 +256,20 @@ See the [authoring workflow](prompts/README.md).
 
 `tests/validation/` owns synthetic tools, scripted models, test identity, request
 fixtures and scoring. It runs through `open_runtime()` with the application prompt
-catalog. `bankeriq_agent_platform.server.LocalServer` remains reusable startup wiring.
+catalog. `agent_platform.server.LocalServer` remains reusable startup wiring.
 The application wheel excludes the harness; the synthetic Docker image copies it
 explicitly and starts `python -m tests.validation`.
 
 ## Implemented session/history boundary
 
-The [session adapter](src/bankeriq_agent_platform/sessions/README.md) owns Redis clients,
+The [session adapter](src/agent_runtime/sessions/README.md) owns Redis clients,
 scoped display state, provisional input and fixed-code progress. `PostgresHistory`
 owns bounded materialisation, page reads and dirty/idle discovery. Trusted application
 code schedules explicit calls; core runtime receives only the session interface.
 Every UI read checks primary ownership/generation/cursor before using cached content.
 The coordinator selects bounded complete-turn context and blocks oversized inference;
 permitted outcomes remain durable and pageable. The
-[worker adapter](src/bankeriq_agent_platform/workers/README.md) implements synthetic
+[worker adapter](src/agent_runtime/workers/README.md) implements synthetic
 ownership, retry/wait recovery, atomic settlement and bounded maintenance scheduling.
 The PostgreSQL adapter optionally owns a bounded primary pool, closed after drain.
 Queue pressure observations support external scaling policy. Separate bounded Redis
@@ -275,4 +284,4 @@ retry/reconciliation commands. Current access, approval, version, replay and bud
 checks gate recovery. Process-loss accounting stops crash loops; orderly drain refunds
 undispatched claims. Unknown effects retain their operation identity when work stops.
 Model/tool orchestration consumes these controls through the same queue owner.
-See the [queued profile](src/bankeriq_agent_platform/workers/asynchronous.md).
+See the [queued profile](src/agent_runtime/workers/asynchronous.md).

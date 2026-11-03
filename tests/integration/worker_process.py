@@ -6,14 +6,14 @@ import sys
 import time
 from pathlib import Path
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.runs.context import RunContext
-from agent_runtime.runs.state import RunStatus
-from bankeriq_agent_platform.storage.codec import plain
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.workers.queue import Lease, PostgresQueue
-from bankeriq_agent_platform.workers.runner import Worker
-from bankeriq_agent_platform.workers.state import Completion, Handler, Handlers, Recovery
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.runs.context import RunContext
+from agent_harness.runs.state import RunStatus
+from agent_harness.storage.codec import plain
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.workers.queue import Lease, PostgresQueue
+from agent_runtime.workers.runner import Worker
+from agent_runtime.workers.state import Completion, Handler, Handlers, Recovery
 
 
 def complete(context: RunContext, state: Recovery) -> Completion:

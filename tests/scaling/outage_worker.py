@@ -5,12 +5,12 @@ import os
 import sys
 from pathlib import Path
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.runs.state import RunStatus
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.workers.asynchronous import AsyncWorker
-from bankeriq_agent_platform.workers.queue import PostgresQueue
-from bankeriq_agent_platform.workers.state import Completion, Handler, Handlers, Recovery
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.runs.state import RunStatus
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.workers.asynchronous import AsyncWorker
+from agent_runtime.workers.queue import PostgresQueue
+from agent_runtime.workers.state import Completion, Handler, Handlers, Recovery
 
 
 def complete(context, state):

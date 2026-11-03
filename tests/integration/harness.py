@@ -5,28 +5,28 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, fields, is_dataclass
 from typing import cast
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.coordinator.control import CoordinatorResult
-from agent_runtime.coordinator.model import ModelReply, ModelRequest
-from agent_runtime.coordinator.runner import Coordinator
-from agent_runtime.durable.continuation import ContinuationEvent
-from agent_runtime.durable.handler import ContinuationHandler
-from agent_runtime.policy.output import EnforcedOutput
-from agent_runtime.prompts.resolution import FixedPromptResolver
-from agent_runtime.runs.context import RunContext
-from agent_runtime.storage.memory import InMemoryStateStore
-from agent_runtime.tools.bindings import ExecutionOutput, ToolBinding
-from agent_runtime.tools.definitions import OutputPolicy, ToolCall, ToolDefinition
-from agent_runtime.tools.gateway import ToolGateway
-from agent_runtime.tools.registry import ToolRegistry, ToolUnavailableError
-from agent_runtime.tools.results import (
+from agent_harness.continuations.continuation import ContinuationEvent
+from agent_harness.continuations.handler import ContinuationHandler
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.coordinator.control import CoordinatorResult
+from agent_harness.coordinator.model import ModelReply, ModelRequest
+from agent_harness.coordinator.runner import Coordinator
+from agent_harness.policy.output import EnforcedOutput
+from agent_harness.prompts.resolution import FixedPromptResolver
+from agent_harness.runs.context import RunContext
+from agent_harness.tools.bindings import ExecutionOutput, ToolBinding
+from agent_harness.tools.definitions import OutputPolicy, ToolCall, ToolDefinition
+from agent_harness.tools.gateway import ToolGateway
+from agent_harness.tools.registry import ToolRegistry, ToolUnavailableError
+from agent_harness.tools.results import (
     PendingToolCall,
     RestrictedReceipt,
     ToolErrorCode,
     ToolFailure,
     WaitReason,
 )
-from agent_runtime.types.json_value import JsonValue
+from agent_harness.types.json_value import JsonValue
+from agent_runtime.storage.memory import InMemoryStateStore
 
 PRIVATE_BODY = "RESTRICTED_PAYLOAD_SENTINEL"
 PERMISSIONS = frozenset({"public.calculate", "reports.create", "reports.read"})

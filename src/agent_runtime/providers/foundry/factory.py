@@ -4,10 +4,10 @@ import math
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 
-from ...coordinator.model import ModelClient, ReasoningEffort
-from ...hosting.endpoint import RuntimeEndpoint
-from ..hosts import Authenticator, RuntimeServer
-from ..models import ModelSettings
+from agent_harness.coordinator.model import ModelClient, ReasoningEffort
+from agent_runtime.hosting.endpoint import RuntimeEndpoint
+from agent_runtime.providers.hosts import Authenticator, RuntimeServer
+from agent_runtime.providers.models import ModelSettings
 
 
 @contextmanager
@@ -35,9 +35,9 @@ def open_foundry_model(
 
     # SDK imports are deliberately lazy. Registering Foundry as an available
     # choice must work in an installation that uses another provider's SDK.
-    from .connection import create_foundry_client
-    from .credentials import foundry_credential
-    from .model import FoundryModelClient
+    from agent_runtime.providers.foundry.connection import create_foundry_client
+    from agent_runtime.providers.foundry.credentials import foundry_credential
+    from agent_runtime.providers.foundry.model import FoundryModelClient
 
     with (
         foundry_credential(environment) as credential,
@@ -58,6 +58,6 @@ def open_foundry_model(
 def create_foundry_host(endpoint: RuntimeEndpoint, authenticate: Authenticator) -> RuntimeServer:
     """Load the Microsoft hosting SDK independently of the chosen model provider."""
 
-    from .hosting import create_hosted_server
+    from agent_runtime.providers.foundry.hosting import create_hosted_server
 
     return create_hosted_server(endpoint, authenticate=authenticate)

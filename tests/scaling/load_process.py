@@ -12,13 +12,13 @@ from pathlib import Path
 
 import httpx2
 
-from agent_runtime.runs.context import RunContext
-from bankeriq_agent_platform.sessions.cache import RedisSessions
-from bankeriq_agent_platform.sessions.service import SessionService
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.workers.api import create_async_app
-from bankeriq_agent_platform.workers.asynchronous import AsyncWorker
-from bankeriq_agent_platform.workers.state import Handlers
+from agent_harness.runs.context import RunContext
+from agent_platform.api.queued import create_async_app
+from agent_runtime.sessions.cache import RedisSessions
+from agent_runtime.sessions.service import SessionService
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.workers.asynchronous import AsyncWorker
+from agent_runtime.workers.state import Handlers
 from tests.integration.async_process import composition
 
 

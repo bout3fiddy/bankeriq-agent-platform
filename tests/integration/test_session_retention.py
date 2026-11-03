@@ -12,12 +12,12 @@ from typing import cast
 import psycopg
 import pytest
 
-from agent_runtime.runs.context import RunContext
-from agent_runtime.storage.interface import StateConflictError, StateNotFoundError
-from bankeriq_agent_platform.sessions.cache import RedisSessions
-from bankeriq_agent_platform.sessions.service import SessionService
-from bankeriq_agent_platform.sessions.stream import ProgressStream
-from bankeriq_agent_platform.storage.history import ProjectionPolicy
+from agent_harness.runs.context import RunContext
+from agent_harness.storage.interface import StateConflictError, StateNotFoundError
+from agent_runtime.sessions.cache import RedisSessions
+from agent_runtime.sessions.service import SessionService
+from agent_runtime.sessions.stream import ProgressStream
+from agent_runtime.storage.history import ProjectionPolicy
 
 from .test_async_groups import fanout
 from .test_postgres import context as context

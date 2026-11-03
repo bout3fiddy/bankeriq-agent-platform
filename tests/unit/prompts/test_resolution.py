@@ -5,13 +5,13 @@ from typing import Any
 
 import pytest
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.prompts.resolution import FixedPromptResolver, PromptUnavailableError
-from agent_runtime.runs.context import RunContext
-from agent_runtime.runs.state import RunStatus
-from agent_runtime.storage.interface import StateConflictError
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.prompts.resolution import FixedPromptResolver, PromptUnavailableError
+from agent_harness.runs.context import RunContext
+from agent_harness.runs.state import RunStatus
+from agent_harness.storage.interface import StateConflictError
+from agent_harness.tools.results import PendingToolCall, WaitReason
 from agent_runtime.storage.memory import InMemoryStateStore
-from agent_runtime.tools.results import PendingToolCall, WaitReason
 
 
 def test_fixed_preparation_retry_and_changed_startup_instructions() -> None:

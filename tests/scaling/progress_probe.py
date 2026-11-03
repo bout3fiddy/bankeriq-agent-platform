@@ -13,12 +13,12 @@ import psycopg
 from psycopg import sql
 from psycopg.conninfo import make_conninfo
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.runs.context import RunContext
-from bankeriq_agent_platform.sessions.cache import RedisSessions
-from bankeriq_agent_platform.sessions.service import SessionService
-from bankeriq_agent_platform.sessions.stream import ProgressStream
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore, migrate
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.runs.context import RunContext
+from agent_runtime.sessions.cache import RedisSessions
+from agent_runtime.sessions.service import SessionService
+from agent_runtime.sessions.stream import ProgressStream
+from agent_runtime.storage.postgres import PostgresStateStore, migrate
 
 
 class ObservedStore(PostgresStateStore):

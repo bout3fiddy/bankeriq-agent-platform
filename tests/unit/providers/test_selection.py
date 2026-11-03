@@ -5,11 +5,11 @@ from contextlib import contextmanager
 
 import pytest
 
-from agent_runtime.coordinator.model import ModelClient, ModelReply, ModelRequest, ReasoningEffort
+from agent_harness.coordinator.model import ModelClient, ModelReply, ModelRequest, ReasoningEffort
+from agent_platform.configuration import load_settings
+from agent_platform.providers import hosting_providers, model_providers
 from agent_runtime.providers.hosts import select_host
 from agent_runtime.providers.models import ModelSettings, open_model
-from bankeriq_agent_platform.configuration import load_settings
-from bankeriq_agent_platform.providers import hosting_providers, model_providers
 
 
 class LocalModel:

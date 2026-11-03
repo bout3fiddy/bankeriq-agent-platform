@@ -7,24 +7,24 @@ from typing import cast
 
 import pytest
 
-from agent_runtime.conversations.conversation import ConversationItem
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.runs.context import RunContext
-from agent_runtime.runs.state import RunStatus
-from agent_runtime.storage.interface import (
+from agent_harness.conversations.conversation import ConversationItem
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.runs.context import RunContext
+from agent_harness.runs.state import RunStatus
+from agent_harness.storage.interface import (
     Checkpoint,
     StateConflictError,
     StateNotFoundError,
     StateStore,
 )
-from agent_runtime.storage.memory import InMemoryStateStore
-from agent_runtime.tools.definitions import ToolCall
-from agent_runtime.tools.results import (
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.results import (
     ArtifactReference,
     PendingToolCall,
     RestrictedReceipt,
     WaitReason,
 )
+from agent_runtime.storage.memory import InMemoryStateStore
 
 CONTEXT = RunContext("tenant-1", "user-1", "conversation-1", "run-1")
 

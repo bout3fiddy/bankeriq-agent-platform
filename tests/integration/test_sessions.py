@@ -16,21 +16,22 @@ from psycopg import sql
 from psycopg.conninfo import make_conninfo
 from psycopg.rows import dict_row
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.runs.context import RunContext
-from agent_runtime.runs.state import RunStatus
-from agent_runtime.storage.interface import StateConflictError, StateNotFoundError
-from agent_runtime.tools.definitions import ToolCall
-from agent_runtime.tools.results import (
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.runs.context import RunContext
+from agent_harness.runs.state import RunStatus
+from agent_harness.storage.interface import StateConflictError, StateNotFoundError
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.results import (
     ArtifactReference,
     PendingToolCall,
     RestrictedReceipt,
     WaitReason,
 )
-from bankeriq_agent_platform.sessions.cache import RedisSessions
-from bankeriq_agent_platform.sessions.service import SessionService
-from bankeriq_agent_platform.storage.history import PostgresHistory, ProjectionPolicy
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore, migrate
+from agent_platform.prompt_files.loader import load_catalog
+from agent_runtime.sessions.cache import RedisSessions
+from agent_runtime.sessions.service import SessionService
+from agent_runtime.storage.history import PostgresHistory, ProjectionPolicy
+from agent_runtime.storage.postgres import PostgresStateStore, migrate
 
 from . import test_postgres
 from .test_postgres import INPUT, Fault, save
@@ -123,10 +124,10 @@ def test_provisional_admission_restart_and_reconciliation(
     # the same view again after deleting only this tenant's disposable cache key.
     script = """
 import os, sys
-from agent_runtime.runs.context import RunContext
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.sessions.cache import RedisSessions
-from bankeriq_agent_platform.sessions.service import SessionService
+from agent_harness.runs.context import RunContext
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.sessions.cache import RedisSessions
+from agent_runtime.sessions.service import SessionService
 c=RunContext(sys.argv[1], 'user', 'chat', 'run')
 s=SessionService(PostgresStateStore(os.environ['SESSION_DSN']),
                  RedisSessions(os.environ['SESSION_REDIS']))
@@ -556,11 +557,11 @@ def test_session_http_commands_admit_without_executing(
     import httpx2
     from starlette.requests import Request
 
-    from agent_runtime.coordinator.runner import Coordinator
-    from agent_runtime.durable.handler import ContinuationHandler
+    from agent_harness.continuations.handler import ContinuationHandler
+    from agent_harness.coordinator.runner import Coordinator
+    from agent_harness.prompts.resolution import FixedPromptResolver
     from agent_runtime.hosting.access import InputRejected, Principal
     from agent_runtime.hosting.endpoint import RuntimeEndpoint
-    from agent_runtime.prompts.resolution import FixedPromptResolver
     from agent_runtime.providers.foundry.hosting import create_hosted_server
 
     from .harness import RuntimeHarness
@@ -662,10 +663,10 @@ def test_conflicting_provisional_display_reconciles_without_hiding_history(
 def test_oversized_turn_commits_results_but_blocks_inference(
     sessions: SessionService, context: RunContext, dsn: str
 ) -> None:
-    from agent_runtime.conversations.context import ContextBudgetExceeded
-    from agent_runtime.coordinator.runner import Coordinator
-    from agent_runtime.prompts.resolution import FixedPromptResolver
-    from agent_runtime.tools.results import VisibleResult
+    from agent_harness.conversations.context import ContextBudgetExceeded
+    from agent_harness.coordinator.runner import Coordinator
+    from agent_harness.prompts.resolution import FixedPromptResolver
+    from agent_harness.tools.results import VisibleResult
 
     from .harness import RuntimeHarness
 
@@ -756,26 +757,43 @@ def test_projection_fairness_and_idle_keyset(
 def test_shared_prompt_cache_loss_corruption_and_withdrawal(
     sessions: SessionService, dsn: str
 ) -> None:
-    from agent_runtime.prompts.resolution import PromptScope, PromptUnavailableError
-    from bankeriq_agent_platform.sessions.prompts import RedisPromptBodies
-    from bankeriq_agent_platform.storage.prompts import PostgresPromptResolver, PromptAdministration
+    from agent_harness.prompts.resolution import PromptScope, PromptUnavailableError
+    from agent_runtime.sessions.prompts import RedisPromptBodies
+    from agent_runtime.storage.prompts import PostgresPromptResolver, PromptAdministration
 
     from .test_prompts import ADMIN, activate, publish
 
     scope = PromptScope(str(uuid4()), "test")
-    admin = PromptAdministration(dsn, scope, authorize=lambda actor, scope: actor == ADMIN)
+    admin = PromptAdministration(
+        dsn, scope, catalog=load_catalog(), authorize=lambda actor, scope: actor == ADMIN
+    )
     publish(admin, "v1")
     activate(admin, "v1", 0)
     cache = RedisPromptBodies(sessions.cache)
-    reader = PostgresPromptResolver(dsn, scope, body_cache=cache)
+    reader = PostgresPromptResolver(dsn, scope, catalog=load_catalog(), body_cache=cache)
     manifest = reader.resolve()
     expected = reader.instructions(manifest)
     assert cache.get(manifest) == "Guidance v1"
-    assert PostgresPromptResolver(dsn, scope, body_cache=cache).instructions(manifest) == expected
+    assert (
+        PostgresPromptResolver(dsn, scope, catalog=load_catalog(), body_cache=cache).instructions(
+            manifest
+        )
+        == expected
+    )
     sessions.cache.client.set(cache.key(manifest), "corrupted instructions")
-    assert PostgresPromptResolver(dsn, scope, body_cache=cache).instructions(manifest) == expected
+    assert (
+        PostgresPromptResolver(dsn, scope, catalog=load_catalog(), body_cache=cache).instructions(
+            manifest
+        )
+        == expected
+    )
     sessions.cache.client.delete(cache.key(manifest))
-    assert PostgresPromptResolver(dsn, scope, body_cache=cache).instructions(manifest) == expected
+    assert (
+        PostgresPromptResolver(dsn, scope, catalog=load_catalog(), body_cache=cache).instructions(
+            manifest
+        )
+        == expected
+    )
     admin.withdraw(ADMIN, request_id="withdraw", version="v1")
 
     with pytest.raises(PromptUnavailableError):

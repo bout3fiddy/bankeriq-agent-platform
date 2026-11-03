@@ -6,13 +6,13 @@ from typing import cast
 
 import pytest
 
-from agent_runtime.runs.context import RunContext
-from agent_runtime.tools.bindings import ExecutionOutput, ToolBinding
-from agent_runtime.tools.definitions import OutputPolicy, ToolCall, ToolDefinition
-from agent_runtime.tools.gateway import ToolGateway
-from agent_runtime.tools.registry import ToolRegistry
-from agent_runtime.tools.results import RestrictedReceipt, ToolErrorCode, ToolFailure, VisibleResult
-from agent_runtime.types.json_value import JsonValue
+from agent_harness.runs.context import RunContext
+from agent_harness.tools.bindings import ExecutionOutput, ToolBinding
+from agent_harness.tools.definitions import OutputPolicy, ToolCall, ToolDefinition
+from agent_harness.tools.gateway import ToolGateway
+from agent_harness.tools.registry import ToolRegistry
+from agent_harness.tools.results import RestrictedReceipt, ToolErrorCode, ToolFailure, VisibleResult
+from agent_harness.types.json_value import JsonValue
 
 CONTEXT = RunContext("tenant-1", "user-1", "conversation-1", "run-1")
 CALL = ToolCall("call-1", "calculate", {"count": 2})

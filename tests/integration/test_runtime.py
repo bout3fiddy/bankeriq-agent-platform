@@ -6,18 +6,18 @@ from typing import cast
 
 import pytest
 
-from agent_runtime.coordinator.model import ModelReply, ModelRequest
-from agent_runtime.runs.state import RunStatus
-from agent_runtime.storage.interface import StateConflictError
-from agent_runtime.tools.definitions import ToolCall
-from agent_runtime.tools.results import (
+from agent_harness.coordinator.model import ModelReply, ModelRequest
+from agent_harness.runs.state import RunStatus
+from agent_harness.storage.interface import StateConflictError
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.results import (
     RestrictedReceipt,
     ToolErrorCode,
     ToolFailure,
     VisibleResult,
     WaitReason,
 )
-from agent_runtime.types.json_value import JsonValue
+from agent_harness.types.json_value import JsonValue
 
 from .harness import (
     CALCULATE,

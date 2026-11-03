@@ -4,10 +4,10 @@ import json
 from itertools import groupby
 from typing import cast
 
-from agent_runtime.conversations.conversation import ConversationItem
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.tools.definitions import ToolCall
-from agent_runtime.tools.results import RestrictedReceipt, ToolFailure, ToolResult, VisibleResult
+from agent_harness.conversations.conversation import ConversationItem
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.results import RestrictedReceipt, ToolFailure, ToolResult, VisibleResult
 
 
 def explain_history(history: tuple[ConversationItem, ...]) -> str:

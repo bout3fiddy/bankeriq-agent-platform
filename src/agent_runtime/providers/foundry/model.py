@@ -10,16 +10,16 @@ from openai import APIError, APIStatusError, AsyncOpenAI, OpenAI, omit
 from openai.types.chat import ChatCompletion, ChatCompletionFunctionToolParam
 from openai.types.shared import ReasoningEffort as SdkReasoningEffort
 
-from ...coordinator.model import (
+from agent_harness.coordinator.model import (
     ModelContextOverflow,
     ModelRateLimited,
     ModelReply,
     ModelRequest,
     ReasoningEffort,
 )
-from .messages import encode_json, encode_messages
-from .metrics import ModelObservation, observe
-from .replies import FoundryModelError, decode_reply
+from agent_runtime.providers.foundry.messages import encode_json, encode_messages
+from agent_runtime.providers.foundry.metrics import ModelObservation, observe
+from agent_runtime.providers.foundry.replies import FoundryModelError, decode_reply
 
 
 class FoundryModelClient:

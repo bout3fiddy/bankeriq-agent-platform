@@ -5,19 +5,21 @@ import os
 import sys
 from dataclasses import replace
 
-from agent_runtime.conversations.messages import Message
-from agent_runtime.conversations.semantic import TokenBudget
-from agent_runtime.coordinator.model import ModelReply, ModelRequest
-from agent_runtime.prompts.resolution import FixedPromptResolver
+from agent_harness.conversations.messages import Message
+from agent_harness.coordinator.model import ModelReply, ModelRequest
+from agent_harness.memory.projection import HistoryPolicy
+from agent_harness.memory.retrieval import HISTORY_TOOL
+from agent_harness.memory.semantic import TokenBudget
+from agent_harness.prompts.resolution import FixedPromptResolver
+from agent_harness.tools.gateway import ToolGateway
+from agent_harness.tools.registry import ToolRegistry
+from agent_runtime.memory.retrieval import HistoryRetrieval
+from agent_runtime.memory.service import SemanticMemory
+from agent_runtime.memory.storage import SemanticStore
 from agent_runtime.providers.foundry.tokens import FoundryTokenCounter
-from agent_runtime.tools.gateway import ToolGateway
-from agent_runtime.tools.registry import ToolRegistry
-from bankeriq_agent_platform.memory.retrieval import HISTORY_TOOL, HistoryRetrieval
-from bankeriq_agent_platform.memory.service import HistoryPolicy, SemanticMemory
-from bankeriq_agent_platform.memory.storage import SemanticStore
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.workers.asynchronous import AsyncWorker
-from bankeriq_agent_platform.workers.state import Handlers
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.workers.asynchronous import AsyncWorker
+from agent_runtime.workers.state import Handlers
 
 from .async_process import composition as base_composition
 from .harness import FakeAccess

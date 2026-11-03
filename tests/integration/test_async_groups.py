@@ -15,16 +15,16 @@ from typing import Any
 
 import pytest
 
-from agent_runtime.conversations.messages import Message
-from agent_runtime.runs.context import RunContext
-from agent_runtime.runs.state import RunStatus
-from agent_runtime.storage.interface import StateConflictError, StateNotFoundError
-from agent_runtime.tools.results import ToolErrorCode, ToolFailure, VisibleResult
-from bankeriq_agent_platform.sessions.stream import ProgressStream
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.workers.asynchronous import AsyncWorker
-from bankeriq_agent_platform.workers.controls import ControlRequest, RecoveryActor, RecoveryControls
-from bankeriq_agent_platform.workers.state import Completion, Handlers
+from agent_harness.conversations.messages import Message
+from agent_harness.runs.context import RunContext
+from agent_harness.runs.state import RunStatus
+from agent_harness.storage.interface import StateConflictError, StateNotFoundError
+from agent_harness.tools.results import ToolErrorCode, ToolFailure, VisibleResult
+from agent_runtime.sessions.stream import ProgressStream
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.workers.asynchronous import AsyncWorker
+from agent_runtime.workers.controls import ControlRequest, RecoveryActor, RecoveryControls
+from agent_runtime.workers.state import Completion, Handlers
 
 from .async_process import composition
 from .test_postgres import context as context
@@ -468,7 +468,7 @@ def test_idle_wait_and_slow_model_do_not_block_another_conversation(
     store: PostgresStateStore,
     context: RunContext,
 ) -> None:
-    from agent_runtime.coordinator.model import ModelReply
+    from agent_harness.coordinator.model import ModelReply
 
     async def run():
         runtime, handlers = composition(store)
@@ -541,11 +541,11 @@ def test_restricted_payload_is_absent_from_model_journal_and_progress(
     dsn: str,
     sessions: Any,
 ) -> None:
-    from agent_runtime.tools.bindings import ExecutionOutput, ToolBinding
-    from agent_runtime.tools.definitions import OutputPolicy
-    from agent_runtime.tools.gateway import ToolGateway
-    from agent_runtime.tools.registry import ToolRegistry
-    from agent_runtime.tools.results import RestrictedReceipt
+    from agent_harness.tools.bindings import ExecutionOutput, ToolBinding
+    from agent_harness.tools.definitions import OutputPolicy
+    from agent_harness.tools.gateway import ToolGateway
+    from agent_harness.tools.registry import ToolRegistry
+    from agent_harness.tools.results import RestrictedReceipt
 
     from .harness import CALCULATE, PERMISSIONS, FakeAccess
 
@@ -647,7 +647,7 @@ def test_admission_transport_and_input_policy(
 ) -> None:
     import httpx2
 
-    from bankeriq_agent_platform.workers.api import create_async_app
+    from agent_platform.api.queued import create_async_app
 
     runtime, _ = composition(store)
 
@@ -764,7 +764,7 @@ def test_sse_stalled_reader_overflows_while_tools_finish(
 def test_tool_batch_budget_rejected_before_any_child(
     store: PostgresStateStore, context: RunContext, dsn: str
 ) -> None:
-    from agent_runtime.coordinator.control import RunLimits
+    from agent_harness.coordinator.control import RunLimits
 
     runtime, handlers = composition(store)
     runtime.limits = RunLimits(tool_calls=2)
@@ -803,7 +803,7 @@ def test_failed_fanout_transaction_exposes_no_partial_children(
 def test_slow_tool_releases_coordinator_for_other_conversation(
     store: PostgresStateStore, context: RunContext
 ) -> None:
-    from agent_runtime.coordinator.model import ModelReply
+    from agent_harness.coordinator.model import ModelReply
 
     runtime, handlers = fanout(store, context)
     other = replace(context, conversation_id="other", run_id="other")
@@ -851,7 +851,7 @@ def test_slow_tool_releases_coordinator_for_other_conversation(
 def test_unknown_child_denial_preserves_group_and_operation(
     store: PostgresStateStore, context: RunContext
 ) -> None:
-    from bankeriq_agent_platform.workers.reasons import FailureReason
+    from agent_runtime.workers.reasons import FailureReason
 
     runtime, handlers = fanout(store, context)
     lease = runtime.queue.claim("tool", handlers)

@@ -5,8 +5,8 @@ from typing import cast
 
 import pytest
 
-from agent_runtime.tools.definitions import OutputPolicy, ToolCall, ToolDefinition
-from agent_runtime.types.json_value import JsonValue
+from agent_harness.tools.definitions import OutputPolicy, ToolCall, ToolDefinition
+from agent_harness.types.json_value import JsonValue
 
 
 def test_call_snapshots_nested_arguments() -> None:

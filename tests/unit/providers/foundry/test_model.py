@@ -8,12 +8,12 @@ import httpx2
 import pytest
 from openai import OpenAI
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.coordinator.model import ModelRequest, ModelTool, ReasoningEffort
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.coordinator.model import ModelRequest, ModelTool, ReasoningEffort
+from agent_harness.tools.definitions import ToolCall
 from agent_runtime.providers.foundry.connection import create_foundry_client
 from agent_runtime.providers.foundry.model import FoundryModelClient
 from agent_runtime.providers.foundry.replies import FoundryModelError
-from agent_runtime.tools.definitions import ToolCall
 
 REQUEST = ModelRequest((Message(MessageRole.USER, "Hello"),), ())
 

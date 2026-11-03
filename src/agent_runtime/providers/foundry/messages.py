@@ -6,11 +6,11 @@ from typing import cast
 
 from openai.types.chat import ChatCompletionMessageParam
 
-from ...conversations.conversation import ConversationItem
-from ...conversations.messages import Message, MessageRole
-from ...tools.definitions import ToolCall
-from ...tools.results import RestrictedReceipt, ToolFailure, VisibleResult
-from ...types.json_value import JsonValue
+from agent_harness.conversations.conversation import ConversationItem
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.results import RestrictedReceipt, ToolFailure, VisibleResult
+from agent_harness.types.json_value import JsonValue
 
 
 def encode_messages(history: tuple[ConversationItem, ...]) -> list[ChatCompletionMessageParam]:

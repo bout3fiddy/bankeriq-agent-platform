@@ -9,10 +9,10 @@ from uuid import uuid4
 
 import httpx2
 
+from agent_harness.runs.context import RunContext
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.results import RestrictedReceipt, VisibleResult
 from agent_runtime.providers.foundry.hosting import create_hosted_server
-from agent_runtime.runs.context import RunContext
-from agent_runtime.tools.definitions import ToolCall
-from agent_runtime.tools.results import RestrictedReceipt, VisibleResult
 
 from .application import PRINCIPAL, PROMPT, LocalServer
 from .tools import PRIVATE_MARKER, ValidationDependencies

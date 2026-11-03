@@ -6,11 +6,11 @@ import httpx2
 import pytest
 from openai import OpenAI
 
-from agent_runtime.coordinator.runner import Coordinator
-from agent_runtime.durable.handler import ContinuationHandler
-from agent_runtime.prompts.resolution import FixedPromptResolver
+from agent_harness.continuations.handler import ContinuationHandler
+from agent_harness.coordinator.runner import Coordinator
+from agent_harness.prompts.resolution import FixedPromptResolver
+from agent_harness.runs.state import RunStatus
 from agent_runtime.providers.foundry.model import FoundryModelClient
-from agent_runtime.runs.state import RunStatus
 
 from .harness import (
     CALCULATE,

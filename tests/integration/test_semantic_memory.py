@@ -10,18 +10,18 @@ from typing import Any
 import psycopg
 import pytest
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.conversations.semantic import MemoryBlocked
-from agent_runtime.coordinator.model import ModelReply
-from agent_runtime.prompts.resolution import FixedPromptResolver
-from agent_runtime.runs.state import RunStatus
-from agent_runtime.storage.interface import StateConflictError, StateNotFoundError
-from agent_runtime.tools.definitions import ToolCall
-from agent_runtime.tools.results import ToolFailure, VisibleResult
-from bankeriq_agent_platform.memory.retrieval import HistoryRetrieval
-from bankeriq_agent_platform.memory.service import HistoryPolicy, project
-from bankeriq_agent_platform.storage.codec import plain
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.coordinator.model import ModelReply
+from agent_harness.memory.projection import HistoryPolicy, project
+from agent_harness.memory.semantic import MemoryBlocked
+from agent_harness.prompts.resolution import FixedPromptResolver
+from agent_harness.runs.state import RunStatus
+from agent_harness.storage.codec import plain
+from agent_harness.storage.interface import StateConflictError, StateNotFoundError
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.results import ToolFailure, VisibleResult
+from agent_runtime.memory.retrieval import HistoryRetrieval
+from agent_runtime.storage.postgres import PostgresStateStore
 
 from .semantic_process import Answer, composition
 from .test_async_groups import step
@@ -188,7 +188,7 @@ def test_required_compaction_blocks_without_model_dispatch(store, context, dsn, 
     if failure == "tools":
         registry = runtime.coordinator._registry
         tool = registry.discover(frozenset({"history.read"}))[0]
-        from agent_runtime.tools.registry import ToolRegistry
+        from agent_harness.tools.registry import ToolRegistry
 
         runtime.coordinator._registry = ToolRegistry((replace(tool, description="large " * 4000),))
 
@@ -295,7 +295,7 @@ def test_restricted_content_reasoning_and_delivery_ids_never_become_sources():
 
 
 def test_publication_duplicate_conflict_stale_attempt_and_rollback(store, context, dsn):
-    from agent_runtime.conversations.semantic import MemoryFact
+    from agent_harness.memory.semantic import MemoryFact
 
     from .test_postgres import Fault
 
@@ -619,7 +619,7 @@ def test_valid_but_oversized_summary_preserves_existing_version(store, context, 
 
 
 def test_action_truth_and_restricted_markers_across_summary_and_retrieval(store, context, dsn):
-    from agent_runtime.tools.results import ArtifactReference, RestrictedReceipt, ToolErrorCode
+    from agent_harness.tools.results import ArtifactReference, RestrictedReceipt, ToolErrorCode
 
     previous = replace(context, run_id="actions")
     checkpoint = store.admit(
@@ -693,8 +693,8 @@ def test_existing_context_byte_limit_still_blocks_semantic_dispatch(store, conte
 
 @pytest.mark.parametrize("change", ["profile", "prompt", "policy"])
 def test_incompatible_or_unavailable_memory_blocks_prepared_work(store, context, change):
-    from agent_runtime.prompts.resolution import PromptUnavailableError
-    from bankeriq_agent_platform.workers.asynchronous import AsyncWorker
+    from agent_harness.prompts.resolution import PromptUnavailableError
+    from agent_runtime.workers.asynchronous import AsyncWorker
 
     seed(store, context, 4)
     runtime, handlers, memory, extractor, lease, _, _ = prepare(store, context, context_window=1800)
@@ -804,7 +804,7 @@ def test_application_history_visibility_tracks_tool_permission_revocation(store,
 
 
 def test_old_retrieval_pages_do_not_promote_user_claims_to_tool_outcomes():
-    from bankeriq_agent_platform.memory.service import active_items
+    from agent_harness.memory.projection import active_items
 
     source = {
         "admission_sequence": 2,

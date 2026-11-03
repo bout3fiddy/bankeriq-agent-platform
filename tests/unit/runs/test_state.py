@@ -2,9 +2,9 @@
 
 import pytest
 
-from agent_runtime.runs.context import RunContext
-from agent_runtime.runs.state import RunState, RunStatus
-from agent_runtime.tools.results import PendingToolCall, WaitReason
+from agent_harness.runs.context import RunContext
+from agent_harness.runs.state import RunState, RunStatus
+from agent_harness.tools.results import PendingToolCall, WaitReason
 
 
 def test_waiting_state_requires_unique_pending_calls() -> None:

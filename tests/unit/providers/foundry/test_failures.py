@@ -7,8 +7,8 @@ import httpx2
 import pytest
 from openai import AsyncOpenAI
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.coordinator.model import ModelContextOverflow, ModelRateLimited, ModelRequest
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.coordinator.model import ModelContextOverflow, ModelRateLimited, ModelRequest
 from agent_runtime.providers.foundry.model import AsyncFoundryModelClient
 from agent_runtime.providers.foundry.replies import FoundryModelError
 

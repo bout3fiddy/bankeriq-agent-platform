@@ -24,35 +24,38 @@ from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from agent_runtime.conversations.semantic import TokenBudget
-from agent_runtime.prompts.resolution import FixedPromptResolver, PromptScope
-from agent_runtime.providers.foundry.model import AsyncFoundryModelClient
-from agent_runtime.providers.foundry.tokens import FoundryTokenCounter
-from agent_runtime.runs.context import RunContext
-from agent_runtime.tools.bindings import ExecutionOutput, ToolBinding
-from agent_runtime.tools.definitions import OutputPolicy
-from agent_runtime.tools.gateway import ToolGateway
-from agent_runtime.tools.registry import ToolRegistry
-from bankeriq_agent_platform.azure.authentication import (
+from agent_harness.memory.projection import HistoryPolicy
+from agent_harness.memory.retrieval import HISTORY_TOOL
+from agent_harness.memory.semantic import TokenBudget
+from agent_harness.prompts.resolution import FixedPromptResolver, PromptScope
+from agent_harness.runs.context import RunContext
+from agent_harness.tools.bindings import ExecutionOutput, ToolBinding
+from agent_harness.tools.definitions import OutputPolicy
+from agent_harness.tools.gateway import ToolGateway
+from agent_harness.tools.registry import ToolRegistry
+from agent_platform.api.queued import create_async_app
+from agent_platform.azure.connections import token_connection
+from agent_platform.composition import compose_queued_runtime
+from agent_platform.identity.entra import (
     EntraAuthentication,
     operator_test_input,
     synthetic_input,
 )
-from bankeriq_agent_platform.azure.connections import token_connection
-from bankeriq_agent_platform.memory.retrieval import HISTORY_TOOL, HistoryRetrieval
-from bankeriq_agent_platform.memory.service import HistoryPolicy, SemanticMemory
-from bankeriq_agent_platform.memory.storage import SemanticStore
-from bankeriq_agent_platform.runtime import compose_queued_runtime
-from bankeriq_agent_platform.sessions.cache import RedisSessions
-from bankeriq_agent_platform.sessions.service import SessionService
-from bankeriq_agent_platform.storage.connections import PrimaryConnections
-from bankeriq_agent_platform.storage.postgres import CommitUnknownError, PostgresStateStore
-from bankeriq_agent_platform.storage.prompts import PostgresPromptResolver
-from bankeriq_agent_platform.telemetry import ACTIVE_RUN, configure, emit
-from bankeriq_agent_platform.workers.api import create_async_app
-from bankeriq_agent_platform.workers.asynchronous import AsyncWorker
-from bankeriq_agent_platform.workers.coordinator import QueuedCoordinator
-from bankeriq_agent_platform.workers.state import Handlers
+from agent_platform.prompt_files.loader import load_catalog
+from agent_runtime.memory.retrieval import HistoryRetrieval
+from agent_runtime.memory.service import SemanticMemory
+from agent_runtime.memory.storage import SemanticStore
+from agent_runtime.providers.foundry.model import AsyncFoundryModelClient
+from agent_runtime.providers.foundry.tokens import FoundryTokenCounter
+from agent_runtime.sessions.cache import RedisSessions
+from agent_runtime.sessions.service import SessionService
+from agent_runtime.storage.connections import PrimaryConnections
+from agent_runtime.storage.postgres import CommitUnknownError, PostgresStateStore
+from agent_runtime.storage.prompts import PostgresPromptResolver
+from agent_runtime.telemetry import ACTIVE_RUN, configure, emit
+from agent_runtime.workers.asynchronous import AsyncWorker
+from agent_runtime.workers.coordinator import QueuedCoordinator
+from agent_runtime.workers.state import Handlers
 from tests.azure.migration import initialise
 from tests.validation.tools import (
     CALCULATE,
@@ -312,7 +315,7 @@ async def main():
 
         store = PostgresStateStore(dsn, connections=connections)
         prompts = PostgresPromptResolver(
-            dsn, PromptScope("bankeriq", "pilot"), connections=connections
+            dsn, PromptScope("bankeriq", "pilot"), catalog=load_catalog(), connections=connections
         )
         model = NoModel()
 

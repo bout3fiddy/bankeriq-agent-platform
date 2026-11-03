@@ -20,7 +20,7 @@ request handler import no provider implementations or vendor SDKs.
 ## Choose a provider
 
 The application reads trusted startup configuration with
-`bankeriq_agent_platform.configuration.load_settings(environment)`. Both provider
+`agent_platform.configuration.load_settings(environment)`. Both provider
 choices default to `foundry`:
 
 ```sh
@@ -57,15 +57,15 @@ HTTP request bodies cannot choose providers or replace configured tools.
 
 ## Application wiring
 
-`bankeriq_agent_platform/runtime.py` contains `open_runtime()`, the composition
+`agent_platform/composition.py` contains `open_runtime()`, the composition
 point that opens the selected model, constructs the coordinator/continuation
 handler, and creates the selected host. Use it with the application's dependencies:
 
 ```python
 import os
 
-from bankeriq_agent_platform.configuration import load_settings
-from bankeriq_agent_platform.runtime import open_runtime
+from agent_platform.configuration import load_settings
+from agent_platform.composition import open_runtime
 
 settings = load_settings(os.environ)
 with open_runtime(
@@ -94,7 +94,7 @@ durable providers still need production implementations.
    there. The gateway continues to own authorization and output enforcement.
 2. Supply a model factory that accepts `ModelSettings`, opens its SDK client,
    yields the adapter and closes the connection on exit.
-3. Register that factory once in `bankeriq_agent_platform/providers.py`.
+3. Register that factory once in `agent_platform/providers.py`.
 4. Select its registered name through `MODEL_PROVIDER`. Hosting can remain Foundry.
 
 A new hosting integration supplies a separate factory accepting `RuntimeEndpoint`

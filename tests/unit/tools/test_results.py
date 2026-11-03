@@ -5,14 +5,14 @@ from typing import cast
 
 import pytest
 
-from agent_runtime.tools.definitions import ToolCall
-from agent_runtime.tools.results import (
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.results import (
     ArtifactReference,
     RestrictedReceipt,
     ToolFailure,
     VisibleResult,
 )
-from agent_runtime.types.json_value import JsonValue
+from agent_harness.types.json_value import JsonValue
 
 
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), object(), {1: "bad key"}])

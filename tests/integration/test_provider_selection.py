@@ -9,14 +9,14 @@ from azure.ai.agentserver.invocations import InvocationAgentServerHost
 from starlette.requests import Request
 from starlette.testclient import TestClient
 
-from agent_runtime.coordinator.model import ModelClient, ModelReply, ReasoningEffort
+from agent_harness.coordinator.model import ModelClient, ModelReply, ReasoningEffort
+from agent_harness.tools.definitions import ToolCall
+from agent_platform.composition import open_runtime
+from agent_platform.configuration import load_settings
 from agent_runtime.hosting.access import Principal
 from agent_runtime.hosting.endpoint import RuntimeEndpoint
 from agent_runtime.providers.hosts import Authenticator, RuntimeServer
 from agent_runtime.providers.models import ModelFactory, ModelSettings
-from agent_runtime.tools.definitions import ToolCall
-from bankeriq_agent_platform.configuration import load_settings
-from bankeriq_agent_platform.runtime import open_runtime
 
 from .harness import (
     CALCULATE,

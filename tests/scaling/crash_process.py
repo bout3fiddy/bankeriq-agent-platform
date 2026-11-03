@@ -8,11 +8,11 @@ import time
 from dataclasses import replace
 from pathlib import Path
 
-from agent_runtime.runs.context import RunContext
-from agent_runtime.runs.state import TERMINAL_STATUSES
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.workers.asynchronous import AsyncWorker
-from bankeriq_agent_platform.workers.state import Handlers
+from agent_harness.runs.context import RunContext
+from agent_harness.runs.state import TERMINAL_STATUSES
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.workers.asynchronous import AsyncWorker
+from agent_runtime.workers.state import Handlers
 from tests.integration.async_process import composition
 
 

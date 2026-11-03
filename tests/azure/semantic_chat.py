@@ -25,19 +25,19 @@ from azure.identity.aio import AzureCliCredential, get_bearer_token_provider
 from openai import AsyncOpenAI
 from psycopg.conninfo import conninfo_to_dict
 
+from agent_harness.prompts.resolution import PromptScope
+from agent_harness.runs.context import RunContext
+from agent_harness.runs.state import TERMINAL_STATUSES
+from agent_harness.storage.codec import plain
+from agent_platform.prompt_files.loader import load_catalog
 from agent_runtime.hosting.access import Principal
-from agent_runtime.prompts.resolution import PromptScope
 from agent_runtime.providers.foundry.model import AsyncFoundryModelClient
 from agent_runtime.providers.foundry.tokens import FoundryTokenCounter
-from agent_runtime.runs.context import RunContext
-from agent_runtime.runs.state import TERMINAL_STATUSES
-from bankeriq_agent_platform.prompt_files.loader import load_catalog
-from bankeriq_agent_platform.sessions.cache import RedisSessions
-from bankeriq_agent_platform.sessions.service import SessionService
-from bankeriq_agent_platform.storage.codec import plain
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore, migrate
-from bankeriq_agent_platform.storage.prompts import PostgresPromptResolver, PromptAdministration
-from bankeriq_agent_platform.workers.asynchronous import AsyncWorker
+from agent_runtime.sessions.cache import RedisSessions
+from agent_runtime.sessions.service import SessionService
+from agent_runtime.storage.postgres import PostgresStateStore, migrate
+from agent_runtime.storage.prompts import PostgresPromptResolver, PromptAdministration
+from agent_runtime.workers.asynchronous import AsyncWorker
 from tests.azure.exec_transport import LocalRelayTransport
 from tests.azure.pilot import Access, NoModel, composition
 
@@ -103,7 +103,7 @@ def dependencies(*, initialise_schema=False):
         migrate(dsn)
 
     store = PostgresStateStore(dsn)
-    prompts = PostgresPromptResolver(dsn, SCOPE)
+    prompts = PostgresPromptResolver(dsn, SCOPE, catalog=load_catalog())
     return dsn, store, prompts
 
 
@@ -117,7 +117,9 @@ def initialise(path, dsn, store):
         return json.loads(path.read_text())
 
     actor = Principal("synthetic-memory-tenant", "synthetic-operator")
-    administration = PromptAdministration(dsn, SCOPE, authorize=lambda p, s: p == actor)
+    administration = PromptAdministration(
+        dsn, SCOPE, catalog=load_catalog(), authorize=lambda p, s: p == actor
+    )
     administration.publish_definition(actor, request_id="memory-publish", validation_reference="11")
     selected = load_catalog().catalog.defaults.system
     version = f"{selected.id}@{selected.version}"

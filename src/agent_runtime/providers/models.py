@@ -5,7 +5,7 @@ from contextlib import AbstractContextManager
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..coordinator.model import ModelClient, ReasoningEffort
+from agent_harness.coordinator.model import ModelClient, ReasoningEffort
 
 
 class ModelSettings(BaseModel):

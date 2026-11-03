@@ -118,7 +118,8 @@ Sources checked on 30 October 2026:
 
 Instructions now come from each `ModelRequest`, resolved and checkpointed before
 inference. The client retains no startup instruction string. See the
-[shared prompt guide](../../prompts/README.md) for fixed/shared resolver composition
+[shared prompt guide](../../../agent_harness/prompts/README.md) for fixed/shared resolver
+composition
 and prepared-step recovery. Local HTTP tests cover concurrent requests through a
 shared client; live Foundry propagation remains unvalidated.
 

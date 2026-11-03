@@ -9,6 +9,11 @@
 
 ## Implementation
 
+- Source layers are `src/agent_harness/` for agent decisions and policy,
+  `src/agent_runtime/` for execution/adapters, and `src/agent_platform/` for backend
+  composition, API and identity. The browser application belongs in `frontend/`.
+  Harness code cannot import runtime/platform or SDK/network clients. Runtime code
+  cannot import platform code; application startup supplies its dependencies.
 - Read README.md for current scope, ARCHITECTURE.md for the proposed design,
   components.md for logical component responsibilities, and STYLEGUIDE.md before
   changing code.

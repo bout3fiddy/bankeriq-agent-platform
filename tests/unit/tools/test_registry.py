@@ -2,8 +2,8 @@
 
 import pytest
 
-from agent_runtime.tools.definitions import OutputPolicy, ToolDefinition
-from agent_runtime.tools.registry import ToolRegistry, ToolUnavailableError
+from agent_harness.tools.definitions import OutputPolicy, ToolDefinition
+from agent_harness.tools.registry import ToolRegistry, ToolUnavailableError
 
 
 def tool(

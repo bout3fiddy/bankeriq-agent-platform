@@ -6,13 +6,13 @@ import os
 from psycopg import sql
 from psycopg.conninfo import make_conninfo
 
+from agent_harness.prompts.resolution import PromptScope
+from agent_platform.prompt_files.loader import load_catalog
 from agent_runtime.hosting.access import Principal
-from agent_runtime.prompts.resolution import PromptScope
-from bankeriq_agent_platform.prompt_files.loader import load_catalog
-from bankeriq_agent_platform.storage.connections import PrimaryConnections
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore, migrate
-from bankeriq_agent_platform.storage.prompts import PromptAdministration
-from bankeriq_agent_platform.workers.queue import PostgresQueue
+from agent_runtime.storage.connections import PrimaryConnections
+from agent_runtime.storage.postgres import PostgresStateStore, migrate
+from agent_runtime.storage.prompts import PromptAdministration
+from agent_runtime.workers.queue import PostgresQueue
 from tests.azure.recovery import prepare_restore
 
 
@@ -33,6 +33,7 @@ def initialise(dsn: str, connections: PrimaryConnections) -> None:
     prompts = PromptAdministration(
         dsn,
         PromptScope("bankeriq", "pilot"),
+        catalog=load_catalog(),
         authorize=lambda supplied, scope: supplied == actor,
         connections=connections,
     )

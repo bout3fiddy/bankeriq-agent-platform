@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-RUNTIME = ROOT / "src/agent_runtime"
+RUNTIME = ROOT / "src/agent_harness"
 CORE_FILES = [
     path for path in RUNTIME.rglob("*.py") if "providers" not in path.relative_to(RUNTIME).parts
 ]
@@ -33,7 +33,7 @@ def test_core_imports_point_inwards() -> None:
 
             for module in modules:
                 if module.split(".")[0] in VENDORS or module.startswith(
-                    ("agent_runtime.providers", "bankeriq_agent_platform")
+                    ("agent_runtime.providers", "agent_platform")
                 ):
                     violations.append(f"{path.relative_to(ROOT)}:{node.lineno}: {module}")
 
@@ -62,8 +62,8 @@ sys.meta_path.insert(0, BlockVendors())
 for name in {modules!r}:
     importlib.import_module(name)
 
-from bankeriq_agent_platform.providers import hosting_providers, model_providers
-from bankeriq_agent_platform.runtime import open_runtime
+from agent_platform.providers import hosting_providers, model_providers
+from agent_platform.composition import open_runtime
 assert set(model_providers({{}})) == {{'foundry'}}
 assert set(hosting_providers()) == {{'foundry'}}
 """
@@ -72,7 +72,7 @@ assert set(hosting_providers()) == {{'foundry'}}
 
 
 def test_application_does_not_import_validation_fixtures() -> None:
-    application = ROOT / "src/bankeriq_agent_platform"
+    application = ROOT / "src/agent_platform"
     assert not (application / "demo").exists()
 
     for path in application.rglob("*.py"):

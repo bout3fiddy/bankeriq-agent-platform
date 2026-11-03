@@ -3,17 +3,17 @@
 from collections.abc import Callable
 from uuid import uuid4
 
-from ..conversations.messages import Message, MessageRole
-from ..coordinator.control import CoordinatorResult
-from ..coordinator.runner import Coordinator
-from ..durable.continuation import ContinuationEvent
-from ..durable.handler import ContinuationHandler
-from ..runs.context import RunContext
-from ..storage.interface import StateStore
-from ..tools.results import WaitReason
-from ..types.json_value import JsonValue
-from .access import Principal
-from .requests import (
+from agent_harness.continuations.continuation import ContinuationEvent
+from agent_harness.continuations.handler import ContinuationHandler
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.coordinator.control import CoordinatorResult
+from agent_harness.coordinator.runner import Coordinator
+from agent_harness.runs.context import RunContext
+from agent_harness.storage.interface import StateStore
+from agent_harness.tools.results import WaitReason
+from agent_harness.types.json_value import JsonValue
+from agent_runtime.hosting.access import Principal
+from agent_runtime.hosting.requests import (
     AdmitInputRequest,
     CreateConversationRequest,
     HistoryReadRequest,
@@ -22,7 +22,7 @@ from .requests import (
     SessionReadRequest,
     StartRunRequest,
 )
-from .sessions import SessionAccess
+from agent_runtime.hosting.sessions import SessionAccess
 
 
 class RuntimeEndpoint:

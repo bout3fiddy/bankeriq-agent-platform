@@ -4,8 +4,8 @@ import json
 
 import tiktoken
 
-from ...coordinator.model import ModelRequest
-from .messages import encode_json, encode_messages
+from agent_harness.coordinator.model import ModelRequest
+from agent_runtime.providers.foundry.messages import encode_json, encode_messages
 
 
 class FoundryTokenCounter:

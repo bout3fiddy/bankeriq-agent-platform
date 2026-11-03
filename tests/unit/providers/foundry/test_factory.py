@@ -6,7 +6,7 @@ import httpx2
 import pytest
 from openai import OpenAI
 
-from agent_runtime.coordinator.model import ModelRequest, ReasoningEffort
+from agent_harness.coordinator.model import ModelRequest, ReasoningEffort
 from agent_runtime.providers.foundry.factory import open_foundry_model
 from agent_runtime.providers.models import ModelSettings
 

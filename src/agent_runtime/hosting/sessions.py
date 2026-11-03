@@ -2,8 +2,8 @@
 
 from typing import Protocol
 
-from ..runs.context import RunContext
-from ..types.json_value import JsonValue
+from agent_harness.runs.context import RunContext
+from agent_harness.types.json_value import JsonValue
 
 
 class SessionAccess(Protocol):

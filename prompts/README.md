@@ -65,14 +65,14 @@ components, 12 nested edges and 32 KiB of rendered UTF-8 text.
 1. Copy a component into its new version path, update `version`, `change_summary`
    and content. Keep existing published files unchanged.
 2. Register the new file, dependencies first:
-   `uv run python -m bankeriq_agent_platform.prompt_files add guidelines/example/1.0.0.json`
+   `uv run python -m agent_platform.prompt_files add guidelines/example/1.0.0.json`
 3. Create/register new parent compositions referencing the exact new versions.
    Update `catalog.json` defaults to the desired registered roots.
 4. Validate and inspect the complete output:
 
 ```sh
-uv run python -m bankeriq_agent_platform.prompt_files validate
-uv run python -m bankeriq_agent_platform.prompt_files render
+uv run python -m agent_platform.prompt_files validate
+uv run python -m agent_platform.prompt_files render
 uv run python scripts/verify.py
 ```
 
@@ -96,7 +96,7 @@ roots' ordered component identities, file hashes, renderers and rendered hashes.
 An optional `reference=Reference(id=..., version=...)` selects another system root.
 Migration 005 adds bounded source provenance to immutable published rows.
 Activate explicitly with the current binding revision using the
-[management API](../src/agent_runtime/prompts/README.md). File edits alone never
+[management API](../src/agent_harness/prompts/README.md). File edits alone never
 change a PostgreSQL binding. Raw `publish(body=...)` remains a trusted compatibility
 API; use `publish_definition` for the maintained JSON authoring workflow.
 

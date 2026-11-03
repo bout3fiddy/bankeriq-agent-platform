@@ -1,8 +1,8 @@
 """Keep human-readable traces faithful to model batches and tool feedback."""
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.tools.definitions import ToolCall
-from agent_runtime.tools.results import ToolErrorCode, ToolFailure, VisibleResult
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.results import ToolErrorCode, ToolFailure, VisibleResult
 from tests.validation.trace import explain_history
 
 

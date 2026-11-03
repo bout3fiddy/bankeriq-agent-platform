@@ -1,1 +1,1 @@
-"""Agent runtime storage."""
+"""Optional persistence adapters; clients and credentials stay outside runtime logic."""

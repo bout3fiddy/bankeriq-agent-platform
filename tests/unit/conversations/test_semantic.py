@@ -5,15 +5,15 @@ from dataclasses import replace
 
 import pytest
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.conversations.semantic import (
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.coordinator.model import ModelRequest, ModelTool
+from agent_harness.memory.semantic import (
     MemoryBlocked,
     MemoryFact,
     TokenBudget,
     memory_message,
     select_facts,
 )
-from agent_runtime.coordinator.model import ModelRequest, ModelTool
 from agent_runtime.providers.foundry.tokens import FoundryTokenCounter
 
 
@@ -88,7 +88,7 @@ def test_output_schema_is_budgeted_and_immutable() -> None:
 
 
 def test_candidate_selection_keeps_text_and_execution_origin_exact() -> None:
-    from agent_runtime.conversations.semantic import select_candidates, summary_candidates
+    from agent_harness.memory.semantic import select_candidates, summary_candidates
 
     sources = (
         MemoryFact(7, 1, "user", "**Decision:** Use EUR. The payment is complete according to me."),
@@ -116,7 +116,7 @@ def test_candidate_selection_keeps_text_and_execution_origin_exact() -> None:
 
 
 def test_candidate_text_and_count_bounds() -> None:
-    from agent_runtime.conversations.semantic import summary_candidates
+    from agent_harness.memory.semantic import summary_candidates
 
     source = MemoryFact(1, 1, "user", "Long text " * 500)
     candidates = summary_candidates((source,))

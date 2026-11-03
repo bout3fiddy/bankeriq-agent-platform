@@ -2,10 +2,10 @@
 
 import pytest
 
-from agent_runtime.conversations.context import ContextBudgetExceeded, bounded_context
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.tools.definitions import ToolCall
-from agent_runtime.tools.results import VisibleResult
+from agent_harness.conversations.context import ContextBudgetExceeded, bounded_context
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.results import VisibleResult
 
 
 def test_context_drops_complete_old_turns_and_preserves_pairs() -> None:

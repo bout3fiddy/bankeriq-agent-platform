@@ -9,14 +9,14 @@ from typing import cast
 
 from starlette.requests import Request
 
-from agent_runtime.coordinator.control import RunLimits
+from agent_harness.coordinator.control import RunLimits
+from agent_platform.composition import open_runtime
+from agent_platform.configuration import load_settings
+from agent_platform.providers import model_providers
+from agent_platform.server import LocalServer
 from agent_runtime.hosting.access import AuthenticationRequired, InputRejected, Principal
 from agent_runtime.hosting.endpoint import RuntimeEndpoint
 from agent_runtime.providers.hosts import Authenticator
-from bankeriq_agent_platform.configuration import load_settings
-from bankeriq_agent_platform.providers import model_providers
-from bankeriq_agent_platform.runtime import open_runtime
-from bankeriq_agent_platform.server import LocalServer
 
 from .model import open_scripted_model
 from .tools import ValidationDependencies

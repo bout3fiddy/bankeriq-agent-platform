@@ -4,11 +4,11 @@ import os
 import sys
 from pathlib import Path
 
-from agent_runtime.runs.state import RunStatus
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.workers.queue import PostgresQueue
-from bankeriq_agent_platform.workers.runner import Worker
-from bankeriq_agent_platform.workers.state import Completion, Handler, Handlers, Recovery
+from agent_harness.runs.state import RunStatus
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.workers.queue import PostgresQueue
+from agent_runtime.workers.runner import Worker
+from agent_runtime.workers.state import Completion, Handler, Handlers, Recovery
 
 version = int(sys.argv[1])
 store = PostgresStateStore(os.environ["BANKERIQ_TEST_POSTGRES_DSN"])

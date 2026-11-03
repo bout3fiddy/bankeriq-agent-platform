@@ -4,8 +4,8 @@ import json
 
 from openai.types.chat import ChatCompletion, ChatCompletionMessageToolCallUnion
 
-from ...coordinator.model import ModelReply
-from ...tools.definitions import ToolCall
+from agent_harness.coordinator.model import ModelReply
+from agent_harness.tools.definitions import ToolCall
 
 
 class FoundryModelError(RuntimeError):

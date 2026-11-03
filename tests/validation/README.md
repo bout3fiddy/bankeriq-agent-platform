@@ -3,7 +3,7 @@
 This repository-only application exercises the coordinator, tools, permissions,
 HTTP handlers, continuation and output isolation with synthetic data. It lives
 under `tests/validation/` and is excluded from the application wheel. Reusable
-server/startup wiring remains in `src/bankeriq_agent_platform/`.
+server/startup wiring remains in `src/agent_platform/`.
 
 Both scripted and live-provider runs use the normal BankerIQ runtime/system
 [prompt catalog](../../prompts/README.md). There is no test-specific system prompt

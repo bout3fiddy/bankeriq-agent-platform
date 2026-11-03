@@ -5,8 +5,8 @@ from typing import Protocol
 
 from starlette.requests import Request
 
-from ..hosting.access import Principal
-from ..hosting.endpoint import RuntimeEndpoint
+from agent_runtime.hosting.access import Principal
+from agent_runtime.hosting.endpoint import RuntimeEndpoint
 
 
 class RuntimeServer(Protocol):

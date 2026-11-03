@@ -6,23 +6,22 @@ from threading import Event
 
 import pytest
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.coordinator.control import RunLimits
-from agent_runtime.coordinator.model import ModelReply, ModelRequest
-from agent_runtime.coordinator.runner import Coordinator
-from agent_runtime.durable.continuation import ContinuationEvent
-from agent_runtime.durable.handler import ContinuationHandler
-from agent_runtime.policy.output import EnforcedOutput, enforce_output
-from agent_runtime.prompts.resolution import FixedPromptResolver
-from agent_runtime.runs.context import RunContext
-from agent_runtime.runs.state import RunStatus
-from agent_runtime.storage.interface import StateConflictError, StateNotFoundError
-from agent_runtime.storage.memory import InMemoryStateStore
-from agent_runtime.tools.bindings import ExecutionOutput, ToolBinding
-from agent_runtime.tools.definitions import OutputPolicy, ToolCall, ToolDefinition
-from agent_runtime.tools.gateway import ToolGateway
-from agent_runtime.tools.registry import ToolRegistry
-from agent_runtime.tools.results import (
+from agent_harness.continuations.continuation import ContinuationEvent
+from agent_harness.continuations.handler import ContinuationHandler
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.coordinator.control import RunLimits
+from agent_harness.coordinator.model import ModelReply, ModelRequest
+from agent_harness.coordinator.runner import Coordinator
+from agent_harness.policy.output import EnforcedOutput, enforce_output
+from agent_harness.prompts.resolution import FixedPromptResolver
+from agent_harness.runs.context import RunContext
+from agent_harness.runs.state import RunStatus
+from agent_harness.storage.interface import StateConflictError, StateNotFoundError
+from agent_harness.tools.bindings import ExecutionOutput, ToolBinding
+from agent_harness.tools.definitions import OutputPolicy, ToolCall, ToolDefinition
+from agent_harness.tools.gateway import ToolGateway
+from agent_harness.tools.registry import ToolRegistry
+from agent_harness.tools.results import (
     ArtifactReference,
     PendingToolCall,
     RestrictedReceipt,
@@ -31,6 +30,7 @@ from agent_runtime.tools.results import (
     VisibleResult,
     WaitReason,
 )
+from agent_runtime.storage.memory import InMemoryStateStore
 
 CONTEXT = RunContext("tenant", "user", "chat", "run")
 CALL = ToolCall("call-1", "report", {})

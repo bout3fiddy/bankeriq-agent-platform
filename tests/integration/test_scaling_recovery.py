@@ -11,11 +11,12 @@ from typing import Any
 import psycopg
 import pytest
 
-from agent_runtime.runs.context import RunContext
-from agent_runtime.runs.state import RunStatus
-from bankeriq_agent_platform.storage.history import ProjectionPolicy
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.workers.state import (
+from agent_harness.runs.context import RunContext
+from agent_harness.runs.state import RunStatus
+from agent_platform.prompt_files.loader import load_catalog
+from agent_runtime.storage.history import ProjectionPolicy
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.workers.state import (
     Completion,
     Handler,
     Handlers,
@@ -121,8 +122,8 @@ def test_every_saved_current_replay_combination(
         idempotent=current_idempotent,
         replay_allowed=current_replay,
     )
-    from agent_runtime.conversations.messages import Message, MessageRole
-    from bankeriq_agent_platform.workers.queue import PostgresQueue
+    from agent_harness.conversations.messages import Message, MessageRole
+    from agent_runtime.workers.queue import PostgresQueue
 
     from .test_workers import expire
 
@@ -192,8 +193,8 @@ def test_primary_routing_rejects_read_only_session(dsn: str) -> None:
     settings = conninfo_to_dict(dsn)
     options = str(settings.get("options", "")) + " -c default_transaction_read_only=on"
 
-    from agent_runtime.prompts.resolution import PromptScope
-    from bankeriq_agent_platform.storage.prompts import PostgresPromptResolver
+    from agent_harness.prompts.resolution import PromptScope
+    from agent_runtime.storage.prompts import PostgresPromptResolver
 
     read_only = make_conninfo(dsn, options=options)
 
@@ -201,7 +202,7 @@ def test_primary_routing_rejects_read_only_session(dsn: str) -> None:
         PostgresStateStore(read_only)
 
     with pytest.raises(psycopg.OperationalError, match="read-only"):
-        PostgresPromptResolver(read_only, PromptScope("bankeriq", "test"))
+        PostgresPromptResolver(read_only, PromptScope("bankeriq", "test"), catalog=load_catalog())
 
 
 def test_migration_failure_rolls_back_and_old_reader_still_works(
@@ -213,7 +214,7 @@ def test_migration_failure_rolls_back_and_old_reader_still_works(
 ) -> None:
     import asyncio
 
-    from bankeriq_agent_platform.storage import postgres
+    from agent_runtime.storage import postgres
 
     runtime, _ = composition(store)
     asyncio.run(runtime.admit(context, request_id="request", text="calculate"))
@@ -250,7 +251,7 @@ def test_migration_failure_rolls_back_and_old_reader_still_works(
 def test_scaling_signal_excludes_sleepers_and_approval_waits(
     store: PostgresStateStore, context: RunContext, dsn: str
 ) -> None:
-    from bankeriq_agent_platform.workers.scaling import pressure
+    from agent_runtime.workers.scaling import pressure
 
     runtime, handlers = fanout(store, context)
     assert pressure(runtime.queue, "tool", handlers).eligible == 3
@@ -267,7 +268,7 @@ def test_scaling_signal_excludes_sleepers_and_approval_waits(
 def test_progress_never_reconstructs_history(
     store: PostgresStateStore, context: RunContext, sessions: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from bankeriq_agent_platform.sessions.stream import ProgressStream
+    from agent_runtime.sessions.stream import ProgressStream
 
     fanout(store, context)
 
@@ -312,8 +313,8 @@ def test_connection_pool_bounds_waits_and_rolls_back(dsn: str) -> None:
 def test_mixed_compatible_worker_processes(
     store: PostgresStateStore, dsn: str, tmp_path: Path
 ) -> None:
-    from agent_runtime.conversations.messages import Message, MessageRole
-    from bankeriq_agent_platform.workers.queue import PostgresQueue
+    from agent_harness.conversations.messages import Message, MessageRole
+    from agent_runtime.workers.queue import PostgresQueue
 
     queue = PostgresQueue(store)
     queue.configure("versioned", concurrency=4, tenant_concurrency=4)

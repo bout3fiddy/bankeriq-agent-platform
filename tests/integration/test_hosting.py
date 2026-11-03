@@ -9,15 +9,15 @@ import pytest
 from starlette.requests import Request
 from starlette.testclient import TestClient
 
-from agent_runtime.coordinator.model import ModelReply, ModelRequest
-from agent_runtime.coordinator.runner import Coordinator
-from agent_runtime.durable.handler import ContinuationHandler
+from agent_harness.continuations.handler import ContinuationHandler
+from agent_harness.coordinator.model import ModelReply, ModelRequest
+from agent_harness.coordinator.runner import Coordinator
+from agent_harness.prompts.resolution import FixedPromptResolver
+from agent_harness.runs.context import RunContext
+from agent_harness.tools.definitions import ToolCall
 from agent_runtime.hosting.access import AuthenticationRequired, InputRejected, Principal
 from agent_runtime.hosting.endpoint import RuntimeEndpoint
-from agent_runtime.prompts.resolution import FixedPromptResolver
 from agent_runtime.providers.foundry.hosting import create_hosted_server
-from agent_runtime.runs.context import RunContext
-from agent_runtime.tools.definitions import ToolCall
 
 from .harness import CALCULATE, CONTEXT, PRIVATE_BODY, REPORT, RuntimeHarness
 

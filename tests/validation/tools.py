@@ -5,16 +5,16 @@ from dataclasses import dataclass
 from typing import cast
 from uuid import uuid4
 
-from agent_runtime.policy.output import EnforcedOutput
-from agent_runtime.prompts.resolution import PromptResolver
-from agent_runtime.runs.context import RunContext
+from agent_harness.policy.output import EnforcedOutput
+from agent_harness.prompts.resolution import PromptResolver
+from agent_harness.runs.context import RunContext
+from agent_harness.tools.bindings import ExecutionOutput, ToolBinding
+from agent_harness.tools.definitions import OutputPolicy, ToolCall, ToolDefinition
+from agent_harness.tools.gateway import ToolGateway
+from agent_harness.tools.registry import ToolRegistry
+from agent_harness.tools.results import PendingToolCall, RestrictedReceipt, WaitReason
+from agent_harness.types.json_value import JsonValue
 from agent_runtime.storage.memory import InMemoryStateStore
-from agent_runtime.tools.bindings import ExecutionOutput, ToolBinding
-from agent_runtime.tools.definitions import OutputPolicy, ToolCall, ToolDefinition
-from agent_runtime.tools.gateway import ToolGateway
-from agent_runtime.tools.registry import ToolRegistry
-from agent_runtime.tools.results import PendingToolCall, RestrictedReceipt, WaitReason
-from agent_runtime.types.json_value import JsonValue
 
 PRIVATE_MARKER = "SYNTHETIC_RESTRICTED_REPORT_CONTENT"
 PERMISSIONS = frozenset({"validation.use"})

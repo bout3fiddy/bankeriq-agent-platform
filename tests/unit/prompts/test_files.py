@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from agent_runtime.prompts.resolution import PromptUnavailableError, content_hash
-from bankeriq_agent_platform.prompt_files.__main__ import register
-from bankeriq_agent_platform.prompt_files.loader import load_catalog
-from bankeriq_agent_platform.prompt_files.schema import Catalog, Document
+from agent_harness.prompts.resolution import PromptUnavailableError, content_hash
+from agent_harness.prompts.schema import Catalog, Document
+from agent_platform.prompt_files.__main__ import register
+from agent_platform.prompt_files.loader import load_catalog
 
 ROOT = Path(__file__).resolve().parents[3] / "prompts"
 
@@ -174,7 +174,7 @@ def test_nested_sections_render_once_in_declared_order(directory: Path) -> None:
     )
     write(directory / "system-new.json", data)
     register(directory, "system-new.json")
-    from bankeriq_agent_platform.prompt_files.schema import Reference
+    from agent_harness.prompts.schema import Reference
 
     body = load_catalog(directory).compile(Reference(id=root.id, version="1.1.0")).body
     assert body.count("Nested guidance") == 1
@@ -195,7 +195,7 @@ def test_failed_registration_keeps_catalog_bytes(directory: Path) -> None:
 
 
 def test_application_default_and_explicit_compatibility_override() -> None:
-    from bankeriq_agent_platform.configuration import load_settings
+    from agent_platform.configuration import load_settings
 
     settings = load_settings({"MODEL_NAME": "synthetic"})
     assert settings.prompts is not None

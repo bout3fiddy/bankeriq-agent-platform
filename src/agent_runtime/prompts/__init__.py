@@ -1,1 +1,1 @@
-"""Versioned prompt composition without clients, credentials or publication authority."""
+"""Prompt source adapters."""

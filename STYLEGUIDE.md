@@ -24,9 +24,10 @@ uv run python -m scripts.format_python
 uv run python scripts/verify.py
 ```
 
-Keep core runtime code under `src/agent_runtime/`, platform code under
-`src/bankeriq_agent_platform/`, checks under `scripts/`,
-and behavioural tests under `tests/`. Group focused runtime tests under
+Keep agent behaviour and policy under `src/agent_harness/`, execution/adapters under
+`src/agent_runtime/`, backend application code under `src/agent_platform/`, and the
+browser application under `frontend/`. Keep checks under `scripts/` and behavioural
+tests under `tests/`. Group focused runtime tests under
 `tests/unit/<component>/`, complete workflows under `tests/integration/`, and
 development-tool checks under `tests/tooling/`. See [tests/README.md](tests/README.md).
 Add cloud dependencies only when needed for an implemented component.

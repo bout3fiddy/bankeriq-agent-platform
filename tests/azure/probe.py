@@ -17,12 +17,12 @@ from redis.credentials import StreamingCredentialProvider
 from redis_entraid.cred_provider import create_from_managed_identity
 from redis_entraid.identity_provider import ManagedIdentityIdType, ManagedIdentityType
 
-from agent_runtime.runs.context import RunContext
-from bankeriq_agent_platform.azure.connections import token_connection
-from bankeriq_agent_platform.sessions.cache import RedisSessions
-from bankeriq_agent_platform.sessions.service import SessionService
-from bankeriq_agent_platform.storage.connections import PrimaryConnections
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
+from agent_harness.runs.context import RunContext
+from agent_platform.azure.connections import token_connection
+from agent_runtime.sessions.cache import RedisSessions
+from agent_runtime.sessions.service import SessionService
+from agent_runtime.storage.connections import PrimaryConnections
+from agent_runtime.storage.postgres import PostgresStateStore
 
 
 class CountedRefresh(StreamingCredentialProvider):

@@ -7,25 +7,26 @@ from dataclasses import replace
 from pathlib import Path
 from uuid import uuid4
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.conversations.semantic import TokenBudget
-from agent_runtime.coordinator.control import RunLimits
-from agent_runtime.coordinator.model import ModelReply, ModelRequest
-from agent_runtime.prompts.resolution import FixedPromptResolver
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.coordinator.control import RunLimits
+from agent_harness.coordinator.model import ModelReply, ModelRequest
+from agent_harness.memory.projection import HistoryPolicy
+from agent_harness.memory.semantic import TokenBudget
+from agent_harness.prompts.resolution import FixedPromptResolver
+from agent_harness.tools.bindings import ExecutionOutput, ToolBinding
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.gateway import ToolGateway
+from agent_harness.tools.registry import ToolRegistry
+from agent_harness.tools.results import VisibleResult
+from agent_platform.composition import compose_queued_runtime
+from agent_runtime.memory.service import SemanticMemory
+from agent_runtime.memory.storage import SemanticStore
 from agent_runtime.providers.foundry.tokens import FoundryTokenCounter
-from agent_runtime.tools.bindings import ExecutionOutput, ToolBinding
-from agent_runtime.tools.definitions import ToolCall
-from agent_runtime.tools.gateway import ToolGateway
-from agent_runtime.tools.registry import ToolRegistry
-from agent_runtime.tools.results import VisibleResult
-from bankeriq_agent_platform.memory.service import HistoryPolicy, SemanticMemory
-from bankeriq_agent_platform.memory.storage import SemanticStore
-from bankeriq_agent_platform.runtime import compose_queued_runtime
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.workers.asynchronous import AsyncWorker
-from bankeriq_agent_platform.workers.coordinator import QueuedCoordinator
-from bankeriq_agent_platform.workers.groups import OrchestrationQueue
-from bankeriq_agent_platform.workers.state import Handlers
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.workers.asynchronous import AsyncWorker
+from agent_runtime.workers.coordinator import QueuedCoordinator
+from agent_runtime.workers.groups import OrchestrationQueue
+from agent_runtime.workers.state import Handlers
 
 from .harness import CALCULATE, PERMISSIONS, FakeAccess
 from .summary_model import Extractor

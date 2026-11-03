@@ -13,20 +13,21 @@ import pytest
 from psycopg import sql
 from psycopg.conninfo import make_conninfo
 
-from agent_runtime.coordinator.model import ModelReply, ModelRequest
-from agent_runtime.coordinator.runner import Coordinator
-from agent_runtime.durable.handler import ContinuationHandler
-from agent_runtime.hosting.access import Principal
-from agent_runtime.prompts.resolution import (
+from agent_harness.continuations.handler import ContinuationHandler
+from agent_harness.coordinator.model import ModelReply, ModelRequest
+from agent_harness.coordinator.runner import Coordinator
+from agent_harness.prompts.resolution import (
     PromptScope,
     PromptUnavailableError,
 )
-from agent_runtime.runs.context import RunContext
-from agent_runtime.runs.state import RunStatus
-from agent_runtime.storage.interface import Checkpoint, StateConflictError
-from agent_runtime.tools.definitions import ToolCall
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.storage.prompts import PostgresPromptResolver, PromptAdministration
+from agent_harness.runs.context import RunContext
+from agent_harness.runs.state import RunStatus
+from agent_harness.storage.interface import Checkpoint, StateConflictError
+from agent_harness.tools.definitions import ToolCall
+from agent_platform.prompt_files.loader import load_catalog
+from agent_runtime.hosting.access import Principal
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.storage.prompts import PostgresPromptResolver, PromptAdministration
 
 from .harness import CONTEXT, PRIVATE_BODY, RuntimeHarness, event_for, inspect_fields
 from .test_postgres import INPUT, Fault, save, snapshot
@@ -44,7 +45,9 @@ def scope() -> PromptScope:
 
 @pytest.fixture
 def admin(dsn: str, scope: PromptScope) -> PromptAdministration:
-    return PromptAdministration(dsn, scope, authorize=lambda actor, scope: actor == ADMIN)
+    return PromptAdministration(
+        dsn, scope, catalog=load_catalog(), authorize=lambda actor, scope: actor == ADMIN
+    )
 
 
 def publish(admin: PromptAdministration, version: str, body: str | None = None) -> None:
@@ -78,7 +81,7 @@ def prepare(
 def test_publish_activate_rollback_scope_and_immutable_sql(
     admin: PromptAdministration, dsn: str, scope: PromptScope
 ) -> None:
-    reader = PostgresPromptResolver(dsn, scope)
+    reader = PostgresPromptResolver(dsn, scope, catalog=load_catalog())
     assert admin.active_binding(ADMIN) == (None, 0)
 
     with pytest.raises(PromptUnavailableError):
@@ -105,7 +108,9 @@ def test_publish_activate_rollback_scope_and_immutable_sql(
         )
 
     with pytest.raises(PromptUnavailableError):
-        PostgresPromptResolver(dsn, replace(scope, environment="production")).resolve()
+        PostgresPromptResolver(
+            dsn, replace(scope, environment="production"), catalog=load_catalog()
+        ).resolve()
 
     with psycopg.connect(dsn) as connection, pytest.raises(psycopg.Error, match="immutable"):
         connection.execute(
@@ -161,7 +166,9 @@ def test_denied_publication_and_read_only_database_role(
         )
 
     reader_dsn = make_conninfo(dsn, user=role, password="synthetic")
-    assert PostgresPromptResolver(reader_dsn, scope).resolve().version == "v1"
+    assert (
+        PostgresPromptResolver(reader_dsn, scope, catalog=load_catalog()).resolve().version == "v1"
+    )
 
     with (
         psycopg.connect(reader_dsn) as connection,
@@ -179,7 +186,7 @@ def test_prepared_step_restart_and_lost_ack_retain_original_prompt(
 ) -> None:
     publish(admin, "v1")
     activate(admin, "v1", 0)
-    resolver = PostgresPromptResolver(dsn, scope)
+    resolver = PostgresPromptResolver(dsn, scope, catalog=load_catalog())
     before = save(store, store.admit(context, request_id="request", items=INPUT), RunStatus.RUNNING)
     publish(admin, "v2")
     acknowledgement_lost = False
@@ -200,7 +207,10 @@ def test_prepared_step_restart_and_lost_ack_retain_original_prompt(
     fresh = PostgresStateStore(dsn)
     restored = fresh.load_model_step(context, 1)
     assert restored == prepared
-    assert prepare(fresh, before, PostgresPromptResolver(dsn, scope)) == prepared
+    assert (
+        prepare(fresh, before, PostgresPromptResolver(dsn, scope, catalog=load_catalog()))
+        == prepared
+    )
     assert restored.run.prompt_manifest is not None
     assert resolver.instructions(restored.run.prompt_manifest).endswith("Guidance v1")
     next_step = prepare(fresh, restored, resolver)
@@ -211,15 +221,16 @@ def test_prepared_step_restart_and_lost_ack_retain_original_prompt(
     # instance has progressed. It requires no inherited cache or instruction body.
     script = """
 import os, sys
-from agent_runtime.runs.context import RunContext
-from agent_runtime.prompts.resolution import PromptScope
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.storage.prompts import PostgresPromptResolver
+from agent_harness.runs.context import RunContext
+from agent_harness.prompts.resolution import PromptScope
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.storage.prompts import PostgresPromptResolver
+from agent_platform.prompt_files.loader import load_catalog
 s = PostgresStateStore(os.environ['BANKERIQ_TEST_POSTGRES_DSN'])
 c = RunContext(sys.argv[1], 'user', 'chat', 'run')
 p = s.load_model_step(c, 1)
 r = PostgresPromptResolver(os.environ['BANKERIQ_TEST_POSTGRES_DSN'],
-                           PromptScope(sys.argv[2], 'test'))
+                           PromptScope(sys.argv[2], 'test'), catalog=load_catalog())
 assert p.run.model_steps == 1 and p.run.prompt_manifest.version == 'v1'
 assert r.instructions(p.run.prompt_manifest).endswith('Guidance v1')
 assert len(p.conversation.items) == 1
@@ -244,8 +255,8 @@ def test_activation_during_inference_and_idle_sessions(
     publish(admin, "v1")
     activate(admin, "v1", 0)
     publish(admin, "v2")
-    worker_a = PostgresPromptResolver(dsn, scope)
-    worker_b = PostgresPromptResolver(dsn, scope)
+    worker_a = PostgresPromptResolver(dsn, scope, catalog=load_catalog())
+    worker_b = PostgresPromptResolver(dsn, scope, catalog=load_catalog())
     assert worker_b.resolve().version == "v1"
     idle = replace(context, conversation_id="idle", run_id="idle")
     store.create_conversation(
@@ -324,7 +335,7 @@ def test_tool_wait_uses_new_prompt_without_changing_permission_or_output_policy(
         runtime.events,
         runtime.model,
         runtime.access.permissions_for,
-        prompts=PostgresPromptResolver(dsn, scope),
+        prompts=PostgresPromptResolver(dsn, scope, catalog=load_catalog()),
     )
     handler = ContinuationHandler(store, coordinator, runtime.events)
     runtime.model.replies = [
@@ -366,7 +377,7 @@ def test_withdrawal_and_incompatible_versions_block_cached_recovery(
 ) -> None:
     publish(admin, "v1")
     activate(admin, "v1", 0)
-    resolver = PostgresPromptResolver(dsn, scope)
+    resolver = PostgresPromptResolver(dsn, scope, catalog=load_catalog())
     manifest = resolver.resolve()
 
     with pytest.raises(PromptUnavailableError):
@@ -410,7 +421,9 @@ def test_concurrent_publishers_activation_compare_and_swap(
     barrier = Barrier(2)
 
     def compete(version: str) -> str:
-        service = PromptAdministration(dsn, scope, authorize=lambda actor, scope: actor == ADMIN)
+        service = PromptAdministration(
+            dsn, scope, catalog=load_catalog(), authorize=lambda actor, scope: actor == ADMIN
+        )
         barrier.wait(timeout=5)
 
         try:
@@ -426,7 +439,7 @@ def test_concurrent_publishers_activation_compare_and_swap(
         outcomes = list(pool.map(compete, ("v1", "v2")))
 
     assert outcomes.count("conflict") == 1
-    assert PostgresPromptResolver(dsn, scope).resolve().version in outcomes
+    assert PostgresPromptResolver(dsn, scope, catalog=load_catalog()).resolve().version in outcomes
 
 
 def test_admin_write_rollback_and_unknown_commits(
@@ -434,7 +447,11 @@ def test_admin_write_rollback_and_unknown_commits(
 ) -> None:
     for boundary in range(1, 4):
         failing = PromptAdministration(
-            dsn, scope, authorize=lambda actor, scope: True, fault=Fault(write=boundary)
+            dsn,
+            scope,
+            catalog=load_catalog(),
+            authorize=lambda actor, scope: True,
+            fault=Fault(write=boundary),
         )
 
         with pytest.raises(RuntimeError, match="synthetic rollback"):
@@ -446,23 +463,35 @@ def test_admin_write_rollback_and_unknown_commits(
             ).fetchone() == (0,)
 
     lost_ack = PromptAdministration(
-        dsn, scope, authorize=lambda actor, scope: True, fault=Fault(lost_ack=True)
+        dsn,
+        scope,
+        catalog=load_catalog(),
+        authorize=lambda actor, scope: True,
+        fault=Fault(lost_ack=True),
     )
     publish(lost_ack, "v1")
 
     for boundary in range(1, 4):
         failing = PromptAdministration(
-            dsn, scope, authorize=lambda actor, scope: True, fault=Fault(write=boundary)
+            dsn,
+            scope,
+            catalog=load_catalog(),
+            authorize=lambda actor, scope: True,
+            fault=Fault(write=boundary),
         )
 
         with pytest.raises(RuntimeError, match="synthetic rollback"):
             activate(failing, "v1", 0)
 
         with pytest.raises(PromptUnavailableError):
-            PostgresPromptResolver(dsn, scope).resolve()
+            PostgresPromptResolver(dsn, scope, catalog=load_catalog()).resolve()
 
     lost_ack = PromptAdministration(
-        dsn, scope, authorize=lambda actor, scope: True, fault=Fault(lost_ack=True)
+        dsn,
+        scope,
+        catalog=load_catalog(),
+        authorize=lambda actor, scope: True,
+        fault=Fault(lost_ack=True),
     )
     assert activate(lost_ack, "v1", 0) == 1
     assert activate(admin, "v1", 0) == 1
@@ -477,7 +506,7 @@ def test_preparation_rolls_back_manifest_budget_and_job_together(
 ) -> None:
     publish(admin, "v1")
     activate(admin, "v1", 0)
-    resolver = PostgresPromptResolver(dsn, scope)
+    resolver = PostgresPromptResolver(dsn, scope, catalog=load_catalog())
     current = save(
         store, store.admit(context, request_id="request", items=INPUT), RunStatus.RUNNING
     )
@@ -509,7 +538,7 @@ def test_missing_prompt_stops_before_model_without_fallback(
         runtime.events,
         runtime.model,
         runtime.access.permissions_for,
-        prompts=PostgresPromptResolver(dsn, scope),
+        prompts=PostgresPromptResolver(dsn, scope, catalog=load_catalog()),
     )
 
     with pytest.raises(PromptUnavailableError):
@@ -525,11 +554,15 @@ def test_withdrawal_rollback_keeps_body_available(
 ) -> None:
     publish(admin, "v1")
     activate(admin, "v1", 0)
-    resolver = PostgresPromptResolver(dsn, scope)
+    resolver = PostgresPromptResolver(dsn, scope, catalog=load_catalog())
 
     for boundary in range(1, 4):
         failing = PromptAdministration(
-            dsn, scope, authorize=lambda actor, scope: actor == ADMIN, fault=Fault(write=boundary)
+            dsn,
+            scope,
+            catalog=load_catalog(),
+            authorize=lambda actor, scope: actor == ADMIN,
+            fault=Fault(write=boundary),
         )
 
         with pytest.raises(RuntimeError, match="synthetic rollback"):
@@ -538,7 +571,11 @@ def test_withdrawal_rollback_keeps_body_available(
         assert resolver.resolve().version == "v1"
 
     lost_ack = PromptAdministration(
-        dsn, scope, authorize=lambda actor, scope: actor == ADMIN, fault=Fault(lost_ack=True)
+        dsn,
+        scope,
+        catalog=load_catalog(),
+        authorize=lambda actor, scope: actor == ADMIN,
+        fault=Fault(lost_ack=True),
     )
     lost_ack.withdraw(ADMIN, request_id="withdraw", version="v1")
     admin.withdraw(ADMIN, request_id="withdraw", version="v1")
@@ -551,7 +588,7 @@ def test_withdrawal_rollback_keeps_body_available(
 def test_json_publication_sources_and_recovery(
     admin: PromptAdministration, dsn: str, scope: PromptScope
 ) -> None:
-    from bankeriq_agent_platform.prompt_files.loader import load_catalog
+    from agent_platform.prompt_files.loader import load_catalog
 
     catalog = load_catalog()
     digest = admin.publish_definition(
@@ -565,7 +602,7 @@ def test_json_publication_sources_and_recovery(
     )
     version = "bankeriq.system@1.0.0"
     activate(admin, version, 0)
-    reader = PostgresPromptResolver(dsn, scope)
+    reader = PostgresPromptResolver(dsn, scope, catalog=load_catalog())
     manifest = reader.resolve()
     assert reader.instructions(manifest) == catalog.resolver().instructions(
         catalog.resolver().resolve()
@@ -580,5 +617,5 @@ def test_json_publication_sources_and_recovery(
         assert row[0]["system"]["content_hash"] == digest
         assert len(row[0]["runtime"]["components"]) > 1
 
-    restored = PostgresPromptResolver(dsn, scope)
+    restored = PostgresPromptResolver(dsn, scope, catalog=load_catalog())
     assert restored.instructions(manifest) == reader.instructions(manifest)

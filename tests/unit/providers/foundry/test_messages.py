@@ -2,10 +2,9 @@
 
 import json
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.providers.foundry.messages import encode_messages
-from agent_runtime.tools.definitions import ToolCall
-from agent_runtime.tools.results import (
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.results import (
     PendingToolCall,
     RestrictedReceipt,
     ToolErrorCode,
@@ -13,6 +12,7 @@ from agent_runtime.tools.results import (
     VisibleResult,
     WaitReason,
 )
+from agent_runtime.providers.foundry.messages import encode_messages
 
 
 def test_batches_match_out_of_order_results_and_omit_wait_references() -> None:

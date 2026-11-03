@@ -6,8 +6,8 @@ import os
 import re
 from pathlib import Path
 
-from agent_runtime.conversations.messages import Message
-from agent_runtime.coordinator.model import ModelReply, ModelRequest
+from agent_harness.conversations.messages import Message
+from agent_harness.coordinator.model import ModelReply, ModelRequest
 
 
 class Extractor:

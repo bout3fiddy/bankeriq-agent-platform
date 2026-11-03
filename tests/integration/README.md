@@ -65,7 +65,7 @@ processes from `worker_process.py`. It covers recovery after process death,
 reconciliation after a synthetic external effect, lease and settlement races,
 unknown commits, strict recovery JSON, compatibility, budgets, waits, capacity,
 restricted outputs and bounded projection maintenance. See the
-[reproduction commands](../../src/bankeriq_agent_platform/workers/README.md).
+[reproduction commands](../../src/agent_runtime/workers/README.md).
 These tests run no real model or business-tool calls.
 
 `test_worker_controls.py` separately validates group-06 follow-ups: safe inspection,

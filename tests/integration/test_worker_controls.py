@@ -10,19 +10,19 @@ from typing import Any
 import psycopg
 import pytest
 
-from agent_runtime.runs.context import RunContext
-from agent_runtime.storage.interface import StateConflictError, StateNotFoundError
-from bankeriq_agent_platform.storage.codec import plain
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.workers.controls import (
+from agent_harness.runs.context import RunContext
+from agent_harness.storage.codec import plain
+from agent_harness.storage.interface import StateConflictError, StateNotFoundError
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.workers.controls import (
     ControlRequest,
     RecoveryActor,
     RecoveryControls,
 )
-from bankeriq_agent_platform.workers.queue import Lease, PostgresQueue
-from bankeriq_agent_platform.workers.reasons import FailureReason
-from bankeriq_agent_platform.workers.runner import Worker
-from bankeriq_agent_platform.workers.state import Handler, Handlers, Recovery
+from agent_runtime.workers.queue import Lease, PostgresQueue
+from agent_runtime.workers.reasons import FailureReason
+from agent_runtime.workers.runner import Worker
+from agent_runtime.workers.state import Handler, Handlers, Recovery
 
 from .test_postgres import Fault
 from .test_workers import admit, claim, expire, process, rows, wait_file
@@ -797,8 +797,8 @@ def test_upgrade_preserves_legacy_unknown_retry_without_authorising_replay(
     from psycopg import sql
     from psycopg.conninfo import make_conninfo
 
-    from bankeriq_agent_platform.storage import postgres
-    from bankeriq_agent_platform.storage.codec import fingerprint
+    from agent_harness.storage.codec import fingerprint
+    from agent_runtime.storage import postgres
 
     schema = "legacy_workers_" + uuid4().hex
     legacy = make_conninfo(dsn, options=f"-c search_path={schema}")

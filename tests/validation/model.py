@@ -4,11 +4,11 @@ from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from uuid import uuid4
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.coordinator.model import ModelClient, ModelReply, ModelRequest
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.coordinator.model import ModelClient, ModelReply, ModelRequest
+from agent_harness.tools.definitions import ToolCall
+from agent_harness.tools.results import RestrictedReceipt, VisibleResult
 from agent_runtime.providers.models import ModelSettings
-from agent_runtime.tools.definitions import ToolCall
-from agent_runtime.tools.results import RestrictedReceipt, VisibleResult
 
 
 class ScriptedModel:

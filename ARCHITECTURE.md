@@ -3,7 +3,7 @@
 Design updated: 3 November 2026. PostgreSQL conversations and durable queues,
 with Redis for active sessions, replace the earlier Durable Task Scheduler choice.
 This document specifies the target design. The
-[PostgreSQL journal and synthetic job-record adapter](src/bankeriq_agent_platform/storage/README.md)
+[PostgreSQL journal and synthetic job-record adapter](src/agent_runtime/storage/README.md)
 is implemented and locally validated. Redis sessions and synthetic durable workers
 and queued coordinator/tool execution are implemented. The
 [Azure pilot](build-order/09-completed-azure-runtime-deployment.md) has hosted lifecycle
@@ -14,6 +14,14 @@ The completed runtime milestone at
 `2fa515b` and local container evidence remain in [build-order/README.md](build-order/README.md).
 
 ## Runtime and model roles
+
+Source layout separates three packages. `agent_harness` owns the model/tool loop, pure
+memory/context policy, prompt compilation and permission/output interfaces. `agent_runtime`
+implements those interfaces with durable workers, PostgreSQL/Redis, provider transport and
+telemetry. `agent_platform` composes the backend API, identity and application configuration.
+The browser application belongs in `frontend/`; infrastructure definitions stay in `infra/azure/`.
+Dependencies point from platform to runtime/harness and from runtime to harness. Current
+package boundaries and entry points are documented in [README.md](README.md#source-layout).
 
 A general-purpose chat interface uses a powerful external model for conversation,
 planning, tool discovery and reasoning over permitted results. The application
@@ -40,7 +48,7 @@ logical responsibilities, including durable execution and persisted state.
 ## Provider boundaries
 
 Microsoft Foundry remains the initial model provider and the existing hosting
-adapter. Core runtime components depend on `ModelClient`, `StateStore` and
+adapter. Core harness components depend on `ModelClient`, `StateStore` and
 execution/policy interfaces.
 Provider SDKs, credentials and wire formats belong under
 `src/agent_runtime/providers/<provider>/`.
@@ -144,10 +152,10 @@ loss can delay progress but cannot remove queued work.
 
 The following are target record groups. Versioned journal, checkpoint, synthetic
 job, result, approval and bounded history-page migrations now exist in the
-[storage adapter](src/bankeriq_agent_platform/storage/README.md), including shared
+[storage adapter](src/agent_runtime/storage/README.md), including shared
 prompt versions and bindings. Bounded history materialisation and Redis sessions
 are implemented. Synthetic worker lifecycle is implemented through the
-[worker adapter](src/bankeriq_agent_platform/workers/README.md). Related writes use one
+[worker adapter](src/agent_runtime/workers/README.md). Related writes use one
 PostgreSQL database.
 
 - **Conversations**
@@ -409,13 +417,13 @@ work stays within the existing PostgreSQL worker design.
 
 ### Active sessions, idle snapshots and reconnects
 
-Implemented locally through the [session adapter](src/bankeriq_agent_platform/sessions/README.md).
+Implemented locally through the [session adapter](src/agent_runtime/sessions/README.md).
 Projection and cleanup can run as bounded maintenance callbacks in the synthetic worker.
 Durable execution uses PostgreSQL leases; async model/tool scheduling is implemented locally.
 Session admission refreshes immediately; other transitions repair on read or projection.
 Every cached read checks a primary head. The refill lease is advisory and contenders can
 hydrate independently. Recent context is bounded to 200 items/256 KiB with complete-turn
-selection. The [semantic memory profile](src/bankeriq_agent_platform/memory/README.md)
+selection. The [semantic memory profile](src/agent_runtime/memory/README.md)
 adds model-specific token estimates, durable extractive summaries and scoped source retrieval.
 Existing deployments retain their selected profile until explicitly upgraded.
 The numbered lifecycle below describes the configured application lifecycle.
@@ -525,7 +533,7 @@ executes. Results correlate by call ID and resume the model once the group settl
 
 ### Shared system prompts and live updates
 
-The [shared prompt group](src/agent_runtime/prompts/README.md) is implemented with
+The [shared prompt group](src/agent_harness/prompts/README.md) is implemented with
 local PostgreSQL and synthetic inference validation. Immutable publication,
 revision-checked activation/rollback, withdrawal and per-step manifests are
 available. Local and optional Redis caches hold immutable bodies; business overlays remain
@@ -865,7 +873,7 @@ calls sequentially and saves results after a batch; continuations use local fake
 
 PostgreSQL storage, transactional synthetic job records and shared prompt
 publication/resolution, Redis sessions and bounded history projection are implemented.
-The [durable worker adapter](src/bankeriq_agent_platform/workers/README.md) now executes
+The [durable worker adapter](src/agent_runtime/workers/README.md) now executes
 synthetic registered tasks with leases, replay policy and atomic checkpoint settlement.
 It also provides bounded crash recovery, safe scoped inspection and audited operator
 retry/reconciliation controls; recovery cannot reset budgets or reopen terminal work.
@@ -893,7 +901,7 @@ Provider throttling uses bounded durable retry deadlines; the worker releases it
 Numeric provider duration/usage observations stay in the application-owned telemetry path.
 The registered `retrieve_history` tool returns bounded, currently permitted source excerpts
 through the existing gateway and tool budget. No Redis model-context cache is introduced.
-See the [memory guide](src/bankeriq_agent_platform/memory/README.md) for composition, token
+See the [memory guide](src/agent_runtime/memory/README.md) for composition, token
 accounting, failure behavior and validation limits. The [hosted release guide](infra/azure/LIVE.md)
 records the deployed image and its validation evidence.
 

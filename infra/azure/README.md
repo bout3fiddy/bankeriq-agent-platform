@@ -298,7 +298,7 @@ validation, generate a saved plan, review
 its resources and settings, then apply it within the user's deployment
 authorisation. Verify resource outputs and run the synthetic live inference test.
 Keep Azure-specific deployment choices here and provider-neutral runtime code
-under `src/agent_runtime/`.
+under `src/agent_harness/`.
 
 ## Validation evidence
 

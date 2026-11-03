@@ -5,9 +5,9 @@ import logging
 
 import pytest
 
-from agent_runtime.runs.context import RunContext
-from bankeriq_agent_platform.azure.authentication import operator_test_input, synthetic_input
-from bankeriq_agent_platform.telemetry import emit
+from agent_harness.runs.context import RunContext
+from agent_platform.identity.entra import operator_test_input, synthetic_input
+from agent_runtime.telemetry import emit
 
 
 def test_lifecycle_metadata_omits_user_identity_and_unknown_queue(caplog) -> None:

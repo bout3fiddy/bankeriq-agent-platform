@@ -7,7 +7,7 @@ import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from bankeriq_agent_platform.azure.authentication import EntraAuthentication, synthetic_input
+from agent_platform.identity.entra import EntraAuthentication, synthetic_input
 
 
 @pytest.fixture

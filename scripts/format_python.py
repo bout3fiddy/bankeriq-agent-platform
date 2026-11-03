@@ -21,7 +21,7 @@ def main() -> int:
     arguments = parser.parse_args()
 
     # Explicit paths let a focused edit format one file, e.g.
-    # `uv run python -m scripts.format_python src/bankeriq_agent_platform/runtime.py`.
+    # `uv run python -m scripts.format_python src/agent_platform/runtime.py`.
     # Without paths, use every authored Python scope. The set removes duplicates
     # when the caller supplies both a directory and a file within that directory.
     paths = arguments.paths or [ROOT / scope for scope in SCOPES]

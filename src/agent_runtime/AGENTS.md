@@ -1,15 +1,16 @@
-# Agent runtime layout
+# Agent runtime guidance
 
-- Prefer Python expressions that make intent explicit and are easy to read.
-  Use descriptive methods when operator overloads obscure the meaning; for
-  example, use `required_permissions.issubset(granted_permissions)` for a set
-  inclusion check.
-- Keep `types/` limited to shared, logic-free definitions. Place behaviour and
-  validation with the component that owns them.
-- Use concrete examples in comments to explain unfamiliar interfaces and
-  consequential behaviour. For callables, show a small implementation, how it is
-  passed, and representative input/output. For example, the `visible_filter`
-  comment in `policy/output.py` shows `public_total(payload)` returning
-  `{"total": payload["total"]}`, passed as `visible_filter=public_total`, turning
-  `{"total": 42, "private_notes": "..."}` into `{"total": 42}`. Keep examples
-  concise and aligned with the code's behaviour.
+Read the root instructions, [README.md](README.md) and the affected component guide.
+
+- This package implements harness interfaces using workers, persistence, sessions,
+  provider/hosting adapters and telemetry. It may import `agent_harness`; it must not
+  import `agent_platform`. Application composition supplies catalog, identity and policy.
+- Keep queue admission/settlement, leases, generation fences, attempt budgets and
+  unknown-effect recovery intact. External calls remain outside retried transactions.
+- Keep pure memory selection and prompt compilation in the harness. Runtime memory
+  coordinates source reads, provider calls and fenced publication using those decisions.
+- Preserve applied SQL migration bytes and numbers. A package move requires no schema
+  migration. Validate package data in the installed wheel, not only an editable checkout.
+- Use real local PostgreSQL/Redis and independent worker processes for durable behaviour.
+  Preserve the synchronous in-memory adapter and scoped output/delivery separation.
+- Follow `storage/memory.py` for commenting. Never log credentials or message/tool bodies.

@@ -2,7 +2,7 @@
 
 from psycopg import Connection
 
-from bankeriq_agent_platform.azure.connections import token_connection
+from agent_platform.azure.connections import token_connection
 
 
 def test_every_physical_connection_requests_a_current_token(monkeypatch):

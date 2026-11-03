@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_runtime.coordinator.model import ModelClient, ModelReply, ModelRequest
+from agent_harness.coordinator.model import ModelClient, ModelReply, ModelRequest
 from agent_runtime.providers.models import ModelSettings
 from tests.validation.application import PROMPT, open_validation
 from tests.validation.tools import PRIVATE_MARKER
@@ -67,7 +67,7 @@ def test_transcript_records_permitted_exchange() -> None:
         )
 
     text = transcript.getvalue()
-    from bankeriq_agent_platform.prompt_files.loader import load_catalog
+    from agent_platform.prompt_files.loader import load_catalog
 
     resolver = load_catalog().resolver()
     assert resolver.instructions(resolver.resolve()) in text and PROMPT in text
@@ -112,7 +112,7 @@ def test_invalid_config_does_not_echo_its_contents(tmp_path: Path) -> None:
 def test_validation_uses_application_prompts_without_scoring_in_context(
     monkeypatch: pytest.MonkeyPatch, provider: str
 ) -> None:
-    from bankeriq_agent_platform.prompt_files.loader import load_catalog
+    from agent_platform.prompt_files.loader import load_catalog
     from tests.validation.model import ScriptedModel
 
     requests: list[ModelRequest] = []

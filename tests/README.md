@@ -48,7 +48,7 @@ uv run python -m pytest tests/tooling -q
 
 `integration/test_postgres.py` uses a real local PostgreSQL container when
 `BANKERIQ_TEST_POSTGRES_DSN` is set. See the
-[storage guide](../src/bankeriq_agent_platform/storage/README.md) for reproducible
+[storage guide](../src/agent_runtime/storage/README.md) for reproducible
 Docker commands, transaction/failure coverage and explicit validation limits.
 Use a dedicated disposable database: tests apply migrations and advance its
 recovery generation. Without that environment variable these tests skip.
@@ -63,5 +63,5 @@ tools, request fixtures and smoke-test scoring. Run `uv run python -m tests.vali
 It uses the application's normal prompt catalog; it is excluded from the application wheel.
 
 Real Redis/PostgreSQL session tests live in `integration/test_sessions.py`. Follow the
-[session guide](../src/bankeriq_agent_platform/sessions/README.md) for disposable
+[session guide](../src/agent_runtime/sessions/README.md) for disposable
 containers and both required environment variables. No model or cloud access is used.

@@ -140,7 +140,7 @@ while the adapter uses `stream=False`. Separate summary calls from coordinator c
 The [initial record](records/2026-11-03-azure-pilot.json) retains one unambiguous serial
 timeline and its limits. Other existing local measurements are available through
 `uv run python -m scripts.measure_sessions`; follow the disposable-service setup in the
-[session guide](../src/bankeriq_agent_platform/sessions/README.md). That script writes data
+[session guide](../src/agent_runtime/sessions/README.md). That script writes data
 and runs migrations. Never point its test DSNs at the retained Azure deployment. Keep
 local session microbenchmarks separate from hosted conversation measurements.
 

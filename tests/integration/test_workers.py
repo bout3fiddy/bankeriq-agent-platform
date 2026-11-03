@@ -15,14 +15,14 @@ from typing import Any
 import psycopg
 import pytest
 
-from agent_runtime.runs.context import RunContext
-from agent_runtime.runs.state import RunStatus
-from agent_runtime.storage.interface import StateConflictError, StateNotFoundError
-from bankeriq_agent_platform.storage.codec import plain
-from bankeriq_agent_platform.storage.postgres import PostgresStateStore
-from bankeriq_agent_platform.workers.queue import Lease, PostgresQueue
-from bankeriq_agent_platform.workers.runner import Listener, Worker
-from bankeriq_agent_platform.workers.state import Completion, Handler, Handlers, Recovery
+from agent_harness.runs.context import RunContext
+from agent_harness.runs.state import RunStatus
+from agent_harness.storage.codec import plain
+from agent_harness.storage.interface import StateConflictError, StateNotFoundError
+from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.workers.queue import Lease, PostgresQueue
+from agent_runtime.workers.runner import Listener, Worker
+from agent_runtime.workers.state import Completion, Handler, Handlers, Recovery
 
 from .test_postgres import INPUT, Fault
 from .test_postgres import context as context
@@ -674,8 +674,8 @@ def test_restricted_output_and_delivery_remain_isolated(
     state: Recovery,
     dsn: str,
 ) -> None:
-    from agent_runtime.policy.output import enforce_output
-    from agent_runtime.tools.definitions import OutputPolicy, ToolCall, ToolDefinition
+    from agent_harness.policy.output import enforce_output
+    from agent_harness.tools.definitions import OutputPolicy, ToolCall, ToolDefinition
 
     private = "SYNTHETIC_PRIVATE_REPORT_BODY"
     definition = ToolDefinition("report", "1", "synthetic report", {}, OutputPolicy.RESTRICTED)
@@ -864,7 +864,7 @@ def test_bounded_worker_maintenance_repairs_projection(
     sessions: Any,
     dsn: str,
 ) -> None:
-    from bankeriq_agent_platform.storage.history import ProjectionPolicy
+    from agent_runtime.storage.history import ProjectionPolicy
 
     admit(queue, context, state)
     stop = Event()

@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from agent_runtime.conversations.retirement import select_memory
-from agent_runtime.conversations.semantic import MemoryFact, memory_message
+from agent_harness.memory.retirement import select_memory
+from agent_harness.memory.semantic import MemoryFact, memory_message
 
 
 def choose(facts, relation="supersedes"):
@@ -103,7 +103,7 @@ def test_validated_retirement_wins_over_a_redundant_old_selection():
 
 
 def test_explicit_user_constraints_survive_selector_omission_without_action_authority():
-    from agent_runtime.conversations.semantic import summary_candidates
+    from agent_harness.memory.semantic import summary_candidates
 
     sources = (MemoryFact(1, 1, "user", "Constraint: use large print. Decision: pay tomorrow."),)
     candidates = summary_candidates(sources)
@@ -133,7 +133,7 @@ def test_protected_excerpt_is_not_duplicated_when_model_changes_its_label():
 
 
 def test_user_names_and_owners_survive_repeated_selector_omission():
-    from agent_runtime.conversations.semantic import summary_candidates
+    from agent_harness.memory.semantic import summary_candidates
 
     sources = (
         MemoryFact(1, 1, "user", "Mara owns logistics; the sensor is nicknamed Copper Finch."),
@@ -165,7 +165,7 @@ def test_explicit_name_correction_can_retire_a_protected_identity():
 
 
 def test_confirmed_user_answer_survives_omission_without_claiming_tool_completion():
-    from agent_runtime.conversations.semantic import summary_candidates
+    from agent_harness.memory.semantic import summary_candidates
 
     sources = (
         MemoryFact(1, 1, "user", "Open question: who is the accessibility reviewer?"),

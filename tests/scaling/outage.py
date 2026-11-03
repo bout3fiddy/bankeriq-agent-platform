@@ -14,12 +14,12 @@ import psycopg
 from psycopg import sql
 from psycopg.conninfo import make_conninfo
 
-from agent_runtime.conversations.messages import Message, MessageRole
-from agent_runtime.runs.context import RunContext
-from agent_runtime.runs.state import RunStatus
-from bankeriq_agent_platform.storage.postgres import CommitUnknownError, PostgresStateStore, migrate
-from bankeriq_agent_platform.workers.queue import PostgresQueue
-from bankeriq_agent_platform.workers.state import Recovery
+from agent_harness.conversations.messages import Message, MessageRole
+from agent_harness.runs.context import RunContext
+from agent_harness.runs.state import RunStatus
+from agent_runtime.storage.postgres import CommitUnknownError, PostgresStateStore, migrate
+from agent_runtime.workers.queue import PostgresQueue
+from agent_runtime.workers.state import Recovery
 
 
 def run(base: str, container: str, output: Path) -> None:
