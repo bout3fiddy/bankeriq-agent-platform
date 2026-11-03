@@ -28,7 +28,7 @@ only. No Pi dependency or Chord integration is proposed.
   Pi stores document deltas with periodic bases and permits deferred persistence
   for model partials/tool progress. BankerIQ uses bounded journal snapshots and
   Redis progress, with accepted execution state committed to PostgreSQL. See Redis
-  step 3, asynchronous execution step 5, [Pi checkpoints][pi-checkpoint-source]
+  step 3, asynchronous execution step 6, [Pi checkpoints][pi-checkpoint-source]
   and [deferred persistence][pi-progress-source].
 
 - **Intent and replay policy**
@@ -58,6 +58,30 @@ Its startup recovery resets running tasks to pending. BankerIQ needs cross-proce
 leases, ownership tokens and revision checks before reclaiming jobs. Existing
 `StateStore`, coordinator and continuation boundaries remain the starting point;
 adopting Pi's single-process scheduler is outside this plan.
+
+## Commit-history follow-up — 3 November 2026
+
+Reviewed Pi history through `f9daca3480732d0042b1df3a6e27221f597a620d`; tests and
+reported benchmarks were inspected without rerunning them. The following are
+planned BankerIQ requirements, with acceptance evidence owned by each group:
+
+- [Group 07](07-planned-asynchronous-coordinator-and-tools.md) adds explicit child
+  ownership, failure recovery and slow-consumer bounds, informed by Pi's
+  [ownership changes][pi-ownership-history], [crash-loop corrections][pi-crash-history]
+  and [folded watch updates][pi-watch-history]. PostgreSQL remains the authority
+  for jobs; Redis and bounded per-connection buffers carry disposable progress.
+- [Group 08](08-planned-recovery-and-scaling-validation.md) adds long-lived worker
+  and growing-history workloads, informed by [scheduler indexing][pi-scheduler-history]
+  and [incremental parsing][pi-stream-history]. Pi's reported timings are not
+  BankerIQ performance evidence or targets.
+- [Group 10](10-planned-reviewed-composite-business-tools.md) rejects cyclic
+  dependencies in reviewed compositions, informed by [Pi's wait-cycle fix][pi-cycle-history].
+  Model-written execution graphs remain conditional work.
+- [Group 11](11-planned-semantic-compaction-and-retrieval.md) budgets summarization
+  itself and makes required-compaction failure stop dispatch, informed by
+  [oversized summary inputs][pi-summary-history] and [failure handling][pi-compaction-history].
+
+## Infrastructure references
 
 [PostgreSQL queue locking](https://www.postgresql.org/docs/current/sql-select.html)
 and [LISTEN/NOTIFY semantics](https://www.postgresql.org/docs/current/sql-notify.html)
@@ -95,3 +119,20 @@ inform deployment validation; availability in the actual host remains a gate.
   https://github.com/earendil-works/pi/blob/f9daca3480732d0042b1df3a6e27221f597a620d/packages/durable/docs/spec.md#L1562-L1613
 [pi-progress-source]:
   https://github.com/earendil-works/pi/blob/f9daca3480732d0042b1df3a6e27221f597a620d/packages/durable/docs/spec.md#L1834-L1852
+
+[pi-ownership-history]:
+  https://github.com/earendil-works/pi/commit/03180653c624d1c079a509c61ab30322e7ff7b62
+[pi-crash-history]:
+  https://github.com/earendil-works/pi/commit/440a5fcdb8b2a204429c280109b2dbf6b123ef35
+[pi-watch-history]:
+  https://github.com/earendil-works/pi/commit/d8d99950ac360bc9330245030f587b32988314fb
+[pi-scheduler-history]:
+  https://github.com/earendil-works/pi/commit/cb437549318e06de1c3b00786f84236a0a4c896e
+[pi-stream-history]:
+  https://github.com/earendil-works/pi/commit/f715a15c101ca8a44d759bceeb7ec2a51024c81c
+[pi-cycle-history]:
+  https://github.com/earendil-works/pi/commit/eb2fce43d22cb41771c4538e0c9f5e9614e5e2a1
+[pi-summary-history]:
+  https://github.com/earendil-works/pi/commit/15e7bdc14cae38786c4cde24870ffce888e062cd
+[pi-compaction-history]:
+  https://github.com/earendil-works/pi/commit/89e5c2c075535e2f427c30fc74720d65b2944ff9

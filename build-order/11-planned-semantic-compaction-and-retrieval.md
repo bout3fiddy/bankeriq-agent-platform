@@ -14,13 +14,24 @@ persist run state, budgets and outcomes; semantic action/decision summaries are 
    outside that coverage. Use stable operation IDs for retries and conditional revision
    checks to prevent stale summaries replacing newer ones. Retain source events under
    the existing recovery, audit and replay policies; compaction alone permits no deletion.
+   Budget the summarizer's complete request against its selected model, including
+   instructions, source text and reserved output space. Use bounded source chunks
+   with explicit coverage when one request cannot fit; preserve tool-call/result
+   pairs. Exclude stored provider reasoning and restricted content from summary
+   input. Source byte limits alone do not establish a model-token budget.
 3. **Assemble initial context** — Have the context builder load the latest compatible
    summary plus recent complete turns, alongside separately resolved system/runtime
    instructions and current authorised tools. Redis may cache this assembled history
    view; rebuild it from PostgreSQL after loss. Include summary version, covered/durable
    cursors, recovery/deletion generations and prompt manifest in relevant cache keys.
    Exclude later queued inputs from the active run and retain complete tool-call/result
-   pairs. Keep bounded input budgets and explicit overflow handling.
+   pairs. Keep bounded input budgets and explicit overflow handling. Distinguish
+   optional background compaction from compaction required to fit the next request.
+   If required compaction fails or its result still exceeds the budget, pause or
+   fail with a bounded visible reason and a bounded retry policy. Keep the previous
+   usable summary and source history; never dispatch an oversized request after
+   that failure. Recheck the assembled context with its separately resolved prompt
+   and tool definitions before model dispatch.
 4. **Retrieve detail on demand** — Register a bounded, read-only history retrieval tool
    through the existing registry/gateway. Let the model request source events or earlier
    pages when the initial summary lacks detail. Trusted code supplies tenant, user,
@@ -38,6 +49,10 @@ persist run state, budgets and outcomes; semantic action/decision summaries are 
    generations. Check summary-plus-tail coverage without omission or duplication, and
    retrieve referenced source details through the tool. Compare long-conversation tasks
    against retained full-history fixtures to measure factual fidelity and retrieval needs.
+   Test near-limit source history, oversized instructions/tool definitions, stored
+   reasoning, summarizer failure and an oversized summary. A failed mandatory
+   compaction must preserve prior memory, stop model dispatch and expose its reason;
+   retries stay bounded instead of repeating an oversized request or empty answer.
 
 Completion requires a long conversation to resume from durable semantic memory, recover
 additional permitted detail on demand and preserve execution truth after cache/process loss.

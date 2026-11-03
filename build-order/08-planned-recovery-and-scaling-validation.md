@@ -30,6 +30,18 @@ Status: planned. Depends on asynchronous coordinator and tools.
    cursor-required recovery retain this route when optional replica reads arrive.
    Require a local controlled-lag test before enabling replica history/reporting.
    Azure HA failover is a separate hosted gate.
+7. **Exercise long-lived workers and growing history** — Hold active concurrency
+   and payload sizes fixed while completing thousands of jobs across reused and
+   new conversations. Separately grow retained history and stream length. Record
+   process memory after idle cleanup, retained task/cache entries, claim-query
+   plans and rows visited, database reads, CPU and bytes written per progress
+   update. Compare early and late workload windows under the same configuration.
+   Require bounded retained memory after cleanup and indexed claims independent
+   of completed-job scans. Ordinary progress must not repeatedly parse, copy or
+   load the full growing transcript. State workload-specific regression limits
+   before accepting results; retain measurements and query plans as evidence.
 
 Completion requires executed failure and load evidence with explicit limits.
 Horizontal worker capacity remains bounded by PostgreSQL and model/tool quotas.
+Include the long-lived workload above and the ownership, failure-recovery and
+slow-client gates from [asynchronous execution](07-planned-asynchronous-coordinator-and-tools.md).

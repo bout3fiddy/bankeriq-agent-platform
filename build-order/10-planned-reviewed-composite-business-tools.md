@@ -33,7 +33,13 @@ for durable jobs or approvals without holding an execution slot.
    dependent children after their inputs commit. Reuse durable joins and one
    continuation, with cancellation and partial-failure rules. Retry unfinished
    effects only under saved/current replay policy and idempotency guarantees;
-   ambiguous effects require reconciliation.
+   ambiguous effects require reconciliation. Apply the parent/child ownership and
+   failure policies from [group 07](07-planned-asynchronous-coordinator-and-tools.md)
+   to nested composites. Validate the reviewed dependency graph as acyclic before
+   child admission; reject self-waits, descendant-to-ancestor waits and longer
+   cycles, including implicit parent waits for children. A terminal or cancelled
+   ancestor prevents further descendant admission and dispatch preparation;
+   already admitted external effects still require reconciliation.
 5. **Preserve output boundaries** — Feed only gateway-enforced child results into
    general orchestration. Restricted processing remains inside the authorised
    business implementation; expose fixed receipts and separate authenticated
@@ -44,6 +50,9 @@ for durable jobs or approvals without holding an execution slot.
    expiry, cancellation and restart between children. Verify completed effects
    are not repeated and one permitted parent result reaches the model. Check
    restricted markers across model requests, persisted state and telemetry.
+   Reject cyclic reviewed compositions without admitting jobs. Exercise nested
+   cancellation during fan-out, both sibling-failure policies and late effects;
+   every unfinished child remains owned and every unknown effect remains recorded.
 
 Example: `compare_loan_scenarios` accepts an approved scenario reference and three
 rate assumptions. Its reviewed implementation obtains permitted inputs, queues
