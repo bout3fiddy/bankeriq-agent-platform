@@ -7,7 +7,10 @@ import pytest
 from agent_runtime.providers.foundry.credentials import foundry_credential
 
 
-def test_cli_credentials_are_lazy_renewable_and_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("mode", ["azure_cli", "managed_identity"])
+def test_credentials_are_lazy_renewable_and_closed(
+    monkeypatch: pytest.MonkeyPatch, mode: str
+) -> None:
     events: list[object] = []
 
     class Credential:
@@ -30,10 +33,11 @@ def test_cli_credentials_are_lazy_renewable_and_closed(monkeypatch: pytest.Monke
         return token
 
     monkeypatch.setattr("azure.identity.AzureCliCredential", Credential)
+    monkeypatch.setattr("azure.identity.ManagedIdentityCredential", Credential)
     monkeypatch.setattr("azure.identity.get_bearer_token_provider", token_provider)
 
     with foundry_credential(
-        {"FOUNDRY_AUTH_MODE": "azure_cli", "AZURE_TENANT_ID": "tenant"}
+        {"FOUNDRY_AUTH_MODE": mode, "AZURE_TENANT_ID": "tenant", "AZURE_CLIENT_ID": "client"}
     ) as credential:
         assert callable(credential)
         assert "token requested" not in events
@@ -41,7 +45,11 @@ def test_cli_credentials_are_lazy_renewable_and_closed(monkeypatch: pytest.Monke
         assert credential() == "synthetic-token"
 
     assert events == [
-        {"tenant_id": "tenant", "process_timeout": 15},
+        (
+            {"tenant_id": "tenant", "process_timeout": 15}
+            if mode == "azure_cli"
+            else {"client_id": "client"}
+        ),
         "https://cognitiveservices.azure.com/.default",
         "token requested",
         "token requested",

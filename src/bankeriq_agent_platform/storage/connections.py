@@ -17,19 +17,31 @@ class PrimaryConnections:
     must include API, prompt and maintenance pools in the database-wide budget.
     A full pool queues at most twice its size and waits at most one second before
     raising an operational error. Call close() after draining application work.
+
+    Startup can inject connection_type=token_connection(current_token) for Azure.
+    Both pooled replacements and one-shot connections then request credentials
+    when connecting; no cached password enters the DSN. Share this source with the
+    store and prompt resolver so their combined usage remains inside one pool bound.
     """
 
-    def __init__(self, dsn: str, *, size: int = 0) -> None:
+    def __init__(
+        self,
+        dsn: str,
+        *,
+        size: int = 0,
+        connection_type: type[Connection[dict[str, Any]]] = Connection[dict[str, Any]],
+    ) -> None:
         if size < 0:
             raise ValueError("connection pool size cannot be negative")
 
         self.dsn = dsn
+        self.connection_type = connection_type
         self.pool: ConnectionPool[Connection[dict[str, Any]]] | None = None
 
         if size:
             self.pool = ConnectionPool(
                 dsn,
-                connection_class=Connection[dict[str, Any]],
+                connection_class=connection_type,
                 kwargs={
                     "row_factory": dict_row,
                     "target_session_attrs": "read-write",
@@ -52,7 +64,7 @@ class PrimaryConnections:
         source = (
             self.pool.connection()
             if self.pool is not None
-            else Connection[dict[str, Any]].connect(
+            else self.connection_type.connect(
                 self.dsn, row_factory=dict_row, target_session_attrs="read-write"
             )
         )

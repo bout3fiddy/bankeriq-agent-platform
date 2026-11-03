@@ -1,0 +1,57 @@
+{
+  "durable_cursor_rebuilt": 6,
+  "grants": {
+    "ddl": false,
+    "prompt_write": false
+  },
+  "groups": {
+    "groups": 7,
+    "joined": 7
+  },
+  "jobs": [
+    {
+      "jobs": 7,
+      "max_attempt": 0,
+      "operation": "coordinator",
+      "status": "completed"
+    },
+    {
+      "jobs": 13,
+      "max_attempt": 1,
+      "operation": "model_infer",
+      "status": "completed"
+    },
+    {
+      "jobs": 13,
+      "max_attempt": 1,
+      "operation": "model_prepare",
+      "status": "completed"
+    },
+    {
+      "jobs": 7,
+      "max_attempt": 1,
+      "operation": "tool",
+      "status": "completed"
+    }
+  ],
+  "postgres_token_acquisitions": 2,
+  "private_addresses": {
+    "model": [
+      "10.90.3.5"
+    ],
+    "postgres": [
+      "10.90.2.7"
+    ],
+    "redis": [
+      "10.90.3.7"
+    ]
+  },
+  "redis_flushed": true,
+  "runs": [
+    {
+      "runs": 6,
+      "status": "completed"
+    }
+  ],
+  "tls": true
+}

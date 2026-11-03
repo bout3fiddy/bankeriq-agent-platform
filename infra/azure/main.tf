@@ -22,11 +22,11 @@ resource "azurerm_cognitive_account" "foundry" {
   project_management_enabled    = true
   custom_subdomain_name         = local.account_name
   local_auth_enabled            = false
-  public_network_access_enabled = true
+  public_network_access_enabled = !var.runtime_enabled
   tags                          = local.tags
 
-  # The development machine calls the authenticated public endpoint. Network
-  # isolation for hosted workloads will be designed in the hosting phase.
+  # The local profile uses authenticated public inference. Hosted pilots use
+  # the runtime module's private endpoint and disable public network access.
   identity {
     type = "SystemAssigned"
   }

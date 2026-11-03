@@ -1,16 +1,17 @@
 # Logical components
 
-Design updated 2 November 2026. This catalogue describes target responsibilities;
+Design updated 3 November 2026. This catalogue describes target responsibilities;
 the PostgreSQL journal, shared prompts, Redis sessions and synthetic durable workers
-and asynchronous coordinator/tool execution are implemented and locally validated.
+and asynchronous coordinator/tool execution are implemented. The synthetic queued profile
+has local service validation and hosted Container Apps lifecycle evidence.
 Current runtime implementation and test coverage are tracked in the
 [build order](build-order/README.md). Several components can
 share an application. Selected Azure services and state ownership are recorded in
 [ARCHITECTURE.md](ARCHITECTURE.md#selected-state-and-execution-services).
 
 The initial platform uses Microsoft Foundry for model inference and a dedicated
-browser chat interface. Container Apps is proposed for the API and worker pools;
-Foundry Hosted Agents compatibility remains a separate deployment decision.
+browser chat interface. Container Apps is selected for the group-09 API/worker pilot;
+Foundry Hosted Agents remains a separate unvalidated deployment path.
 The self-hosted specialist is deferred. See
 [ARCHITECTURE.md](ARCHITECTURE.md) for the overall design and security boundaries.
 

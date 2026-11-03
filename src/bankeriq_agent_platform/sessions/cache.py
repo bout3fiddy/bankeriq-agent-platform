@@ -16,12 +16,12 @@ from bankeriq_agent_platform.storage.codec import fingerprint
 class RedisSessions:
     """Application-owned client; errors become misses without exposing connection details."""
 
-    def __init__(self, url: str, *, ttl_seconds: int = 1800) -> None:
+    def __init__(self, url: str, *, ttl_seconds: int = 1800, client: Redis | None = None) -> None:
         if not 1 <= ttl_seconds <= 86400:
             raise ValueError("session TTL must be between 1 and 86400 seconds")
 
         self.ttl_seconds = ttl_seconds
-        self.client = Redis.from_url(url, socket_connect_timeout=1, socket_timeout=1)
+        self.client = client or Redis.from_url(url, socket_connect_timeout=1, socket_timeout=1)
         self._script = self.client.register_script(
             Path(__file__).with_name("session.lua").read_text()
         )

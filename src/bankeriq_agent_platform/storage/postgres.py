@@ -10,7 +10,6 @@ from uuid import uuid4
 import psycopg
 from psycopg import Connection
 from psycopg.errors import DeadlockDetected, SerializationFailure, UniqueViolation
-from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from agent_runtime.conversations.context import ContextBudgetExceeded
@@ -45,13 +44,13 @@ class CommitUnknownError(RuntimeError):
     """Retry the same stable identity on the primary; success was not established."""
 
 
-def migrate(dsn: str) -> None:
+def migrate(dsn: str, *, connections: PrimaryConnections | None = None) -> None:
     """Apply immutable numbered migrations under one transaction and migration lock."""
 
     # Two release processes may call migrate(writer_dsn) at the same time.
     # The transaction-scoped advisory lock makes the second wait until the first
     # commits its schema and version ledger together, then skip matching files.
-    with Connection[dict[str, Any]].connect(dsn, row_factory=dict_row) as connection:
+    with (connections or PrimaryConnections(dsn)).connection() as connection:
         connection.execute("SELECT pg_advisory_xact_lock(720321)")
         connection.execute(
             "CREATE TABLE IF NOT EXISTS schema_versions "
@@ -101,10 +100,15 @@ class PostgresStateStore:
     """
 
     def __init__(
-        self, dsn: str, *, fault: Callable[[str], None] | None = None, pool_size: int = 0
+        self,
+        dsn: str,
+        *,
+        fault: Callable[[str], None] | None = None,
+        pool_size: int = 0,
+        connections: PrimaryConnections | None = None,
     ) -> None:
         self._dsn = dsn
-        self._connections = PrimaryConnections(dsn, size=pool_size)
+        self._connections = connections or PrimaryConnections(dsn, size=pool_size)
         self._fault = fault or (lambda phase: None)
 
         # Pin this instance to the database timeline it opened. For example,

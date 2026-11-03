@@ -1,16 +1,17 @@
 # Azure infrastructure
 
-Terraform configuration and provisioning inventory for the Foundry deployment.
-The existing configuration defines the local-inference environment. PostgreSQL
-conversation/job storage and Redis active sessions are selected for the next phase;
-Container Apps is the proposed worker host. Their Terraform resources and
-Redis/worker adapters remain unimplemented. The
-[PostgreSQL application adapter](../../src/bankeriq_agent_platform/storage/README.md)
-is locally validated; no PostgreSQL cloud resource has been provisioned.
+Terraform configuration and provisioning inventory for Foundry and the group-09
+Container Apps pilot. The default profile supports local inference; setting
+`runtime_enabled=true` enables the [private hosted module](modules/runtime/README.md).
+It defines PostgreSQL, Redis, registry, identities, Entra admission, compute and logs.
+The immutable image and migration job precede enabling API/coordinator/tool apps.
+The [pilot entry point](../../tests/azure/README.md) uses the existing durable queues.
+Hosted lifecycle validation and disposable cleanup are complete; execution evidence
+belongs to [group 09](../../build-order/09-completed-azure-runtime-deployment.md).
 Create resources through Terraform as required by [AGENTS.md](../../AGENTS.md).
 
-The first milestone is a local coordinator calling a deployed Foundry model.
-Hosted execution and the remaining platform services follow separately. Logical
+The original first milestone ran a local coordinator against a deployed Foundry model.
+The hosted pilot adds the durable API/worker profile. Logical
 responsibilities are described in [components.md](../../components.md).
 
 ## First model test
@@ -53,7 +54,8 @@ and model deployment name. Map the latter two to `FOUNDRY_OPENAI_BASE_URL` and
 The initial configuration disables API keys and assigns the deploying principal
 the account-scoped `Cognitive Services OpenAI User` role. Runtime settings select
 `FOUNDRY_AUTH_MODE=azure_cli`; the provider obtains renewable tokens from your
-`az login` session. Managed identity integration remains application work.
+`az login` session. Foundry credentials also support explicit user-assigned managed identity; hosted
+integration and refresh validation remain group-09 work.
 Keep keys out of source, normal Terraform outputs and generated configuration files.
 
 ## Run the initial configuration
@@ -147,8 +149,7 @@ this single-developer validation; migration to shared storage remains pending.
 ## Hosted coordinator phase
 
 The earlier Foundry Hosted Agents target remains an unvalidated deployment path.
-The asynchronous design now proposes Container Apps workers connected to Foundry
-inference; settle that hosting choice before implementation/deployment. Preserve
+Group 09 selects Container Apps workers connected to Foundry inference. Preserve
 the existing hosted-agent adapter and its tests. If Foundry hosting is retained,
 validate queue polling, private connectivity, shutdown and PostgreSQL recovery
 ownership before adding the following resources:
@@ -182,10 +183,13 @@ compatibility still need validation before hosting this runtime.
 
 ## Selected runtime infrastructure
 
-Selected on 2 November 2026. Add provider-managed resources alongside their
-application integrations, reviewing plans before authorised applies. Regional
-availability, SKU, capacity, network reachability and SDK compatibility require
-verification before provisioning.
+The following inventory records the design selected on 2 November 2026. Its original
+"still needed" entries are historical; the hosted module now implements the database,
+cache, API/workers, registry, managed identities, private network and monitoring.
+[Group 09](../../build-order/09-completed-azure-runtime-deployment.md) records executed
+gates and limits. Tool-owned Blob reports, the browser application, shared state
+and production autoscaling remain separate work. Regional availability, capacity and
+SDK compatibility must be verified for each new deployment.
 
 - **Durable persistence and queue**
   Resources or decisions still needed: PostgreSQL Flexible Server, database and scoped application
@@ -239,7 +243,7 @@ verification before provisioning.
 - **Monitoring and recovery**
   Resources or decisions still needed: Azure Monitor/Log Analytics with approved fields, DB
   backups/PITR, retention settings and restore drills. General Purpose zone-redundant PostgreSQL HA
-  is a production sizing decision; Burstable is for the synthetic pilot.
+  is a production sizing decision; the synthetic pilot uses a single primary.
 
 
 PostgreSQL owns accepted data and execution state. Redis serves active interaction;
@@ -322,7 +326,7 @@ was `The total is 42, and the report status is "restricted."` The receipt record
 execution as completed and output as restricted; the final wording conflates
 those two fields. The transcript retains the supplied instructions, which
 prescribed the tool sequence, so this historical evidence evaluates workflow execution.
-The current validation harness uses the normal BankerIQ prompts; it has not yet been
+At that historical checkpoint, the normal BankerIQ prompt profile had not yet been
 validated against a live model after removing those test-specific instructions.
 The exporter and existing Python checks passed all 241 tests.
 Terraform then destroyed all five repeat-test resources; the state is empty,
@@ -357,3 +361,11 @@ Microsoft's [model lifecycle guidance][line-source-6].
   https://learn.microsoft.com/en-us/azure/postgresql/read-replica/concepts-read-replicas
 [line-source-6]:
   https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-retirements
+
+## Automatically created networking
+
+Azure may create a regional Network Watcher and `NetworkWatcherRG` when the pilot's
+first VNet is provisioned. These can survive VNet deletion. The separate
+[import-and-destroy root](automatic-networking/README.md) handles cleanup only when
+inspection proves exclusive disposable-pilot ownership. Never adopt or delete a shared
+watcher group. The Container Apps managed resource group follows its environment's lifecycle.

@@ -1,0 +1,14 @@
+{
+  "completed_turns": 1,
+  "seconds": [
+    5.794257666100748
+  ],
+  "completed_children": [
+    2
+  ],
+  "report_delivery_checked": true,
+  "unauthenticated_requests_rejected": true,
+  "input_policy_enforced": true,
+  "duplicate_admission_accepted": true,
+  "report_authentication_enforced": true
+}

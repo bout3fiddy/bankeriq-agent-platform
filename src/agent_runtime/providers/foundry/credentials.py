@@ -21,5 +21,15 @@ def foundry_credential(environment: Mapping[str, str]) -> Iterator[str | Callabl
             yield get_bearer_token_provider(
                 credential, "https://cognitiveservices.azure.com/.default"
             )
+    elif mode == "managed_identity":
+        from azure.identity import ManagedIdentityCredential, get_bearer_token_provider
+
+        # A user-assigned coordinator identity is selected explicitly. The SDK's
+        # token provider renews in memory; no access token is put into environment
+        # variables, image layers, Terraform outputs or durable run checkpoints.
+        with ManagedIdentityCredential(client_id=environment["AZURE_CLIENT_ID"]) as credential:
+            yield get_bearer_token_provider(
+                credential, "https://cognitiveservices.azure.com/.default"
+            )
     else:
         raise ValueError("unsupported Foundry authentication mode")

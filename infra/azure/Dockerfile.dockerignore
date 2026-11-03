@@ -1,0 +1,20 @@
+# Only package inputs and selected test fixtures enter the build context. Terraform
+# state, transcripts and the developer virtual environment stay outside it.
+**
+!Dockerfile
+!pyproject.toml
+!uv.lock
+!src/
+!src/**
+!prompts/
+!prompts/**
+
+!tests/
+!tests/__init__.py
+!tests/validation/
+!tests/validation/**
+**/__pycache__/
+**/*.pyc
+
+!tests/azure/
+!tests/azure/**

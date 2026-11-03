@@ -130,3 +130,11 @@ shared client; live Foundry propagation remains unvalidated.
   https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/reasoning
 [line-source-4]:
   https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create
+
+## Container Apps credentials
+
+`FOUNDRY_AUTH_MODE=managed_identity` selects the explicit user-assigned identity in
+`AZURE_CLIENT_ID`. The credential remains application-owned and supplies renewable
+in-memory tokens for the Cognitive Services scope. It does not fall back to local
+CLI credentials or an API key. Local credential lifecycle tests pass; hosted identity
+propagation, token expiry and asynchronous startup remain group-09 deployment gates.

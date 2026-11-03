@@ -2,14 +2,12 @@
 
 from collections import OrderedDict
 from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
 from threading import RLock
 from typing import Any, LiteralString, Protocol
 
 import psycopg
-from psycopg import Connection
 from psycopg.errors import UniqueViolation
-from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from agent_runtime.hosting.access import Principal
@@ -26,6 +24,7 @@ from agent_runtime.storage.interface import StateConflictError
 from ..prompt_files.loader import PromptCatalog, load_catalog
 from ..prompt_files.schema import Reference
 from .codec import fingerprint
+from .connections import PrimaryConnections
 from .postgres import CommitUnknownError, Database
 
 
@@ -33,7 +32,12 @@ class _PromptDatabase:
     """Keep writer routing and recovery fencing common to admin and read-only APIs."""
 
     def __init__(
-        self, dsn: str, scope: PromptScope, *, catalog: PromptCatalog | None = None
+        self,
+        dsn: str,
+        scope: PromptScope,
+        *,
+        catalog: PromptCatalog | None = None,
+        connections: PrimaryConnections | None = None,
     ) -> None:
         if not scope.application or not scope.environment:
             raise ValueError("prompt application and environment are required")
@@ -43,6 +47,7 @@ class _PromptDatabase:
         # environments share the same database. The DSN comes from trusted startup.
         self._catalog = catalog if catalog is not None else load_catalog()
         self._dsn = dsn
+        self._connections = connections or PrimaryConnections(dsn)
         self.scope = scope
 
         # Pin this client to the timeline it opened. After a restore changes
@@ -53,12 +58,8 @@ class _PromptDatabase:
             assert row is not None
             self._recovery_id = row["recovery_id"]
 
-    def _connect(self) -> Database:
-        connection = Connection[dict[str, Any]].connect(
-            self._dsn, row_factory=dict_row, target_session_attrs="read-write"
-        )
-        connection.isolation_level = psycopg.IsolationLevel.READ_COMMITTED
-        return connection
+    def _connect(self) -> AbstractContextManager[Database]:
+        return self._connections.connection()
 
     @contextmanager
     def _transaction(self, *, write: bool = False) -> Iterator[Database]:
@@ -111,8 +112,9 @@ class PostgresPromptResolver(_PromptDatabase):
         *,
         catalog: PromptCatalog | None = None,
         body_cache: PromptBodyCache | None = None,
+        connections: PrimaryConnections | None = None,
     ) -> None:
-        super().__init__(dsn, scope, catalog=catalog)
+        super().__init__(dsn, scope, catalog=catalog, connections=connections)
         self._bodies: OrderedDict[tuple[str, str], str] = OrderedDict()
         self._lock = RLock()
         self._body_cache = body_cache
@@ -255,9 +257,10 @@ class PromptAdministration(_PromptDatabase):
         *,
         authorize: Callable[[Principal, PromptScope], bool],
         fault: Callable[[str], None] | None = None,
+        connections: PrimaryConnections | None = None,
         catalog: PromptCatalog | None = None,
     ) -> None:
-        super().__init__(dsn, scope, catalog=catalog)
+        super().__init__(dsn, scope, catalog=catalog, connections=connections)
         self._authorize = authorize
         self._fault = fault or (lambda phase: None)
 

@@ -56,3 +56,52 @@ variable "deployment_type" {
     error_message = "Use DataZoneStandard or regional Standard for this EU development environment."
   }
 }
+
+variable "runtime_enabled" {
+  description = "Enable the private synthetic Container Apps pilot foundation."
+  type        = bool
+  default     = false
+}
+
+variable "runtime_image" {
+  description = "Immutable pilot image; null creates only the foundation."
+  type        = string
+  default     = null
+}
+variable "runtime_ready" {
+  description = "Start application replicas after the migration job has passed."
+  type        = bool
+  default     = false
+}
+variable "runtime_replicas" {
+  description = "Fixed pilot replicas per role, bounded by worker/database capacity."
+  type        = number
+  default     = 1
+}
+
+variable "runtime_ha" {
+  type    = bool
+  default = false
+}
+variable "runtime_failover_id" {
+  type    = string
+  default = null
+}
+
+variable "runtime_restore_time" {
+  type    = string
+  default = null
+}
+variable "runtime_use_restore" {
+  type    = bool
+  default = false
+}
+variable "runtime_recovery_id" {
+  type    = string
+  default = null
+}
+
+variable "runtime_tool_delay" {
+  type    = number
+  default = 0
+}

@@ -1,0 +1,22 @@
+{
+  "requests": [
+    {
+      "conversation_id": "db27b633-3180-4d36-b820-b5d8fa95217e",
+      "run_id": "35c950d3-35c1-48ac-89da-7f074d3970cf",
+      "text": "Calculate the sum of 2 and 3.",
+      "completed_children": 1
+    }
+  ],
+  "completed_turns": 1,
+  "seconds": [
+    49.249194958945736
+  ],
+  "completed_children": [
+    1
+  ],
+  "report_delivery_checked": false,
+  "unauthenticated_requests_rejected": true,
+  "input_policy_enforced": true,
+  "duplicate_admission_accepted": true,
+  "report_authentication_enforced": true
+}

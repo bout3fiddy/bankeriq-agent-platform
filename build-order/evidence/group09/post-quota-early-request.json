@@ -1,0 +1,11 @@
+{
+  "requests": [
+    {
+      "conversation_id": "2f5d33d8-7d1b-40c8-90ca-c5a624d6ce2d",
+      "run_id": "9d77e127-b7ae-470a-983c-e757dddc80d7",
+      "text": "Calculate the sum of 2 and 3, then prepare a restricted report."
+    }
+  ],
+  "status": "running",
+  "validation_result": "completion check failed during quota propagation"
+}

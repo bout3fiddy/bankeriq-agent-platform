@@ -1,0 +1,9 @@
+{
+  "ha": {
+    "mode": "ZoneRedundant",
+    "standbyAvailabilityZone": "2",
+    "state": "Healthy"
+  },
+  "state": "Ready",
+  "zone": "1"
+}

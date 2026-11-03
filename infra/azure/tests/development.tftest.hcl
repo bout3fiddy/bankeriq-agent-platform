@@ -1,3 +1,5 @@
+mock_provider "azapi" {}
+
 mock_provider "azurerm" {}
 
 variables {

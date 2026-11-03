@@ -5,7 +5,9 @@ with Redis for active sessions, replace the earlier Durable Task Scheduler choic
 This document specifies the target design. The
 [PostgreSQL journal and synthetic job-record adapter](src/bankeriq_agent_platform/storage/README.md)
 is implemented and locally validated. Redis sessions and synthetic durable workers
-and queued coordinator/tool execution are implemented locally; hosted scaling remains future work.
+and queued coordinator/tool execution are implemented. The
+[Azure pilot](build-order/09-completed-azure-runtime-deployment.md) has hosted lifecycle
+evidence with one or two fixed replicas per role; production scaling remains future work.
 [Local recovery and scaling evidence](build-order/08-completed-recovery-and-scaling-validation.md)
 covers bounded primary pooling, indexed claims and independent worker processes.
 The completed runtime milestone at
@@ -17,10 +19,10 @@ A general-purpose chat interface uses a powerful external model for conversation
 planning, tool discovery and reasoning over permitted results. The application
 owns the agent loop and selects model-visible tools per request. Foundry supplies
 model inference. For the asynchronous queue design, Azure Container Apps is the
-recommended execution host for API, coordinator and tool workers. This changes
-the earlier Foundry Hosted Agents target and remains a hosting proposal to settle
-before deployment. The existing Foundry hosting adapter and its validation work
-are preserved; hosting compatibility is a separate gate below.
+selected execution host for API, coordinator and tool workers, validated by the
+disposable group-09 pilot. This changes the earlier Foundry Hosted Agents target.
+The existing Foundry hosting adapter and its local validation work are preserved;
+its hosted lifecycle remains a separate gate below.
 
 A smaller, self-hosted open-weights model is deferred to a later phase for bounded
 tasks involving restricted data. Its intended benefit is lower hosting cost; capability and cost
@@ -68,7 +70,7 @@ optional SDK dependencies and local validation evidence.
   transient streams.
 
 - **Execution**
-  Selected service: Azure Container Apps, proposed
+  Selected service: Azure Container Apps, validated for the synthetic pilot
   Ownership: Independently scalable API, coordinator and tool worker pools; maintenance starts as a
   bounded worker role.
 
@@ -315,7 +317,8 @@ For production, evaluate Azure Flexible Server zone-redundant HA for the require
 failure domains. Its managed standby supports failover; optional read replicas
 serve lag-tolerant reads. Replication does not add independent write capacity.
 Select and validate availability, recovery-point and recovery-time targets before
-provisioning. The synthetic pilot has no demonstrated HA guarantee.
+provisioning. The synthetic pilot exercised planned HA failover and fenced PITR;
+its measured interruption and restore time establish no production availability SLO.
 [Azure HA][line-source-1],
 [Azure read replicas][line-source-2]
 
@@ -715,9 +718,9 @@ never cancel durable work implicitly.
   boundary.
 
 - **PostgreSQL Flexible Server**
-  Proposed use: Shared transactional conversation journal and queue. Burstable for synthetic pilot;
-  General Purpose with zone-redundant HA for production availability after sizing. Enable
-  backups/PITR and execute restore drills.
+  Proposed use: Shared transactional conversation journal and queue. The group-09 pilot used
+  General Purpose D2ds_v5 after regional Burstable provisioning failed, then exercised
+  zone-redundant HA and PITR. Production sizing and availability targets need separate validation.
 
 - **Azure Managed Redis**
   Proposed use: Private endpoint, bounded active data and TTLs. HA reduces disruption; recovery
@@ -762,7 +765,7 @@ The existing Foundry Hosted Agents adapter remains an alternative hosting path.
 Before selecting it for queue consumers, validate background polling, shutdown,
 private connectivity and asynchronous response behaviour. PostgreSQL must remain
 the single execution owner; a second host-level replay mechanism cannot duplicate
-its jobs. The proposed Container Apps deployment must not silently count as
+its jobs. Container Apps deployment evidence must not silently count as
 Foundry Hosted Agents lifecycle validation.
 
 For the <=10k-turn/month synthetic pilot, a provisional infrastructure floor is
@@ -772,7 +775,8 @@ Maintenance shares a bounded worker role. A second coordinator replica adds abou
 $39. These Sweden Central USD estimates use 730 hours and the 2 November retail
 lookup; model tokens, registry, logs, networking, backups beyond allowances and
 tool services are additional. Free compute grants can reduce spend. This is a
-pilot budget, with database capacity and production HA still to be measured.
+historical planning estimate; group 09 used different database/cache sizing and measured
+HA recovery. Its final billed cost and production capacity remain unmeasured.
 [Azure retail pricing API][line-source-3]
 
 Provision every cloud resource through provider-managed Terraform under
@@ -1011,11 +1015,11 @@ retention and report verification belong to the tool and user.
    reliable general-purpose sensitivity classifier is assumed. Decide whether
    raw input stays internal or the interface permits only externally processable
    input, and establish the enforcement and residual risks before deployment.
-2. **Runtime integration:** validate the proposed Container Apps host against the
-   earlier Foundry Hosted Agents target, async SDK/Python compatibility and the
-   PostgreSQL queue scaler. Benchmark lease, batching, idle and concurrency settings
-   and select measurable SLOs. PostgreSQL/Redis ownership and durable acceptance
-   are specified above; their implementation and failure validation are pending.
+2. **Production operating envelope:** benchmark lease, batching, idle and concurrency
+   settings at representative load and validate production SLOs. Group 09 validated
+   Container Apps, Python/SDK compatibility and hosted recovery at synthetic pilot load.
+   Its PostgreSQL scaler lacks managed-identity support, so it uses bounded fixed replicas.
+   Foundry Hosted Agents deployment and natural token-expiry endurance remain unvalidated.
 3. **Tool policies:** define registry schemas, enterprise entitlement mappings,
    resource checks, approval rules and visible-result schemas. Specify how
    permissions and policy revisions affect active runs and pending jobs.

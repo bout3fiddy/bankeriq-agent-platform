@@ -1,0 +1,10 @@
+{
+  "management_token_limit": 10000,
+  "observed_inference_token_limit": 1000,
+  "inference_small_probe_succeeded": true,
+  "prepared_instruction_characters": 5775,
+  "tool_definitions": 2,
+  "effective_token_limit": 10000,
+  "confirmed_at": "2026-11-03T12:16:34.112461+00:00",
+  "confirmed_seconds_after_apply": 586.5175058841705
+}

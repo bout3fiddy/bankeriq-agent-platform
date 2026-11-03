@@ -23,3 +23,11 @@ output "runtime_environment" {
     AZURE_TENANT_ID   = data.azurerm_client_config.current.tenant_id
   }
 }
+
+output "hosted_foundation" {
+  value = var.runtime_enabled ? module.runtime[0].foundation : null
+}
+
+output "api_url" {
+  value = var.runtime_enabled ? module.runtime[0].api_url : null
+}

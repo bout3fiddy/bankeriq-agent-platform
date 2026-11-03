@@ -1,0 +1,7 @@
+{
+  "attempts": 3,
+  "unknown_outcome_retained": true,
+  "retry_decision": "ineligible",
+  "duplicate_control_idempotent": true,
+  "cross_tenant_inspection_denied": true
+}

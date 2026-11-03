@@ -9,9 +9,9 @@ candidate frontend. Teams is outside the proposed delivery boundary.
 
 The proposed general-purpose external coordinator runs an application-owned loop
 using Microsoft Foundry inference and discovers tools allowed by the user's
-permissions. Azure Container Apps is proposed for independently scalable queue
-workers; the earlier Foundry Hosted Agents target remains a hosting compatibility
-decision. Visible tool outputs return to the coordinator. Restricted outputs
+permissions. Azure Container Apps is selected for the group-09 queue-worker pilot;
+the earlier Foundry Hosted Agents target remains a separate unvalidated hosting path.
+Visible tool outputs return to the coordinator. Restricted outputs
 stay with an internal specialist or containerised application, with reports
 delivered directly to the user through authenticated downloads.
 
@@ -26,7 +26,7 @@ startup settings and optional SDK dependencies.
 The initial runtime scope is complete as of 2 November 2026, including live
 Foundry inference with synthetic tools and in-memory state. The
 [build order](build-order/README.md) separates this completed milestone
-from the planned infrastructure phase and later runtime features.
+from subsequent infrastructure milestones and later runtime features.
 
 This repository contains design documentation, core runtime data types, a
 permission-filtered tool registry, completed-output enforcement, a synchronous
@@ -46,7 +46,8 @@ creation, run start and continuation through Microsoft's Invocations SDK, tested
 locally with synthetic identity and input policy. Its worker pool allows separate
 sessions to execute concurrently while each coordinator loop remains synchronous.
 Python 3.14 is the tooling and container baseline. The synthetic container has
-passed local Linux ARM64 validation; Azure hosting compatibility remains pending.
+passed local Linux ARM64 validation. That Foundry Hosted Agents lifecycle remains a
+separate hosting path from the Container Apps pilot.
 
 The [executable development profile](tests/validation/README.md)
 wires these components with synthetic tools and in-memory state. Run
@@ -67,7 +68,11 @@ asynchronous coordinator/tool execution is implemented in the
 [queued profile](src/bankeriq_agent_platform/workers/asynchronous.md).
 [Recovery and scaling validation](build-order/08-completed-recovery-and-scaling-validation.md)
 adds bounded primary pooling, eligible-backlog observations, progress isolation and
-executed local outage/restore and 2,800-job load evidence. Cloud deployment remains planned.
+executed local outage/restore and 2,800-job load evidence.
+[Azure deployment](build-order/09-completed-azure-runtime-deployment.md) is complete for
+the synthetic Container Apps pilot, with delegated Entra admission, private services,
+worker drain/restart, HA failover, fenced restore and model-throttling evidence.
+The disposable resources were removed through Terraform after validation.
 
 ## Development
 
@@ -113,8 +118,8 @@ runtime/system catalog as application startup. Business overlays remain later wo
 Tools own private Blob reports and authenticated download endpoints. The runtime
 forwards opaque links to the user without reading report contents. Tool-specific
 storage and delivery implementations remain separate work. Infrastructure is
-managed through Terraform; hosted runtime validation, production identity and input
-admission are pending. The browser app and self-hosted specialist remain deferred.
+managed through Terraform; the hosted synthetic runtime is validated. Production identity
+and general chat-input admission, the browser app and self-hosted specialist remain deferred.
 
 Prompt authoring uses [versioned JSON definitions](prompts/README.md), with separate
 runtime and BankerIQ system roots composed from reusable rules and guidelines.

@@ -30,6 +30,13 @@ postgres = [
 redis = [
     "redis>=5,<8",
 ]
+azure-runtime = [
+    "aiohttp>=3.13,<4",
+    "certifi>=2026.1.4",
+    "pyjwt[crypto]>=2.10,<3",
+    "redis-entraid>=1,<2",
+    "uvicorn>=0.35,<1",
+]
 
 [dependency-groups]
 dev = [
@@ -41,9 +48,12 @@ dev = [
     "pre-commit>=4",
     "psycopg-pool>=3.2,<4",
     "psycopg[binary]>=3.2",
+    "pyjwt[crypto]>=2.10,<3",
     "pytest>=8",
     "redis>=5,<8",
+    "redis-entraid>=1,<2",
     "ruff>=0.11",
+    "uvicorn>=0.35,<1",
 ]
 
 [tool.hatch.build.targets.wheel]
