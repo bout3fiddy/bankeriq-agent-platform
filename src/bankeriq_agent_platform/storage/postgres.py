@@ -148,6 +148,13 @@ class PostgresStateStore:
     def admit(
         self, context: RunContext, *, request_id: str, items: tuple[ConversationItem, ...]
     ) -> Checkpoint:
+        """Commit permitted input and its recoverable job before acknowledging acceptance."""
+
+        return self._retry(self.admission_change(context, request_id=request_id, items=items))
+
+    def admission_change(
+        self, context: RunContext, *, request_id: str, items: tuple[ConversationItem, ...]
+    ) -> Callable[[Database], Checkpoint]:
         """Persist policy-approved user input and ordered work under a stable request ID."""
 
         # Example: admit(context_for_run_b, request_id="request-b", items=(
@@ -227,7 +234,7 @@ class PostgresStateStore:
             self._dirty(connection, context, head, encoded)
             return self._load(connection, context, head)
 
-        return self._retry(transaction)
+        return transaction
 
     def create_run(
         self,
@@ -264,6 +271,41 @@ class PostgresStateStore:
         expected_deletion_generation: int = 0,
         prompt_resolver: PromptResolver | None = None,
     ) -> Checkpoint:
+        """Commit a checkpoint through the same transaction used by durable settlement."""
+
+        return self._retry(
+            self.checkpoint_change(
+                context,
+                expected_conversation_revision=expected_conversation_revision,
+                expected_run_revision=expected_run_revision,
+                status=status,
+                items=items,
+                pending_calls=pending_calls,
+                model_steps=model_steps,
+                tool_calls=tool_calls,
+                artifacts=artifacts,
+                expected_recovery_id=expected_recovery_id,
+                expected_deletion_generation=expected_deletion_generation,
+                prompt_resolver=prompt_resolver,
+            )
+        )
+
+    def checkpoint_change(
+        self,
+        context: RunContext,
+        *,
+        expected_conversation_revision: int,
+        expected_run_revision: int,
+        status: RunStatus,
+        items: tuple[ConversationItem, ...] = (),
+        pending_calls: tuple[PendingToolCall, ...] = (),
+        model_steps: int | None = None,
+        tool_calls: int | None = None,
+        artifacts: tuple[ArtifactReference, ...] = (),
+        expected_recovery_id: str | None = None,
+        expected_deletion_generation: int = 0,
+        prompt_resolver: PromptResolver | None = None,
+    ) -> Callable[[Database], Checkpoint]:
         """Commit bounded delta, budgets, results/delivery and next synthetic work together.
 
         A run revision identifies one logical transition. Matching replay returns its
@@ -335,6 +377,18 @@ class PostgresStateStore:
                 raise StateConflictError("checkpoint deletion generation changed")
 
             current = self._load(connection, context, head)
+
+            # Worker-managed work must first pass ownership fencing in the queue
+            # adapter. It marks its job completed inside this same transaction.
+            # A synchronous coordinator cannot bypass a leased or waiting worker.
+            managed = connection.execute(
+                "SELECT 1 FROM jobs WHERE tenant_id=%s AND conversation_id=%s "
+                "AND run_id=%s AND recovery IS NOT NULL AND status <> 'completed' LIMIT 1",
+                self._key(context),
+            ).fetchone()
+
+            if managed:
+                raise StateConflictError("checkpoint requires durable worker settlement")
 
             if (
                 head["revision"] != expected_conversation_revision
@@ -449,7 +503,7 @@ class PostgresStateStore:
 
             return self._response(connection, context, response)
 
-        return self._retry(transaction)
+        return transaction
 
     def load_model_step(self, context: RunContext, step_number: int) -> Checkpoint:
 
@@ -573,8 +627,10 @@ class PostgresStateStore:
             )
             self._write(
                 connection,
-                "UPDATE jobs SET status = 'cancelled' WHERE tenant_id = %s "
-                "AND conversation_id = %s AND status IN ('blocked', 'ready', 'waiting')",
+                "UPDATE jobs SET status = CASE WHEN recovery->>'phase' IN ('dispatch','reconcile') "
+                "THEN 'cancelled_unknown' ELSE 'cancelled' END WHERE tenant_id = %s "
+                "AND conversation_id = %s AND status IN "
+                "('blocked','ready','waiting','leased','retry','approval','reconcile')",
                 self._scope(context),
             )
             head["deletion_generation"] += 1

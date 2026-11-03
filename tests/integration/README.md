@@ -57,3 +57,13 @@ execution itself is synchronous. This suite does not establish production
 durability, authentication, network isolation or model behaviour. Those depend on
 future adapters and deployment tests. Fake approvals use in-memory decisions
 bound to context, call and version; expiry and persistence are unimplemented.
+
+## Durable worker service tests
+
+`test_workers.py` uses real local PostgreSQL and Redis plus independent child
+processes from `worker_process.py`. It covers recovery after process death,
+reconciliation after a synthetic external effect, lease and settlement races,
+unknown commits, strict recovery JSON, compatibility, budgets, waits, capacity,
+restricted outputs and bounded projection maintenance. See the
+[reproduction commands](../../src/bankeriq_agent_platform/workers/README.md).
+These tests run no real model or business-tool calls.

@@ -58,8 +58,10 @@ supported model with available quota.
 The [Redis session and history adapter](src/bankeriq_agent_platform/sessions/README.md)
 adds disposable UI views, provisional input reconciliation, durable acceptance,
 bounded asynchronous history projection and optional immutable prompt caching.
-Explicit projection/cleanup calls require application scheduling; worker execution
-ownership remains the next group. Local tests use real PostgreSQL and Redis.
+The [durable synthetic workers](src/bankeriq_agent_platform/workers/README.md) add
+leased execution, restart reconstruction, atomic settlement and bounded maintenance.
+Local tests use real PostgreSQL/Redis and independent worker processes. Real
+asynchronous coordinator/tool execution remains the next group.
 
 ## Development
 
@@ -91,8 +93,8 @@ being added on `codex/runtime-infrastructure`. The
 [PostgreSQL journal adapter](src/bankeriq_agent_platform/storage/README.md) now persists
 ordered admission, checkpoints, synthetic job records, results and approvals,
 with local PostgreSQL failure tests. The default executable retains in-memory
-state; application composition can inject the adapter. Redis sessions and asynchronous
-history are next. See the
+state; application composition can inject the adapter. Redis sessions, asynchronous
+history and synthetic durable workers are implemented. See the
 [state ownership and session lifecycle](ARCHITECTURE.md#selected-state-and-execution-services).
 
 The [shared prompt system](src/agent_runtime/prompts/README.md) now resolves a

@@ -40,12 +40,37 @@ def plain(value: Any) -> Any:
     return value
 
 
+def strict_json(value: Any, *, maximum: int = 262144) -> str:
+    """Reject coercions and unsupported JSON values before a transaction starts."""
+
+    def validate(item: Any) -> None:
+        if isinstance(item, dict):
+            if any(type(key) is not str for key in item):
+                raise ValueError("JSON object keys must be strings")
+
+            for child in item.values():
+                validate(child)
+        elif isinstance(item, list):
+            for child in item:
+                validate(child)
+        elif not isinstance(item, (str, int, float, bool, type(None))):
+            raise ValueError("unsupported JSON value")
+
+    validate(value)
+    encoded = json.dumps(value, sort_keys=True, allow_nan=False)
+
+    if len(encoded.encode()) > maximum:
+        raise ValueError("JSON storage bound exceeded")
+
+    return encoded
+
+
 def fingerprint(value: Any) -> str:
 
     # {"a": 1, "b": 2} and {"b": 2, "a": 1} represent the same JSON object.
     # Sorting keys gives both the same digest, while changing b to 3 conflicts
     # when a caller tries to reuse the same admission or transition identity.
-    return sha256(json.dumps(value, sort_keys=True, allow_nan=False).encode()).hexdigest()
+    return sha256(strict_json(plain(value)).encode()).hexdigest()
 
 
 def encode_items(items: tuple[ConversationItem, ...]) -> list[dict[str, Any]]:
@@ -60,10 +85,10 @@ def encode_items(items: tuple[ConversationItem, ...]) -> list[dict[str, Any]]:
     # Bound the entire write and each member independently. A 101-item delta
     # and a single 60,001-byte event both fail before storage starts the write;
     # the individual limit also leaves headroom below the database row limit.
-    if len(encoded) > 100 or len(json.dumps(encoded).encode()) > 131072:
+    if len(encoded) > 100 or len(strict_json(encoded).encode()) > 131072:
         raise ValueError("checkpoint delta exceeds storage bound")
 
-    if any(len(json.dumps(item).encode()) > 60000 for item in encoded):
+    if any(len(strict_json(item).encode()) > 60000 for item in encoded):
         raise ValueError("journal event exceeds storage bound")
 
     return encoded

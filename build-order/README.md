@@ -11,7 +11,7 @@ Task groups run in this order: initial runtime → containerisation → PostgreS
 journal and job records → shared system prompts → Redis sessions and asynchronous
 history → durable workers → asynchronous coordinator and tools → recovery and
 scaling validation → Azure runtime deployment. Each group has its own task
-numbering. Durable PostgreSQL workers are next.
+numbering. Durable PostgreSQL workers remain in progress for additional tasks.
 
 The selected stack is PostgreSQL plus ephemeral Redis. PostgreSQL contains durable
 conversation deltas, history snapshots and the message queue. Redis serves active
@@ -22,7 +22,8 @@ The transaction and replication
 [boundaries](../ARCHITECTURE.md#transaction-and-replication-boundaries)
 define atomic writes, primary-only reads and recovery requirements for the groups
 below. The PostgreSQL journal adapter and its local failure tests are implemented;
-later worker and deployment guarantees remain pending.
+synthetic worker ownership and recovery are now validated locally.
+Real asynchronous orchestration and deployment remain pending.
 DTS and separate brokers are outside this sequence. Tools own confidential Blob
 reports and authenticated downloads. Container Apps is proposed for worker hosting;
 the earlier Foundry Hosted Agents target remains a separate compatibility decision.
@@ -45,7 +46,7 @@ file determine execution eligibility. Follow-up groups remain after infrastructu
 - 05 — Redis sessions and asynchronous history
   [completed](05-completed-redis-sessions-and-history.md)
 - 06 — Durable PostgreSQL workers
-  [planned](06-planned-durable-postgresql-workers.md)
+  [in-progress](06-in-progress-durable-postgresql-workers.md)
 - 07 — Asynchronous coordinator and tool queues
   [planned](07-planned-asynchronous-coordinator-and-tools.md)
 - 08 — Recovery and horizontal scaling validation
@@ -59,7 +60,7 @@ file determine execution eligibility. Follow-up groups remain after infrastructu
 - 12 — Follow-up runtime work
   [planned](12-planned-follow-up-runtime-work.md)
 
-Next: [durable PostgreSQL workers](06-planned-durable-postgresql-workers.md).
+Current: [durable PostgreSQL workers](06-in-progress-durable-postgresql-workers.md).
 
 Use exactly three statuses: `planned`, `in-progress` and `completed`.
 `planned` means work has not started. Mark a group `in-progress` as soon as work

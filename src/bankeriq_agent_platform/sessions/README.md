@@ -175,3 +175,10 @@ The 120-event measurement ran 20 samples per read mode. Median/maximum times wer
 6.13/7.20 ms for warm reads, 23.27/25.58 ms for cold reads and 8.74/10.55 ms for pages.
 Two projection batches took 32.09 ms total. These measurements include local primary
 connections; they do not establish deployment capacity or justify tuning the defaults.
+
+## Worker maintenance integration
+
+The [durable synthetic worker](../workers/README.md) now accepts a bounded maintenance
+callback for `project_due()` and idle cleanup. PostgreSQL retains dirty work across
+worker/Redis loss. The dated session-group evidence above predates worker ownership;
+worker failure tests and limits are recorded in the worker guide.

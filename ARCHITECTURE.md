@@ -4,8 +4,9 @@ Design updated: 2 November 2026. PostgreSQL conversations and durable queues,
 with Redis for active sessions, replace the earlier Durable Task Scheduler choice.
 This document specifies the target design. The
 [PostgreSQL journal and synthetic job-record adapter](src/bankeriq_agent_platform/storage/README.md)
-is implemented and locally validated; queued execution, Redis and horizontal
-scaling remain future work. The completed runtime milestone at
+is implemented and locally validated. Redis sessions and synthetic durable workers
+are implemented; real queued coordinator/tool execution and hosted scaling remain future work.
+The completed runtime milestone at
 `2fa515b` and local container evidence remain in [build-order/README.md](build-order/README.md).
 
 ## Runtime and model roles
@@ -141,7 +142,8 @@ The following are target record groups. Versioned journal, checkpoint, synthetic
 job, result, approval and bounded history-page migrations now exist in the
 [storage adapter](src/bankeriq_agent_platform/storage/README.md), including shared
 prompt versions and bindings. Bounded history materialisation and Redis sessions
-are implemented; worker lifecycle remains the next group. Related writes use one
+are implemented. Synthetic worker lifecycle is implemented through the
+[worker adapter](src/bankeriq_agent_platform/workers/README.md). Related writes use one
 PostgreSQL database.
 
 - **Conversations**
@@ -269,7 +271,8 @@ or both roll back; the tool's earlier external effect requires its own recovery.
 Use database uniqueness constraints for request, event, call and continuation
 identities. Start with `READ COMMITTED`, explicit row locks and conditional revision
 updates. Multi-record transitions lock the conversation head, run, pending group
-and affected jobs in a consistent order; claims/renewals touch only job records.
+and affected jobs in a consistent order. Synthetic claims use the same head/run/job
+order; renewals touch only their job and never acquire head/run locks afterward.
 Recheck ownership and deletion generation under those locks. Roll back the whole
 transaction on a failed invariant. Bound retries for deadlocks/serialization errors
 around the database operation; external calls stay outside that retry loop.
@@ -400,7 +403,8 @@ work stays within the existing PostgreSQL worker design.
 ### Active sessions, idle snapshots and reconnects
 
 Implemented locally through the [session adapter](src/bankeriq_agent_platform/sessions/README.md).
-Projection and cleanup require explicit calls; no scheduler or worker ownership exists yet.
+Projection and cleanup can run as bounded maintenance callbacks in the synthetic worker.
+Durable synthetic execution uses PostgreSQL leases; real coordinator/tool scheduling is deferred.
 Session admission refreshes immediately; other transitions repair on read or projection.
 Every cached read checks a primary head. The refill lease is advisory and contenders can
 hydrate independently. Recent context is bounded to 200 items/256 KiB with complete-turn
@@ -843,7 +847,8 @@ calls sequentially and saves results after a batch; continuations use local fake
 
 PostgreSQL storage, transactional synthetic job records and shared prompt
 publication/resolution, Redis sessions and bounded history projection are implemented.
-Next add durable PostgreSQL workers.
+The [durable worker adapter](src/bankeriq_agent_platform/workers/README.md) now executes
+synthetic registered tasks with leases, replay policy and atomic checkpoint settlement.
 The later asynchronous coordinator group extracts one resumable model-step
 boundary from `Coordinator._run_loop`, preserving existing behaviour with the
 in-memory profile. Add an async model adapter and queued tool

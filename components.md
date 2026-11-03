@@ -1,8 +1,8 @@
 # Logical components
 
 Design updated 2 November 2026. This catalogue describes target responsibilities;
-the PostgreSQL journal, synthetic job records and shared prompt system are implemented; Redis
-and asynchronous worker integrations remain planned.
+the PostgreSQL journal, shared prompts, Redis sessions and synthetic durable workers
+are implemented. Real asynchronous coordinator/tool integrations remain planned.
 Current runtime implementation and test coverage are tracked in the
 [build order](build-order/README.md). Several components can
 share an application. Selected Azure services and state ownership are recorded in
@@ -144,7 +144,7 @@ the journal, on size/time thresholds and idle. Redis loss can reconstruct accept
 messages even before that materialisation. The PostgreSQL adapter implements `StateStore` and
 focused transactional admission
 operations. Its bounded journal reads are available now; asynchronous history
-materialisation remains later work. See the
+materialisation is implemented. See the
 [storage guide](src/bankeriq_agent_platform/storage/README.md).
 
 The storage adapter owns the [transaction
@@ -243,4 +243,6 @@ owns bounded materialisation, page reads and dirty/idle discovery. Trusted appli
 code schedules explicit calls; core runtime receives only the session interface.
 Every UI read checks primary ownership/generation/cursor before using cached content.
 The coordinator selects bounded complete-turn context and blocks oversized inference;
-permitted outcomes remain durable and pageable. Worker ownership is still deferred.
+permitted outcomes remain durable and pageable. The
+[worker adapter](src/bankeriq_agent_platform/workers/README.md) implements synthetic
+ownership, retry/wait recovery, atomic settlement and bounded maintenance scheduling.

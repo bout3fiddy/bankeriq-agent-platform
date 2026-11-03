@@ -194,3 +194,12 @@ The subsequent [shared prompt group](../../agent_runtime/prompts/README.md) adds
 migration 004 and per-step manifest preparation to this adapter. Global prompt
 bodies remain in immutable version records; prepared checkpoints retain manifests
 and context cursors. Existing checkpoints without manifests remain readable.
+
+## Durable worker extension
+
+The [worker adapter](../workers/README.md) reuses admission/checkpoint transaction
+builders from this store. Migrations 008/009 add recovery envelopes, budgets,
+settlement/control identities, notifications and capacity indexes. Synchronous
+checkpoint writes reject active worker-managed jobs. In-memory behaviour is unchanged.
+Worker validation and current limits are recorded in its guide and build-order group;
+the dated group-03 evidence above retains its original scope.
