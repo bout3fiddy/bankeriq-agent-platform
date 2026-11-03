@@ -28,15 +28,12 @@ milestone; parallel tool execution has moved out of follow-up scope.
    outcomes. Fence pending children and reject new child admission when their
    parent is cancelled or terminal. Retain dispatched unknown effects for
    reconciliation; late results cannot reopen the parent or create a continuation.
-4. **Expose failure and recovery states** — Extend the worker's persisted budgets
-   and reconciliation with bounded reason codes and allowed recovery actions for
-   unavailable handler versions, exhausted attempts, repeated process crashes and
-   uncertain effects. Make these visible through authorised inspection without
-   exposing raw errors or restricted data. Repeated crashes must exhaust a durable
-   allowance; orderly draining must not count as an execution failure. Eligible
-   operator retries recheck current access, approvals, versions and replay policy,
-   preserve operation identity and committed outcomes, and record the actor and
-   decision. Never bypass reconciliation or silently reset exhausted budgets.
+4. **Integrate worker recovery controls** — Use the failure reasons, crash limits
+   and authorised recovery controls from the
+   [worker group](06-in-progress-durable-postgresql-workers.md#remaining-worker-tasks)
+   for model-step and tool jobs. Carry their safe status into run inspection and
+   continuation decisions; preserve child ownership, committed outcomes and the
+   worker's operation identity across an authorised recovery.
 5. **Keep API and workers responsive** — Return an accepted run ID; release the
    coordinator slot during tool/approval waits. Use bounded async I/O, isolate
    blocking handlers and CPU-heavy tools, and preserve model/tool budgets across
@@ -61,14 +58,14 @@ milestone; parallel tool execution has moved out of follow-up scope.
    serialization, per-call budgets and out-of-order results with one continuation.
    Cancel while children are admitted, claimed and settling: every child retains
    an owner, no later child dispatch or continuation is admitted, and unknown
-   effects remain inspectable. Test both sibling-failure policies. Repeatedly kill
-   one synthetic handler and prove its allowance eventually stops dispatch while
-   unrelated jobs progress. Test unauthorised/conflicting operator retries and
-   orderly drain separately. Stall an SSE consumer beyond its buffer limit and
-   prove bounded memory, independent execution and recovery of the final outcome.
+   effects remain inspectable. Test both sibling-failure policies. Verify worker
+   failure reasons and authorised recovery propagate through model/tool groups
+   without leaking raw errors or scheduling duplicate continuations. Stall an SSE
+   consumer beyond its buffer limit and prove bounded memory, independent execution
+   and recovery of the final outcome.
 
 Completion requires a real local PostgreSQL/Redis conversation to fan out synthetic
 jobs, release its coordinator, resume once and survive a worker restart. Streaming
 transport tests do not require implementing the deferred browser application.
-The acceptance gate also includes child cancellation races, observable exhausted
-work and bounded slow-client delivery. These remain planned orchestration tests.
+The acceptance gate also includes child cancellation races, integration with worker
+recovery controls and bounded slow-client delivery. These remain planned orchestration tests.

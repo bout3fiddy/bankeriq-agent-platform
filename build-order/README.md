@@ -11,7 +11,8 @@ Task groups run in this order: initial runtime → containerisation → PostgreS
 journal and job records → shared system prompts → Redis sessions and asynchronous
 history → durable workers → asynchronous coordinator and tools → recovery and
 scaling validation → Azure runtime deployment. Each group has its own task
-numbering. Durable PostgreSQL workers remain in progress for additional tasks.
+numbering. Durable PostgreSQL workers remain in progress for inspectable failure
+states, bounded crash recovery and authorised recovery controls.
 
 The selected stack is PostgreSQL plus ephemeral Redis. PostgreSQL contains durable
 conversation deltas, history snapshots and the message queue. Redis serves active

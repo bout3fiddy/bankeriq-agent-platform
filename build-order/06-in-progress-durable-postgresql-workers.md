@@ -2,7 +2,8 @@
 
 Status: in-progress. Depends on PostgreSQL records and Redis recovery semantics.
 The implemented scope and validation evidence below are retained. Additional
-tasks for this group are pending definition by the user.
+worker tasks 8–11 below define the remaining work. They are planned; the existing
+implementation evidence covers tasks 1–7.
 
 1. **Define serializable recovery state** — Extend the existing storage codec and
    versioned checkpoint records with explicit task kind/version, phase, bounded
@@ -50,6 +51,37 @@ The saved phase determines recovery; a vanished Python stack provides no evidenc
 
 Completion requires one accepted job to recover across worker loss and duplicate
 notifications. Model and tool orchestration remain synthetic until the next group.
+The group also requires the remaining worker tasks and their acceptance gates below.
+
+## Remaining worker tasks
+
+8. **Expose failure and recovery reasons** — Extend the existing persisted budgets
+   and reconciliation with bounded reason codes and allowed recovery actions for
+   unavailable handler versions, exhausted attempts, repeated process crashes and
+   uncertain effects. Expose tenant-scoped inspection through trusted application
+   interfaces with current access checks. Return safe status and operation identity;
+   raw errors, credentials and restricted payloads remain outside these responses.
+9. **Bound repeated crashes** — Use durable attempt/run allowances to stop repeated
+   dispatch after process crashes, including crashes before an outcome is saved.
+   Preserve an inspectable reason when the allowance is exhausted. Orderly draining
+   must not count as an execution failure. Unavailable handlers and stopped work
+   must not retain execution capacity or prevent unrelated eligible jobs progressing.
+10. **Add authorised recovery controls** — Define eligible inspection, retry and
+    reconciliation actions against the saved reason and current state. Recheck
+    current access, approvals, handler versions and replay policy. Preserve the
+    operation identity and committed outcomes, and durably record actor, decision
+    and request identity. Matching control retries are idempotent; conflicting
+    reuse rejects. Never bypass uncertain-effect reconciliation or silently reset
+    exhausted budgets. Keep these controls in the worker/application boundary.
+11. **Validate recovery controls with synthetic handlers** — Repeatedly kill one
+    handler across fresh processes until its durable allowance stops dispatch;
+    verify another tenant's eligible jobs still progress. Compare orderly drain
+    with crashes and prove unavailable/stopped work holds no execution lease.
+    Exercise authorised, denied, duplicate, conflicting and stale control requests,
+    lost commit acknowledgements, revoked approvals and changed replay policy.
+    Inspection must retain safe reasons and unknown operation identities without
+    restricted data. Recovery must neither repeat a committed effect nor authorise
+    an unsafe unknown effect. Record executed evidence separately from tasks 1–7.
 
 ## Implementation and acceptance evidence
 

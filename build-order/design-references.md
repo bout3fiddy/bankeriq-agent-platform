@@ -65,10 +65,14 @@ Reviewed Pi history through `f9daca3480732d0042b1df3a6e27221f597a620d`; tests an
 reported benchmarks were inspected without rerunning them. The following are
 planned BankerIQ requirements, with acceptance evidence owned by each group:
 
+- [Group 06](06-in-progress-durable-postgresql-workers.md#remaining-worker-tasks)
+  owns inspectable failure reasons, bounded crash recovery and authorised operator
+  controls, informed by [Pi's crash-loop corrections][pi-crash-history]. Existing
+  worker evidence remains separate from these planned follow-up acceptance gates.
 - [Group 07](07-planned-asynchronous-coordinator-and-tools.md) adds explicit child
-  ownership, failure recovery and slow-consumer bounds, informed by Pi's
-  [ownership changes][pi-ownership-history], [crash-loop corrections][pi-crash-history]
-  and [folded watch updates][pi-watch-history]. PostgreSQL remains the authority
+  ownership, integration with worker recovery and slow-consumer bounds, informed
+  by Pi's [ownership changes][pi-ownership-history] and
+  [folded watch updates][pi-watch-history]. PostgreSQL remains the authority
   for jobs; Redis and bounded per-connection buffers carry disposable progress.
 - [Group 08](08-planned-recovery-and-scaling-validation.md) adds long-lived worker
   and growing-history workloads, informed by [scheduler indexing][pi-scheduler-history]
