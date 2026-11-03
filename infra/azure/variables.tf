@@ -105,3 +105,15 @@ variable "runtime_tool_delay" {
   type    = number
   default = 0
 }
+
+variable "runtime_interactive" {
+  description = "Opt in to operator-approved non-sensitive conversational test input."
+  type        = bool
+  default     = false
+}
+
+variable "runtime_session_idle_seconds" {
+  description = "Cache inactivity window; passive SSE/status traffic does not renew it."
+  type        = number
+  default     = 1800
+}

@@ -652,6 +652,9 @@ def test_admission_transport_and_input_policy(
     runtime, _ = composition(store)
 
     async def authenticate(request):
+        if request.headers.get("x-test-user") == "other":
+            return replace(context, user_id="other")
+
         return context
 
     app = create_async_app(
@@ -672,6 +675,17 @@ def test_admission_transport_and_input_policy(
             assert duplicate.json() == result.json()
             bad = await client.post("/runs", json={"request_id": "request", "text": "other"})
             assert bad.status_code == 409
+            activity = await client.post("/activity")
+            assert activity.status_code == 200
+            history = await client.get("/history")
+            assert history.status_code == 200 and history.json()["events"]
+
+            # Authentication alone does not grant access to another user's chat.
+            # Reject both retention signals and history before touching its cache.
+            for method, path in (("POST", "/activity"), ("GET", "/history")):
+                denied = await client.request(method, path, headers={"x-test-user": "other"})
+                assert denied.status_code == 404
+                assert denied.json() == {"error": "session_unavailable"}
 
     asyncio.run(request())
     assert store.load_run(context).run.status == RunStatus.QUEUED

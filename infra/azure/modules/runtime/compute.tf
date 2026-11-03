@@ -1,11 +1,19 @@
 locals {
+  # Container Apps names allow 32 characters, including the coordinator suffix.
+  # Preserve existing short names. Longer prefixes get a bounded, stable hash so
+  # two environments with the same leading text do not acquire the same app name.
+  compute_prefix = length(var.prefix) <= 20 ? var.prefix : format(
+    "%s-%s", trim(substr(var.prefix, 0, 11), "-"), substr(sha256(var.prefix), 0, 8)
+  )
   common_environment = {
-    AZURE_TENANT_ID    = var.tenant_id
-    POSTGRES_HOST      = local.database_host
-    REDIS_HOST         = azurerm_managed_redis.runtime.hostname
-    ENTRA_AUDIENCE     = azuread_application.api.client_id
-    RESTORE_GENERATION = var.use_restore ? var.recovery_id : ""
-    ALLOWED_USERS      = jsonencode([var.operator_id])
+    AZURE_TENANT_ID      = var.tenant_id
+    POSTGRES_HOST        = local.database_host
+    REDIS_HOST           = azurerm_managed_redis.runtime.hostname
+    ENTRA_AUDIENCE       = azuread_application.api.client_id
+    RESTORE_GENERATION   = var.use_restore ? var.recovery_id : ""
+    ALLOWED_USERS        = jsonencode([var.operator_id])
+    INPUT_POLICY         = var.interactive ? "operator_test" : "fixtures"
+    SESSION_IDLE_SECONDS = tostring(var.session_idle_seconds)
     FOUNDRY_OPENAI_BASE_URL = format(
       "https://%s.openai.azure.com/openai/v1/", var.prefix
     )
@@ -30,7 +38,7 @@ locals {
 
 resource "azurerm_container_app_job" "migration" {
   count                        = var.image == null ? 0 : 1
-  name                         = "${var.prefix}-migration"
+  name                         = "${local.compute_prefix}-migration"
   location                     = var.location
   resource_group_name          = var.resource_group
   container_app_environment_id = azurerm_container_app_environment.runtime.id
@@ -74,7 +82,7 @@ resource "azurerm_container_app" "runtime" {
   for_each = (
     var.runtime_ready && var.image != null ? toset(["api", "coordinator", "tool"]) : []
   )
-  name                         = "${var.prefix}-${each.key}"
+  name                         = "${local.compute_prefix}-${each.key}"
   resource_group_name          = var.resource_group
   container_app_environment_id = azurerm_container_app_environment.runtime.id
   workload_profile_name        = "Consumption"

@@ -9,6 +9,9 @@ The [pilot entry point](../../tests/azure/README.md) uses the existing durable q
 Hosted lifecycle validation and disposable cleanup are complete; execution evidence
 belongs to [group 09](../../build-order/09-completed-azure-runtime-deployment.md).
 Create resources through Terraform as required by [AGENTS.md](../../AGENTS.md).
+The separately authorised [persistent operator deployment](LIVE.md) stays running for
+non-sensitive conversations and idle-cache inspection; its lifetime differs from the
+completed disposable group-09 exercise.
 
 The original first milestone ran a local coordinator against a deployed Foundry model.
 The hosted pilot adds the durable API/worker profile. Logical

@@ -29,6 +29,55 @@ class RedisSessions:
         self._progress_script = self.client.register_script(
             Path(__file__).with_name("progress.lua").read_text()
         )
+        self._activity_script = self.client.register_script(
+            Path(__file__).with_name("activity.lua").read_text()
+        )
+
+    def touch(self, head: dict[str, Any], *, minimum_interval: int = 0) -> bool:
+        """Extend retention after explicit interaction or an observed live SQL lease.
+
+        Example: a tool still holds a renewed lease after 30 minutes. Maintenance
+        supplies its current conversation head; existing history/progress keys get
+        another TTL without copying history. Missing payloads remain cache misses.
+        The activity marker shares the recovery/deletion scope and expires too, so
+        a dead maintenance process cannot leave permanent Redis reservations.
+        """
+
+        key = self.key(head)
+
+        with suppress(RedisError):
+            return bool(
+                self._activity_script(
+                    keys=[
+                        key,
+                        key + f":progress:{head['deletion_generation']}",
+                        key + f":activity:{head['deletion_generation']}",
+                    ],
+                    args=[self.ttl_seconds, minimum_interval],
+                )
+            )
+
+        return False
+
+    def inspect(self, head: dict[str, Any]) -> dict[str, int | bool]:
+        key = self.key(head)
+
+        try:
+            with self.client.pipeline(transaction=False) as pipeline:
+                pipeline.pttl(key)
+                pipeline.pttl(key + f":progress:{head['deletion_generation']}")
+                pipeline.pttl(key + f":activity:{head['deletion_generation']}")
+                view, progress, activity = pipeline.execute()
+
+            return {
+                "available": True,
+                "idle_timeout_seconds": self.ttl_seconds,
+                "view_ttl_ms": view,
+                "progress_ttl_ms": progress,
+                "activity_ttl_ms": activity,
+            }
+        except RedisError:
+            return {"available": False}
 
     def progress(self, head: dict[str, Any], **values: Any) -> list[dict[str, Any]]:
         """Read/write only the bounded progress document, scoped to this generation.
@@ -73,7 +122,10 @@ class RedisSessions:
 
         try:
             result = self._script(
-                keys=[self.key(head)],
+                keys=[
+                    self.key(head),
+                    self.key(head) + f":activity:{head['deletion_generation']}",
+                ],
                 args=[op, json.dumps(arguments), str(uuid4()), self.ttl_seconds],
             )
         except RedisError:

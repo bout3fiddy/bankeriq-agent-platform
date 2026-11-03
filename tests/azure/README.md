@@ -1,4 +1,4 @@
-# Disposable Azure runtime validation
+# Azure runtime validation and operator conversations
 
 This harness hosts the existing durable API/coordinator/tool composition with synthetic
 arithmetic and restricted-report fixtures. It belongs to group 09 and is not a production
@@ -8,10 +8,16 @@ roles. Only the coordinator receives inference permission; tools cannot call a m
 
 Admission verifies a delegated Entra v2 token, tenant, audience, issuer, lifetime, scope,
 client and explicit user allowlist. Headers supply UUID conversation/run identifiers;
-they cannot replace the signed identity. The pilot only admits the exact text
+they cannot replace the signed identity. By default, the pilot admits only the exact text
 `Calculate the sum of 2 and 3.` or
 `Calculate the sum of 2 and 3, then prepare a restricted report.`. Permission/output checks
 still apply. The authenticated report URL is a synthetic fixture with no Blob storage.
+
+The explicitly enabled `runtime_interactive=true` profile accepts non-sensitive operator
+conversations up to 8,192 UTF-8 bytes. It preserves Entra admission and the user allowlist;
+it does not classify sensitive content. The [persistent deployment guide](../../infra/azure/LIVE.md)
+records the current environment and chat commands. The fixed-input validator below applies
+only to the default fixture policy; interactive input is validated with the operator CLI.
 
 ## Release sequence
 
@@ -51,6 +57,12 @@ execution success before setting `runtime_ready=true` and reviewing/applying the
 Each process owns a bounded SQL pool with renewable tokens and primary-only routing.
 API/coordinator processes use Redis's Entra credential provider for refresh/re-auth.
 SIGTERM stops new claims and drains accepted active work before connections close.
+Coordinator maintenance also renews existing Redis views for live PostgreSQL leases,
+including tools running without a connected reader. Accepted messages and explicit
+POST /activity signals also renew retention. Passive history/status/SSE reads do not.
+`runtime_session_idle_seconds` defaults to 1,800 seconds. Background lease scans run
+every second in bounded pages. Once activity stops, expiry remains enabled. Reconstruction
+uses PostgreSQL after cache loss, including when the next message arrives hours later.
 `runtime_replicas` selects one or two fixed replicas per role. These bounds do not
 establish production capacity or autoscaler compatibility.
 

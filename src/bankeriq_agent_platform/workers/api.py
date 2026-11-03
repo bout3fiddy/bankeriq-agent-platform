@@ -3,6 +3,7 @@
 import asyncio
 import json
 from collections.abc import Awaitable, Callable
+from contextlib import suppress
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from starlette.applications import Starlette
@@ -14,6 +15,7 @@ from agent_runtime.runs.context import RunContext
 from agent_runtime.storage.interface import StateConflictError, StateNotFoundError
 from bankeriq_agent_platform.sessions.service import SessionService
 from bankeriq_agent_platform.sessions.stream import Cursor, ProgressStream
+from bankeriq_agent_platform.telemetry import emit
 
 from .coordinator import QueuedCoordinator
 
@@ -54,11 +56,35 @@ def create_async_app(
             text = await asyncio.to_thread(prepare_input, context, admission.text)
             run_id = await runtime.admit(context, request_id=admission.request_id, text=text)
         except ValidationError, ValueError:
+            emit("admission.rejected", context)
             return JSONResponse({"error": "invalid_input"}, status_code=400)
         except StateConflictError:
             return JSONResponse({"error": "conflict"}, status_code=409)
 
+        # Acceptance already committed. Cache/logging work cannot revoke that
+        # receipt; a reconnect can recover the same request if Redis is down.
+        emit("admission.accepted", context)
+
+        with suppress(Exception):
+            await asyncio.to_thread(sessions.record_activity, context)
+
         return JSONResponse({"accepted": True, "run_id": run_id}, status_code=202)
+
+    async def activity(request: Request) -> Response:
+        context = await authenticate(request)
+        renewed = await asyncio.to_thread(sessions.record_activity, context)
+        return JSONResponse({"renewed": renewed})
+
+    async def history(request: Request) -> Response:
+        context = await authenticate(request)
+        return JSONResponse(await asyncio.to_thread(sessions.read, context))
+
+    async def unavailable(request: Request, error: Exception) -> Response:
+
+        # Scope failures reveal neither another user's history nor database details.
+        # The same handler covers inspection routes added by the hosting application.
+        status = 404 if isinstance(error, StateNotFoundError) else 409
+        return JSONResponse({"error": "session_unavailable"}, status_code=status)
 
     async def progress(request: Request) -> Response:
         context = await authenticate(request)
@@ -81,4 +107,15 @@ def create_async_app(
             stream.events(), media_type="text/event-stream", headers={"Cache-Control": "no-store"}
         )
 
-    return Starlette(routes=[Route("/runs", admit, methods=["POST"]), Route("/events", progress)])
+    return Starlette(
+        exception_handlers={
+            StateNotFoundError: unavailable,
+            StateConflictError: unavailable,
+        },
+        routes=[
+            Route("/runs", admit, methods=["POST"]),
+            Route("/events", progress),
+            Route("/activity", activity, methods=["POST"]),
+            Route("/history", history),
+        ],
+    )

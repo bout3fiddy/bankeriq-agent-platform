@@ -169,6 +169,9 @@ def test_idle_cleanup_retains_recovery_and_deduplication(
     raw = json.loads(sessions.cache.client.get(sessions.cache.key(head)))
     raw["last_access"] = 0
     sessions.cache.client.set(sessions.cache.key(head), json.dumps(raw))
+    sessions.cache.client.set(
+        sessions.cache.key(head) + f":activity:{head['deletion_generation']}", "0", ex=1800
+    )
     assert sessions.cleanup(context, raw)
     assert rows(dsn, "SELECT count(*) FROM admissions") == [(1,)]
     assert rows(dsn, "SELECT count(*) FROM jobs WHERE effect_pending") == [(1,)]

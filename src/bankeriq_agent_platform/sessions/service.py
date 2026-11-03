@@ -10,6 +10,7 @@ from agent_runtime.storage.interface import StateConflictError, StateNotFoundErr
 from bankeriq_agent_platform.storage.codec import encode_items, fingerprint, plain
 from bankeriq_agent_platform.storage.history import PostgresHistory, ProjectionPolicy, encoded_size
 from bankeriq_agent_platform.storage.postgres import PostgresStateStore
+from bankeriq_agent_platform.telemetry import emit
 
 from .cache import RedisSessions
 
@@ -45,6 +46,7 @@ class SessionService:
         view = self._cached_view(cached, head)
 
         if view is None:
+            emit("cache.miss", context)
             token = self.cache.acquire_refill(head)
 
             try:
@@ -53,10 +55,13 @@ class SessionService:
                 # readers may rebuild the same bounded window; publish rejects
                 # an older cursor if another reader already filled a newer one.
                 view = self.history.view(context)
-                cached = self.publish(context, view, touch=True)
+                cached = self.publish(context, view)
+                emit("cache.rebuilt", context)
             finally:
                 if token is not None:
                     self.cache.release_refill(head, token)
+        else:
+            emit("cache.hit", context)
 
         pending = list((cached or {}).get("pending", {}).values())
         reconciled = []
@@ -88,6 +93,54 @@ class SessionService:
             **view,
             "pending": visible_pending,
             "progress": self.cache.progress(head),
+        }
+
+    def record_activity(self, context: RunContext) -> bool:
+        """Record an authenticated, explicit interaction using server time.
+
+        The API calls this for an accepted message or POST /activity. A future UI
+        can send that signal on an explicit open or deliberate history request.
+        Passive reads, SSE and background refreshes must not call it.
+        Repeated interaction signals within 15 seconds coalesce;
+        a live worker may already have extended the same retention deadline.
+        """
+
+        head = self.history.head(context)
+        renewed = self.cache.touch(head, minimum_interval=min(15, self.cache.ttl_seconds // 3))
+
+        if renewed:
+            emit("session.activity", context)
+
+        return renewed
+
+    def inspect(self, context: RunContext) -> dict[str, Any]:
+        """Read owned metadata and Redis TTLs without renewing activity or history.
+
+        A client can compare view_ttl_ms before/after an hour away. Redis -2 means
+        the key is absent. Journal/run counts show durable state still exists;
+        no transcript, model prompt, tool payload or credential enters this view.
+        """
+
+        with self.store._connect() as connection:
+            head = self.store._head(connection, context)
+            counts = connection.execute(
+                "SELECT (SELECT count(*) FROM conversation_events "
+                "WHERE tenant_id=%s AND conversation_id=%s) AS journal_events,"
+                "(SELECT count(*) FROM runs WHERE tenant_id=%s AND conversation_id=%s) AS runs",
+                (*self.store._scope(context), *self.store._scope(context)),
+            ).fetchone()
+            jobs = connection.execute(
+                "SELECT status,count(*) AS count FROM jobs "
+                "WHERE tenant_id=%s AND conversation_id=%s GROUP BY status ORDER BY status",
+                self.store._scope(context),
+            ).fetchall()
+
+        return {
+            "cursor": head["cursor"],
+            "active_run": head["active_run_id"],
+            "durable": counts,
+            "jobs": jobs,
+            "cache": self.cache.inspect(head),
         }
 
     def publish(
@@ -248,6 +301,8 @@ class SessionService:
                 self.store._key(context),
             ).fetchall()
 
+        # Passive status reads and SSE polling do not signal user interaction.
+        # They may remain connected for hours after the Redis view has expired.
         return {
             "run_id": context.run_id,
             **run,
@@ -277,13 +332,54 @@ class SessionService:
 
         return len(contexts)
 
+    def keep_active(
+        self, *, limit: int = 100, after: tuple[str, str] = ("", "")
+    ) -> tuple[int, tuple[str, str] | None]:
+        """Renew a bounded page of conversations with live durable worker leases.
+
+        The application schedules pages more frequently than the cache TTL and
+        passes next_scope into the next call, restarting at ("", "") after None.
+        For example, keep_active(limit=10) can retain a waiting parent while its
+        tool holds a lease, even with no connected browser or new model tokens.
+        Queued, approval, expired and cancelled jobs alone do not prove activity.
+        """
+
+        if not 1 <= limit <= 100:
+            raise ValueError("invalid active session batch bound")
+
+        with self.store._connect() as connection:
+            self.store._generation(connection)
+
+            # Scan the existing partial leased-job index, excluding deleted
+            # conversations and old runs. No transcript or job payload is loaded.
+            # A stale scan can extend retention once; finite TTLs bound that race.
+            heads = connection.execute(
+                "SELECT DISTINCT c.tenant_id,c.user_id,c.conversation_id,"
+                "c.deletion_generation FROM jobs j JOIN conversations c "
+                "USING (tenant_id,conversation_id) WHERE j.status='leased' "
+                "AND j.recovery IS NOT NULL AND j.lease_expiry>clock_timestamp() "
+                "AND NOT c.deleted AND c.active_run_id=j.run_id "
+                "AND (c.tenant_id,c.conversation_id)>(%s,%s) "
+                "ORDER BY c.tenant_id,c.conversation_id LIMIT %s",
+                (*after, limit),
+            ).fetchall()
+
+        for head in heads:
+            self.cache.touch({**head, "recovery_id": self.store.recovery_id})
+
+        next_scope = (
+            (heads[-1]["tenant_id"], heads[-1]["conversation_id"]) if len(heads) == limit else None
+        )
+        return len(heads), next_scope
+
     def cleanup_idle(
         self,
         *,
-        idle_seconds: int = 900,
+        idle_seconds: int | None = None,
         limit: int = 100,
         after: tuple[str, str] = ("", ""),
     ) -> tuple[int, tuple[str, str] | None]:
+        idle_seconds = self.cache.ttl_seconds if idle_seconds is None else idle_seconds
         removed = 0
         contexts = self.history.idle(seconds=idle_seconds, limit=limit, after=after)
 
@@ -305,13 +401,26 @@ class SessionService:
         return removed, next_scope
 
     def cleanup(
-        self, context: RunContext, observed: dict[str, Any], *, idle_seconds: int = 900
+        self, context: RunContext, observed: dict[str, Any], *, idle_seconds: int | None = None
     ) -> bool:
+        idle_seconds = self.cache.ttl_seconds if idle_seconds is None else idle_seconds
+
         if idle_seconds < 1:
             raise ValueError("idle threshold must be positive")
 
         with self.store._connect() as connection:
             head = self.store._head(connection, context, allow_deleted=True)
+            active = connection.execute(
+                "SELECT 1 FROM jobs WHERE tenant_id=%s AND conversation_id=%s "
+                "AND run_id=%s AND status='leased' AND lease_expiry>clock_timestamp() LIMIT 1",
+                (*self.store._scope(context), head["active_run_id"]),
+            ).fetchone()
+
+            # A long tool can leave the conversation journal unchanged while its
+            # lease keeps renewing. Do not evict its view between retention sweeps.
+            if active is not None:
+                return False
+
             work = connection.execute(
                 "SELECT projected_cursor FROM projection_work "
                 "WHERE tenant_id = %s AND conversation_id = %s",

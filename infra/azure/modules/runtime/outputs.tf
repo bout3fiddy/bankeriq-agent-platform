@@ -8,6 +8,7 @@ output "foundation" {
     entra_audience = azuread_application.api.client_id
     tenant_id      = var.tenant_id
     allowed_users  = [var.operator_id]
+    log_workspace  = azurerm_log_analytics_workspace.runtime.workspace_id
     identities = {
       for role, identity in azurerm_user_assigned_identity.runtime : role => {
         id           = identity.id

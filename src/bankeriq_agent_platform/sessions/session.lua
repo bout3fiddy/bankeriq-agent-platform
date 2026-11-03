@@ -4,7 +4,8 @@
 local function older(a, b)
     return #a < #b or (#a == #b and a < b)
 end
-local now = tonumber(redis.call('TIME')[1])
+local clock = redis.call('TIME')
+local now = tonumber(clock[1]) + tonumber(clock[2]) / 1000000
 local op = ARGV[1]
 local incoming = cjson.decode(ARGV[2])
 local raw = redis.call('GET', KEYS[1])
@@ -14,9 +15,10 @@ if raw then
     if ok and decoded.schema == '1' then state = decoded end
 end
 if op == 'cleanup' then
+    local activity = tonumber(redis.call('GET', KEYS[2])) or 0
     if state and state.epoch == incoming.epoch and state.cursor == incoming.cursor
         and state.generation == incoming.generation
-        and now - (state.last_access or now) >= incoming.idle_seconds then
+        and now - math.max(state.last_access or now, activity) >= incoming.idle_seconds then
         return redis.call('DEL', KEYS[1])
     end
     return 0
@@ -29,7 +31,7 @@ if not state or older(state.generation, incoming.generation) then
 end
 if state.deleted and op ~= 'tombstone' and op ~= 'peek' then return false end
 if op == 'read' then
-    if not raw or state.view == '' then return false end
+    return raw or false
 elseif op == 'peek' then
     return raw or false
 elseif op == 'publish' then
@@ -53,9 +55,17 @@ elseif op == 'tombstone' then
 else
     return redis.error_reply('unsupported session operation')
 end
-if op == 'read' or op == 'stage' or incoming.touch then
+if op == 'stage' or incoming.touch then
     state.last_access = now
 end
 state.epoch = ARGV[3]
-redis.call('SET', KEYS[1], cjson.encode(state), 'EX', ARGV[4])
+-- Republishing a snapshot or reconciling a draft is passive. Keep the deadline
+-- anchored to interaction, live work or the latest committed conversation event.
+-- An idle read may reconstruct a view for its caller without recaching it.
+local activity = tonumber(redis.call('GET', KEYS[2])) or 0
+local last = math.max(state.last_access, activity, now - incoming.last_activity_age)
+local remaining = math.ceil((tonumber(ARGV[4]) - math.max(0, now - last)) * 1000)
+if remaining > 0 then
+    redis.call('SET', KEYS[1], cjson.encode(state), 'PX', remaining)
+end
 return cjson.encode(state)

@@ -164,7 +164,12 @@ bounded context, pending display state and transient progress. Hydrate from a
 PostgreSQL snapshot plus journal tail. Distinguish provisional messages/tokens
 from accepted durable records, and reject stale cache writes by cursor/generation.
 
-A configurable idle TTL removes cached state. PostgreSQL dirty records drive
+A configurable idle TTL removes cached state after activity stops. Accepted messages,
+explicit activity signals and bounded maintenance over live PostgreSQL worker leases
+renew existing keys. Passive history/status/SSE reads, pending approvals and expired
+leases alone do not renew them. A small Redis activity marker avoids reading the
+transcript for retention updates.
+PostgreSQL dirty records drive
 snapshot/cleanup work even if Redis has disappeared. Cleanup cannot delete a
 newer session generation. Reconnects load the same conversation from durable
 records; Redis grants no permissions and owns no execution leases.

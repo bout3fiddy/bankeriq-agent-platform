@@ -30,7 +30,11 @@ from agent_runtime.runs.context import RunContext
 from agent_runtime.tools.bindings import ExecutionOutput, ToolBinding
 from agent_runtime.tools.gateway import ToolGateway
 from agent_runtime.tools.registry import ToolRegistry
-from bankeriq_agent_platform.azure.authentication import EntraAuthentication, synthetic_input
+from bankeriq_agent_platform.azure.authentication import (
+    EntraAuthentication,
+    operator_test_input,
+    synthetic_input,
+)
 from bankeriq_agent_platform.azure.connections import token_connection
 from bankeriq_agent_platform.runtime import compose_queued_runtime
 from bankeriq_agent_platform.sessions.cache import RedisSessions
@@ -38,6 +42,7 @@ from bankeriq_agent_platform.sessions.service import SessionService
 from bankeriq_agent_platform.storage.connections import PrimaryConnections
 from bankeriq_agent_platform.storage.postgres import CommitUnknownError, PostgresStateStore
 from bankeriq_agent_platform.storage.prompts import PostgresPromptResolver
+from bankeriq_agent_platform.telemetry import configure, emit
 from bankeriq_agent_platform.workers.api import create_async_app
 from bankeriq_agent_platform.workers.asynchronous import AsyncWorker
 from bankeriq_agent_platform.workers.coordinator import QueuedCoordinator
@@ -148,8 +153,16 @@ async def api(runtime, sessions, tenant, users):
 
         return RunContext(principal.tenant_id, principal.user_id, chat, run)
 
+    mode = os.environ.get("INPUT_POLICY", "fixtures")
+
+    if mode not in {"fixtures", "operator_test"}:
+        raise ValueError("unsupported input policy")
+
     app = create_async_app(
-        runtime, sessions, authenticate=authenticate, prepare_input=synthetic_input
+        runtime,
+        sessions,
+        authenticate=authenticate,
+        prepare_input=operator_test_input if mode == "operator_test" else synthetic_input,
     )
 
     async def conversation(request):
@@ -180,6 +193,10 @@ async def api(runtime, sessions, tenant, users):
         await user(request)
         return JSONResponse({"report": "synthetic report fixture"})
 
+    async def inspect(request):
+        context = await authenticate(request)
+        return JSONResponse(await asyncio.to_thread(sessions.inspect, context))
+
     async def health(request):
         return JSONResponse({"ready": True})
 
@@ -187,6 +204,7 @@ async def api(runtime, sessions, tenant, users):
         [
             Route("/conversations", conversation, methods=["POST"]),
             Route("/status", status),
+            Route("/inspect", inspect),
             Route("/reports/synthetic", report),
             Route("/health", health),
         ]
@@ -197,6 +215,7 @@ async def api(runtime, sessions, tenant, users):
 
 
 async def main():
+    configure()
     role = os.environ["RUNTIME_ROLE"]
     tenant = os.environ["AZURE_TENANT_ID"]
     users = frozenset(json.loads(os.environ["ALLOWED_USERS"]))
@@ -288,12 +307,15 @@ async def main():
                 socket_timeout=2,
                 max_connections=8,
             )
-            cache = RedisSessions("", client=redis, ttl_seconds=120)
+            cache = RedisSessions(
+                "", client=redis, ttl_seconds=int(os.environ.get("SESSION_IDLE_SECONDS", "1800"))
+            )
             stack.callback(cache.close)
             sessions = SessionService(store, cache)
 
         if role == "api":
             assert sessions is not None
+            emit("runtime.ready")
             await api(runtime, sessions, tenant, users)
             return
 
@@ -309,13 +331,22 @@ async def main():
 
         async def maintenance():
             assert sessions is not None
+            active_after = ("", "")
 
             while not stop.is_set():
                 with suppress(psycopg.OperationalError, CommitUnknownError):
+
+                    # Tool identities need no Redis access. The coordinator uses
+                    # live PostgreSQL leases to renew existing views during long
+                    # calls; a completed sweep restarts from the first scope.
+                    _, next_scope = await asyncio.to_thread(
+                        sessions.keep_active, after=active_after
+                    )
+                    active_after = next_scope or ("", "")
                     await asyncio.to_thread(sessions.project_due, limit=10)
 
                 with suppress(TimeoutError):
-                    await asyncio.wait_for(stop.wait(), 1)
+                    await asyncio.wait_for(stop.wait(), min(1, sessions.cache.ttl_seconds / 3))
 
         tasks = [
             AsyncWorker(
@@ -335,8 +366,9 @@ async def main():
         if sessions is not None:
             tasks.append(maintenance())
 
+        emit("runtime.ready")
         await asyncio.gather(*tasks)
-        print("worker drained", flush=True)
+        emit("runtime.drained")
 
 
 if __name__ == "__main__":

@@ -2,11 +2,13 @@
 
 import asyncio
 from contextlib import suppress
+from time import monotonic
 
 import psycopg
 
 from agent_runtime.storage.interface import StateConflictError
 from bankeriq_agent_platform.storage.postgres import CommitUnknownError
+from bankeriq_agent_platform.telemetry import emit
 
 from .queue import ApprovalExpiredError, Lease
 from .reasons import FailureReason
@@ -66,6 +68,8 @@ class AsyncWorker(Worker):
 
     async def execute_async(self, lease: Lease) -> None:
         lost = asyncio.Event()
+        started = monotonic()
+        emit("worker.claimed", lease.context, queue=self.queue_name, attempt=lease.attempt)
 
         async def heartbeat() -> None:
             while True:
@@ -75,6 +79,7 @@ class AsyncWorker(Worker):
                     await asyncio.to_thread(self.queue.renew, lease, seconds=self.lease_seconds)
                 except psycopg.Error, StateConflictError, CommitUnknownError:
                     lost.set()
+                    emit("worker.lease_lost", lease.context, queue=self.queue_name)
                     return
 
         renewal = asyncio.create_task(heartbeat())
@@ -124,6 +129,8 @@ class AsyncWorker(Worker):
                 if lost.is_set():
                     return
 
+                emit("worker.started", lease.context, queue=self.queue_name, attempt=lease.attempt)
+
                 try:
                     outcome = (
                         await handler.async_execute(lease.context, prepared)
@@ -132,6 +139,7 @@ class AsyncWorker(Worker):
                     )
                 except Exception:
                     if replay_safe(prepared, handler):
+                        emit("worker.retry", lease.context, queue=self.queue_name)
                         await asyncio.to_thread(
                             self.queue.pause,
                             lease,
@@ -139,12 +147,20 @@ class AsyncWorker(Worker):
                             handler=handler,
                         )
                     else:
+                        emit("worker.uncertain", lease.context, queue=self.queue_name)
                         await asyncio.to_thread(self.queue.reconcile, lease)
 
                     return
 
             if not lost.is_set():
                 await asyncio.to_thread(self.queue.settle, lease, outcome)
+                emit(
+                    "worker.settled",
+                    lease.context,
+                    queue=self.queue_name,
+                    attempt=lease.attempt,
+                    elapsed_ms=round((monotonic() - started) * 1000),
+                )
         except ApprovalExpiredError:
             await asyncio.to_thread(self.queue.reject, lease, FailureReason.APPROVAL_EXPIRED)
         except StateConflictError, CommitUnknownError, psycopg.OperationalError:

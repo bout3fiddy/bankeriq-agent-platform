@@ -430,9 +430,14 @@ The numbered lifecycle below describes the configured application lifecycle.
 4. Discover idle/dirty work from indexed PostgreSQL records. Redis expiry events
    are only hints. A snapshot reads a fixed committed cursor and advances that
    cursor atomically; activity after that cursor remains pending for the next batch.
-5. Give active Redis keys a sliding 30-minute TTL as an initial setting. On explicit
-   idle cleanup, delete only the cache generation/cursor observed by that cleanup
-   job; new activity prevents the deletion. Early eviction is safe because the
+5. Give active Redis keys a sliding 30-minute TTL as an initial setting. Accepted
+   messages and explicit activity signals renew retention. Passive history/status/SSE
+   reads do not renew it. Bounded maintenance also renews existing
+   keys while PostgreSQL workers hold live leases. A disconnected browser therefore
+   does not evict a long-running tool's view. Expired leases and approval waits alone
+   do not keep keys alive. Schedule a complete maintenance sweep within the TTL.
+   On explicit idle cleanup, delete only the generation/cursor observed by that cleanup
+   job; recent interaction or a live lease prevents deletion. Early eviction is safe because the
    journal survives. Waiting tools and approvals survive session expiry.
 6. Retain journal data until snapshot/history durability and all run, delivery,
    deduplication and audit retention needs are satisfied. Deletion is bounded and

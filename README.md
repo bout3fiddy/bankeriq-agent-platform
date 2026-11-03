@@ -59,6 +59,10 @@ supported model with available quota.
 The [Redis session and history adapter](src/bankeriq_agent_platform/sessions/README.md)
 adds disposable UI views, provisional input reconciliation, durable acceptance,
 bounded asynchronous history projection and optional immutable prompt caching.
+Accepted messages, explicit activity signals and live-worker maintenance renew Redis
+retention. Passive history/status/SSE reads allow idle expiry; PostgreSQL retains the
+conversation. The [persistent test deployment](infra/azure/LIVE.md) supports operator chat
+and metadata-only backend inspection.
 The [durable synthetic workers](src/bankeriq_agent_platform/workers/README.md) add
 leased execution, restart reconstruction, atomic settlement and bounded maintenance.
 Worker recovery also exposes scoped failure inspection, bounded crash recovery and

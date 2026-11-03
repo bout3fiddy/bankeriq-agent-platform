@@ -1,3 +1,20 @@
+variable "interactive" {
+  type    = bool
+  default = false
+}
+
+variable "session_idle_seconds" {
+  type    = number
+  default = 1800
+  validation {
+    condition = (
+      var.session_idle_seconds >= 1 && var.session_idle_seconds <= 86400 &&
+      floor(var.session_idle_seconds) == var.session_idle_seconds
+    )
+    error_message = "Use an integral session idle timeout from one second to one day."
+  }
+}
+
 variable "prefix" {
   type = string
 }

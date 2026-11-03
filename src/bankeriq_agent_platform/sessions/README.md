@@ -106,13 +106,40 @@ time. This prevents a dead cache from starving later history writes. Redis repai
 also discovers generation changes and tombstones from PostgreSQL. Direct admission
 refreshes immediately; other transitions refresh on read or explicit projection.
 
-Keys have a sliding 30-minute TTL. Background publication preserves last user access.
+Keys have a configurable 30-minute idle TTL, shared by explicit idle cleanup. Accepted
+messages and authenticated POST /activity signals renew existing history/progress keys.
+Passive history/status reads, open SSE streams and background projection do not renew
+activity. A small generation-scoped marker records explicit activity without decoding
+the transcript. Repeated user signals coalesce within 15 seconds. A future UI can signal
+a deliberate open, typing or history action; it must not send periodic idle heartbeats.
+
+`SessionService.keep_active()` renews existing keys for conversations with unexpired
+PostgreSQL worker leases, including a waiting parent whose tool is still running.
+For example, a 45-minute tool can retain a 30-minute cache through periodic renewal
+even after its browser disconnects. It loads only scoped lease/conversation metadata;
+missing cache payloads are rebuilt by the next ordinary read. Ready jobs, approval waits,
+cancelled work and expired leases alone do not extend retention. After the last user
+interaction or live-work renewal, finite TTLs continue counting down. Redis outage or memory
+eviction can still remove cached data; accepted work remains recoverable from PostgreSQL.
+
+Schedule bounded maintenance pages outside core runtime logic, with a complete sweep
+well inside the configured TTL. For example, call `keep_active(limit=100, after=cursor)`
+each tick, pass its returned cursor to the next tick and restart at `("", "")` after
+`None`. The Azure coordinator loop does this every second, followed by `project_due()`;
+tool identities need no Redis access. Larger deployments must size the page rate to
+their active conversation count. No timer or thread is allocated per idle conversation.
+
+Background publication preserves the activity deadline, including after cache loss.
+An expired view is reconstructed for a passive reader without being cached again;
+a recent interaction, live lease or durable event permits caching within its TTL.
 Run due projection before idle cleanup to materialise the final idle window.
 Explicit cleanup refuses a live conversation whose snapshot cursor still trails its head. The
 bounded cleanup scan returns `(removed, next_scope)`; pass `after=next_scope` until
 it returns `None`, then start the next sweep from the beginning. Keyset pagination
 advances past missing Redis keys. Cleanup checks both primary inactivity and Redis
-access time, epoch, cursor and generation, so recent reads/new turns prevent removal.
+access time, the activity marker, epoch, cursor and generation. A live worker lease or
+recent explicit interaction/new turn prevents removal. The Azure harness relies on TTL expiry;
+its maintenance loop does not schedule explicit idle cleanup.
 TTL eviction can happen earlier; retained PostgreSQL events still recover the view.
 
 No journal pruning is implemented. Removal requires durable page/snapshot coverage,
@@ -190,9 +217,37 @@ Progress uses a separate Redis key scoped by recovery and deletion generation. I
 SSE metadata polls never deserialize the cached transcript or reconstruct a checkpoint.
 Durable history remains cursor-paginated; child status and separate delivery metadata
 come from primary reads. Idle cleanup evicts the history view; the progress key expires
-on its independent TTL. Deleted/old-generation keys cannot be served by current readers.
+on its TTL after activity stops. Explicit activity and live-lease maintenance extend
+both existing payloads through Redis expiry commands. Deleted/old-generation keys cannot
+be served by current readers.
 
 [Group 08 measurements](../../../build-order/08-completed-recovery-and-scaling-validation.md)
 compare fixed-size progress updates at 10 and 3,000 retained turns, including SQL reads,
 WAL, Redis traffic, CPU and memory. This does not bound durable database growth; storage
 retention and capacity controls remain planned in group 13.
+
+## Activity retention evidence (3 November 2026)
+
+Local integration coverage uses PostgreSQL 17 and Redis 7. It exercises retention across
+multiple one-second cache lifetimes while an independent tool process renews its lease,
+expiry after that process is killed, passive SSE/status reads through expiry, explicit
+activity, idle-cleanup races, bounded pagination, Redis outage, tenant checks and recovery
+fencing. Completed, cancelled, expired, approval-waiting and deleted work stop renewal.
+Passive history reads and background publication cannot resurrect an idle cache.
+Accepted history remains reconstructable after expiry. The earlier 488-test iteration
+renewed on passive progress polls; the current implementation corrects that behavior.
+Current executed checks and hosted evidence are recorded in the
+[persistent deployment guide](../../../infra/azure/LIVE.md).
+
+```sh
+docker run -d --name bankeriq-live-test-postgres \
+  -e POSTGRES_PASSWORD=synthetic -p 127.0.0.1:55439:5432 postgres:17
+docker run -d --name bankeriq-live-test-redis -p 127.0.0.1:56389:6379 redis:7
+docker exec bankeriq-live-test-postgres pg_isready -U postgres
+export BANKERIQ_TEST_POSTGRES_DSN='postgresql://postgres:synthetic@127.0.0.1:55439/postgres'
+export BANKERIQ_TEST_REDIS_URL='redis://127.0.0.1:56389/0'
+uv run pytest tests/integration/test_session_retention.py -q
+uv run python scripts/verify.py
+git diff --check
+docker rm -f -v bankeriq-live-test-postgres bankeriq-live-test-redis
+```

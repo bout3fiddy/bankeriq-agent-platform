@@ -107,3 +107,17 @@ def synthetic_input(context: object, text: str) -> str:
         raise ValueError("only the synthetic pilot input is permitted")
 
     return text
+
+
+def operator_test_input(context: object, text: str) -> str:
+    """Accept bounded text in the explicitly enabled, operator-only test environment.
+
+    The deploying user authorises non-sensitive conversations. This is an opt-in
+    test policy, with Entra identity/user allowlisting enforced before this call;
+    it provides no automated sensitivity classification for production input.
+    """
+
+    if not text.strip() or len(text.encode()) > 8192 or "\x00" in text:
+        raise ValueError("invalid operator test message")
+
+    return text

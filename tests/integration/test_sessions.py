@@ -90,7 +90,7 @@ def work(dsn: str, context: RunContext) -> dict[str, Any]:
 def age(dsn: str, context: RunContext) -> None:
     with psycopg.connect(dsn) as connection:
         connection.execute(
-            "UPDATE conversations SET last_activity=now()-interval '16 minutes' "
+            "UPDATE conversations SET last_activity=now()-interval '31 minutes' "
             "WHERE tenant_id=%s AND conversation_id=%s",
             (context.tenant_id, context.conversation_id),
         )
@@ -313,6 +313,7 @@ def test_idle_cleanup_and_reads_racing_new_turn(
     cached = json.loads(cast(bytes, sessions.cache.client.get(key)))
     cached["last_access"] = 0
     sessions.cache.client.set(key, json.dumps(cached))
+    sessions.cache.client.set(key + ":activity:0", "0", ex=1800)
     assert sessions.cleanup_idle()[0] == 1
     assert sessions.cache.apply("peek", sessions.history.head(context)) is None
     assert len(sessions.read(context)["events"]) == 2
@@ -466,6 +467,7 @@ def test_byte_time_triggers_page_bounds_and_sliding_ttl(
     view = sessions.read(context)
     key = sessions.cache.key(sessions.history.head(context))
     sessions.cache.client.expire(key, 2)
+    sessions.record_activity(context)
     sessions.read(context)
     assert cast(int, sessions.cache.client.ttl(key)) > 1700
     assert len(view["events"]) <= 5
