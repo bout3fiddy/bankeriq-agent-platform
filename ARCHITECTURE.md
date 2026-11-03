@@ -6,7 +6,7 @@ This document specifies the target design. The
 [PostgreSQL journal and synthetic job-record adapter](src/bankeriq_agent_platform/storage/README.md)
 is implemented and locally validated; queued execution, Redis and horizontal
 scaling remain future work. The completed runtime milestone at
-`2fa515b` and local container evidence remain in [build-order.md](build-order.md).
+`2fa515b` and local container evidence remain in [build-order/README.md](build-order/README.md).
 
 ## Runtime and model roles
 
@@ -849,7 +849,7 @@ boundary from `Coordinator._run_loop`, preserving existing behaviour with the
 in-memory profile. Add an async model adapter and queued tool
 dispatcher, and adapt `ContinuationHandler` to durable result groups. Do not create
 a generic workflow framework or move SDKs, connection pools, timers or worker
-scheduling into core types. Each group in [build-order.md](build-order.md) includes
+scheduling into core types. Each group in [build-order/README.md](build-order/README.md) includes
 its own implementation, tests and evidence before the next integration begins.
 
 ## Browser chat interface

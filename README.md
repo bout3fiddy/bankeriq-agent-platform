@@ -25,7 +25,7 @@ startup settings and optional SDK dependencies.
 
 The initial runtime scope is complete as of 2 November 2026, including live
 Foundry inference with synthetic tools and in-memory state. The
-[build order](build-order.md) separates this completed milestone
+[build order](build-order/README.md) separates this completed milestone
 from the planned infrastructure phase and later runtime features.
 
 This repository contains design documentation, core runtime data types, a

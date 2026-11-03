@@ -4,7 +4,7 @@ Design updated 2 November 2026. This catalogue describes target responsibilities
 the PostgreSQL journal, synthetic job records and shared prompt system are implemented; Redis
 and asynchronous worker integrations remain planned.
 Current runtime implementation and test coverage are tracked in the
-[build order](build-order.md). Several components can
+[build order](build-order/README.md). Several components can
 share an application. Selected Azure services and state ownership are recorded in
 [ARCHITECTURE.md](ARCHITECTURE.md#selected-state-and-execution-services).
 

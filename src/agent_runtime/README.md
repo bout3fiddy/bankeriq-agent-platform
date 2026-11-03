@@ -39,7 +39,7 @@ These are logical boundaries, not a decision to deploy separate services.
 Durability requires both persisted state and execution/recovery logic.
 
 For this branch, tool execution and durable recovery are mocked dependencies.
-See the root [build order](../../build-order.md) for the implementation sequence.
+See the root [build order](../../build-order/README.md) for the implementation sequence.
 
 ## Implemented data types
 

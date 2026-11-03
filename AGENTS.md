@@ -12,6 +12,9 @@
 - Read README.md for current scope, ARCHITECTURE.md for the proposed design,
   components.md for logical component responsibilities, and STYLEGUIDE.md before
   changing code.
+- For roadmap work, read [build-order/AGENTS.md](build-order/AGENTS.md) and the
+  [build-order index](build-order/README.md), then the selected task-group file.
+  Keep group statuses, evidence and index links aligned when work changes.
 - Prefer focused, incremental changes and justify additional abstractions.
 - Use descriptive names and blank lines between logical stages.
 - Keep authored source, configuration and documentation lines at 100 characters

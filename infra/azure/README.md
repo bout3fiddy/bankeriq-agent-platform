@@ -248,7 +248,7 @@ durable journal. Idle cleanup can discard Redis before snapshot completion becau
 the journal still reconstructs accepted turns. The
 [architecture](../../ARCHITECTURE.md#selected-state-and-execution-services) specifies
 ownership, async execution, proposed sizing and failure gates; the
-[build order](../../build-order.md) tracks each integration separately.
+[build order](../../build-order/README.md) tracks each integration separately.
 The self-hosted specialist is deferred. Current tests use synthetic tools and
 mocked continuations, with both in-memory and real local PostgreSQL storage. No additional resources
 are provisioned
