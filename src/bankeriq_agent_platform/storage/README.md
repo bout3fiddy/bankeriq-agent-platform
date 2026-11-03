@@ -203,3 +203,7 @@ settlement/control identities, notifications and capacity indexes. Synchronous
 checkpoint writes reject active worker-managed jobs. In-memory behaviour is unchanged.
 Worker validation and current limits are recorded in its guide and build-order group;
 the dated group-03 evidence above retains its original scope.
+
+Migration 010 adds worker failure reasons, crash accounting, control revisions,
+unknown-effect tracking and audited recovery requests. Current worker interfaces and
+acceptance evidence are documented in the [worker guide](../workers/README.md).

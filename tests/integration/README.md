@@ -67,3 +67,10 @@ unknown commits, strict recovery JSON, compatibility, budgets, waits, capacity,
 restricted outputs and bounded projection maintenance. See the
 [reproduction commands](../../src/bankeriq_agent_platform/workers/README.md).
 These tests run no real model or business-tool calls.
+
+`test_worker_controls.py` separately validates group-06 follow-ups: safe inspection,
+current access/approval checks, audited idempotent commands, rollback and unknown commits,
+repeated fresh-process kills before/after preparation, crash allowance exhaustion,
+independent tenant progress and orderly-drain refunds. Recovery preserves completed
+outcomes, operation identity and budget usage. The tests use the same disposable
+PostgreSQL/Redis configuration as `test_workers.py`.

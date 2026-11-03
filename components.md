@@ -246,3 +246,11 @@ The coordinator selects bounded complete-turn context and blocks oversized infer
 permitted outcomes remain durable and pageable. The
 [worker adapter](src/bankeriq_agent_platform/workers/README.md) implements synthetic
 ownership, retry/wait recovery, atomic settlement and bounded maintenance scheduling.
+
+### Worker recovery controls
+
+The synthetic worker boundary now supplies safe tenant-scoped inspection and audited
+retry/reconciliation commands. Current access, approval, version, replay and budget
+checks gate recovery. Process-loss accounting stops crash loops; orderly drain refunds
+undispatched claims. Unknown effects retain their operation identity when work stops.
+Real model/tool orchestration consumes these controls in group 07.

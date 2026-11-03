@@ -44,6 +44,6 @@ Status: planned. Depends on asynchronous coordinator and tools.
 Completion requires executed failure and load evidence with explicit limits.
 Horizontal worker capacity remains bounded by PostgreSQL and model/tool quotas.
 Include the long-lived workload above, the
-[worker recovery gates](06-in-progress-durable-postgresql-workers.md#remaining-worker-tasks)
+[worker recovery gates](06-completed-durable-postgresql-workers.md#worker-recovery-extensions)
 and the ownership/slow-client gates from
 [asynchronous execution](07-planned-asynchronous-coordinator-and-tools.md).

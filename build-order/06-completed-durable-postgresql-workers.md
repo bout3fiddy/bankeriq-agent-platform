@@ -1,9 +1,8 @@
 # Durable PostgreSQL workers
 
-Status: in-progress. Depends on PostgreSQL records and Redis recovery semantics.
-The implemented scope and validation evidence below are retained. Additional
-worker tasks 8–11 below define the remaining work. They are planned; the existing
-implementation evidence covers tasks 1–7.
+Status: completed. Depends on PostgreSQL records and Redis recovery semantics.
+Tasks 1–11 are implemented and validated. The original tasks 1–7 evidence is
+retained; worker recovery extensions 8–11 have separate acceptance evidence below.
 
 1. **Define serializable recovery state** — Extend the existing storage codec and
    versioned checkpoint records with explicit task kind/version, phase, bounded
@@ -51,9 +50,9 @@ The saved phase determines recovery; a vanished Python stack provides no evidenc
 
 Completion requires one accepted job to recover across worker loss and duplicate
 notifications. Model and tool orchestration remain synthetic until the next group.
-The group also requires the remaining worker tasks and their acceptance gates below.
+The group also requires the worker recovery extensions and acceptance gates below.
 
-## Remaining worker tasks
+## Worker recovery extensions
 
 8. **Expose failure and recovery reasons** — Extend the existing persisted budgets
    and reconciliation with bounded reason codes and allowed recovery actions for
@@ -150,6 +149,54 @@ service-test skips. Lockfile, formatting, lint, readability, JSON style, the
 100-character line limit and type checks passed. `git diff --check` and changed
 documentation file-link checks passed. This evidence predates the subsequent
 user-authorised commit and push.
+
+## Worker recovery follow-up evidence — 3 November 2026
+
+Tasks 8–11 are implemented in `workers/controls.py`, `workers/reasons.py` and the
+existing queue/scheduler, with migration 010. The original tasks 1–7 evidence above
+remains historical. `tests/integration/test_worker_controls.py` adds 30 acceptance
+cases against local PostgreSQL 17.11 and Redis 7.4.12.
+
+- Inspection exposes fixed reasons, operation identity, usage, revision/timeline,
+  uncertainty and eligible actions after current tenant/access checks. Arguments,
+  payloads, credentials and provider errors remain excluded. Handler availability
+  is relative to the inspecting registration, so older workers cannot disable a
+  version that a compatible worker can execute.
+- Recovery commands preserve identities, outcomes and budget usage. Current actor,
+  execution, approval, version and replay checks precede locked revision validation.
+  Audit decisions and state changes commit together. Matching requests recover the
+  original receipt; conflicting IDs reject. Stale and denied requests have fixed
+  audited decisions. Database retries do not repeat policy or provider I/O.
+- Repeated fresh-process kills before and after preparation exhaust the durable
+  allowance and retain a reason. Another tenant continues executing. Expired work
+  is swept even without a compatible handler; unavailable/stopped work holds no live
+  execution lease. Orderly drain refunds undispatched reservations once, including
+  lost acknowledgements; prepared work cannot claim a refund.
+- Retry preserves approval expiry and explicit unknown-effect state. Revoked
+  permission, approval or replay policy blocks execution after an accepted control.
+  Policy callbacks receive detached intent snapshots and cannot change saved
+  arguments. Reconciliation schedules lookup under the original operation ID.
+  Completed/cancelled/terminal work cannot reopen and no control resets budgets.
+- Tests cover simultaneous duplicate/conflicting/stale requests, lost claim/sweep/
+  control acknowledgements, rollback, restored timelines, revoked approvals and
+  unknown effects. An upgrade from migration 009 preserves accepted work and treats
+  legacy ambiguous retries conservatively, preventing unsafe replay.
+
+Reproduction uses the existing disposable-container commands in the
+[worker guide](../src/bankeriq_agent_platform/workers/README.md):
+
+```sh
+uv run pytest -q tests/integration/test_worker_controls.py
+uv run python scripts/verify.py
+git diff --check
+```
+
+Final verification passed: 401 tests, including 47 original worker cases and
+30 recovery-control cases, with no service-test skips. Lockfile, formatting,
+lint, readability, JSON/100-character checks and types passed. The PostgreSQL
+rollback snapshot helper now orders by a unique identity/sequence prefix;
+this removes row-order ambiguity while retaining full rollback comparisons.
+`git diff --check` and updated documentation links/anchors passed.
 
 ## Remaining limits
 

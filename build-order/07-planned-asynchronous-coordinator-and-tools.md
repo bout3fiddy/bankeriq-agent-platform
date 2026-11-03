@@ -30,7 +30,7 @@ milestone; parallel tool execution has moved out of follow-up scope.
    reconciliation; late results cannot reopen the parent or create a continuation.
 4. **Integrate worker recovery controls** — Use the failure reasons, crash limits
    and authorised recovery controls from the
-   [worker group](06-in-progress-durable-postgresql-workers.md#remaining-worker-tasks)
+   [worker group](06-completed-durable-postgresql-workers.md#worker-recovery-extensions)
    for model-step and tool jobs. Carry their safe status into run inspection and
    continuation decisions; preserve child ownership, committed outcomes and the
    worker's operation identity across an authorised recovery.

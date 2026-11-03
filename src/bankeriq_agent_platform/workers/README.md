@@ -59,8 +59,9 @@ The scheduler retries safe execution failures with exponential backoff, starting
 one second and capped at 300 seconds. `pause()` also supports explicit retry and
 approval deadlines up to 30 days. Approval binds the exact saved state and version;
 matching decision retries are idempotent. Every resumed execution checks current
-access again. Expired approvals and exhausted budgets terminate the run and release
-the next accepted turn. The initial run budget cannot increase in a continuation.
+access again. Expired approvals and exhausted budgets terminate runs with no uncertain effect,
+releasing the next accepted turn. Unknown effects remain stopped and inspectable.
+The initial run budget cannot increase in a continuation.
 
 Unknown unsafe outcomes enter `reconcile`. A registered reconciliation callback
 looks up the same operation ID using fresh provider dependencies. It may return a
@@ -133,6 +134,80 @@ docker rm -f bankeriq-workers-postgres bankeriq-workers-redis
 ```
 
 Executed counts and service versions are recorded in the
-[group evidence](../../../build-order/06-in-progress-durable-postgresql-workers.md).
+[group evidence](../../../build-order/06-completed-durable-postgresql-workers.md).
 HA failover, restoration, production authentication/network isolation, throughput SLOs,
 cloud hosting, semantic compaction and real asynchronous orchestration remain deferred.
+
+## Failure inspection and recovery controls
+
+Migration 010 adds fixed failure codes, process-loss counts, a control revision,
+explicit unknown-effect state and an immutable recovery-command audit. The revision
+changes for execution/control transitions; heartbeats do not change it. The database
+sweep accounts for expired claims independently of installed handler versions. Each
+lost process consumes its existing durable allowance, including loss before dispatch.
+Unavailable and stopped jobs occupy no live execution lease.
+
+`RecoveryControls` accepts a verified `RecoveryActor`, a trusted target `RunContext`
+and an application `authorize(actor, context, action)` callback. Tenant scope is checked
+before reading a job. Current inspection permission gates `inspect()` and `decisions()`.
+Inspection returns operation identity, fixed status/reason, counters, revision,
+recovery generation, unknown-effect flag and eligible actions. It omits arguments,
+results, provider errors and credentials. Handler unavailability is reported relative
+to the inspecting deployment; an older deployment cannot globally disable a version
+that another compatible worker can execute.
+
+For example, application composition can authorise an operator with a live policy:
+
+```python
+controls = RecoveryControls(queue, handlers, authorize=current_operator_policy)
+view = controls.inspect(actor, context, job_id)
+request = ControlRequest(
+    request_id="retry-request-17",
+    action="retry",
+    expected_revision=view.revision,
+    recovery_id=view.recovery_id,
+)
+receipt = controls.apply(actor, context, job_id, request)
+```
+
+The imports are from `bankeriq_agent_platform.workers.controls`. Authentication supplies
+`actor`; the request body cannot choose its identity or grant permissions. The target
+context retains the conversation owner's identity. Enterprise authentication and an
+operator UI remain outside this synthetic group.
+
+Eligible `retry` commands make recoverable ready/retry/stopped work due now. They
+preserve the operation identity, arguments, attempt usage, run budget and unknown-effect
+flag. Unknown effects require saved and current replay permission or compatible
+idempotency. A job already in reconciliation cannot switch to execution through retry.
+Eligible `reconcile` commands schedule the registered lookup for the same operation ID;
+they never execute the operation. Lookup requires unused run allowance even when its
+execution attempt limit has been reached. Completed/cancelled/terminal work cannot
+reopen, and these controls provide no budget-reset or budget-increase action.
+
+Each command rechecks operator access, current execution permission, handler version,
+current approval policy and database-time approval expiry. `Handler.approval_valid`
+lets composition check current approval revocation against the saved context/arguments.
+Retries retain the original persisted approval deadline. Workers repeat those checks
+before dispatch or lookup, so accepting a command grants no lasting permission.
+Callbacks receive detached intent snapshots. Mutation rejects the policy result and
+cannot change saved arguments. Callbacks execute outside database transactions and are
+not repeated by database retries; locked revision/timeline checks reject changed state
+after the policy lookup.
+
+The command's actor, request identity, action, fingerprint and fixed decision commit
+with its state change. Same-ID retries return the original receipt while current
+operator access permits that read. Conflicting reuse rejects; stale or denied new
+requests record safe decisions. `decisions(..., limit=20)` reads a bounded audit page.
+Unknown commit recovery uses the same primary-side command identity and never repeats
+an external operation. Restricted data and exception text do not enter these records.
+
+Shutdown refunds a claim only when its current owner has not started dispatch or
+lookup. The refund is idempotent and does not record a process loss. In-flight handlers
+continue draining with heartbeats. A hard kill follows normal crash accounting.
+Unknown effects remain explicit when access, approval or budgets stop progress; the
+worker preserves their operation identity instead of treating exhaustion as a known
+external failure. Stopped work permits other eligible conversations/tenants to progress.
+
+The upgrade from migration 009 conservatively retains uncertainty for legacy retry
+phases whose external outcome cannot be established. No migration resets usage or
+changes the saved operation identity. Local upgrade acceptance exercises that path.

@@ -75,6 +75,10 @@ class Handler:
     and returns a Completion. authorize runs again after every wait and recovery.
     reconcile looks up that same operation ID and returns a proven result or None;
     None leaves the job in reconciliation without executing it again.
+    approval_valid(context, state) checks the current approval/revocation source;
+    for example, lambda context, state: approvals.active(state.operation_id).
+    Omitting it declares that no additional provider approval is required; the
+    queue still checks any persisted approval deadline before dispatch and lookup.
     """
 
     authorize: Callable[[RunContext, Recovery], bool]
@@ -82,6 +86,7 @@ class Handler:
     idempotent: bool = False
     replay_allowed: bool = False
     reconcile: Callable[[RunContext, Recovery], Completion | None] | None = None
+    approval_valid: Callable[[RunContext, Recovery], bool] = lambda context, state: True
 
 
 class Handlers:
@@ -99,3 +104,32 @@ def replay_safe(state: Recovery, handler: Handler) -> bool:
     return (state.idempotent and handler.idempotent) or (
         state.replay_allowed and handler.replay_allowed
     )
+
+
+def permitted(check: Callable[[], bool]) -> bool:
+    """Policy/client exceptions produce a fixed denial without exposing their text."""
+
+    try:
+        return check()
+    except Exception:
+        return False
+
+
+def policy_permitted(
+    policy: Callable[[RunContext, Recovery], bool],
+    context: RunContext,
+    state: Recovery,
+) -> bool:
+    """Give injected policy code a detached snapshot of the exact saved intent."""
+
+    # Recovery is frozen, but nested JSON dictionaries can still be mutated.
+    # A policy that changes {"amount": 2} to {"amount": 3} must neither alter
+    # the saved arguments nor authorize a different operation accidentally.
+    # Compare canonical JSON after the callback and collapse failures to denial.
+    encoded = strict_json(state.encode())
+    candidate = Recovery.model_validate_json(encoded)
+
+    try:
+        return policy(context, candidate) and strict_json(candidate.encode()) == encoded
+    except Exception:
+        return False

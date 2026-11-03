@@ -60,6 +60,8 @@ adds disposable UI views, provisional input reconciliation, durable acceptance,
 bounded asynchronous history projection and optional immutable prompt caching.
 The [durable synthetic workers](src/bankeriq_agent_platform/workers/README.md) add
 leased execution, restart reconstruction, atomic settlement and bounded maintenance.
+Worker recovery also exposes scoped failure inspection, bounded crash recovery and
+idempotent operator controls with durable audit decisions.
 Local tests use real PostgreSQL/Redis and independent worker processes. Real
 asynchronous coordinator/tool execution remains the next group.
 

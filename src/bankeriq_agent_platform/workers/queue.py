@@ -13,6 +13,7 @@ from agent_runtime.storage.interface import Checkpoint, StateConflictError
 from bankeriq_agent_platform.storage.codec import fingerprint, plain
 from bankeriq_agent_platform.storage.postgres import Database, PostgresStateStore
 
+from .reasons import FailureReason
 from .state import Completion, Handler, Handlers, Recovery, replay_safe
 
 
@@ -25,6 +26,11 @@ class Lease:
     checkpoint: Checkpoint
     state: Recovery
     attempt: int
+    effect_pending: bool = False
+
+
+class ApprovalExpiredError(StateConflictError):
+    """An approval expired at the final database-time dispatch check."""
 
 
 class PostgresQueue:
@@ -103,6 +109,7 @@ class PostgresQueue:
         if not 0 < seconds <= 3600:
             raise ValueError("lease duration must be in (0, 3600]")
 
+        self.recover_expired(queue)
         versions = [version for kind, version in handlers.entries if kind == queue]
 
         if not versions:
@@ -150,9 +157,8 @@ class PostgresQueue:
                 "AND busy.operation=j.operation AND busy.status='leased' "
                 "AND busy.lease_expiry>clock_timestamp()) < %s "
                 "AND r.active AND c.active_run_id=j.run_id "
-                "AND ((j.status IN ('ready','retry','reconcile', "
-                "'approval') AND j.due_at<=clock_timestamp()) OR "
-                "(j.status='leased' AND j.lease_expiry<=clock_timestamp())) "
+                "AND j.status IN ('ready','retry','reconcile','approval') "
+                "AND j.due_at<=clock_timestamp() "
                 "ORDER BY j.due_at,j.job_id LIMIT 64 FOR UPDATE OF c SKIP LOCKED",
                 (queue, versions, limits["tenant_concurrency"]),
             ).fetchall()
@@ -182,9 +188,8 @@ class PostgresQueue:
 
                 row = self._row(connection, context, candidate["job_id"])
                 eligible = connection.execute(
-                    "SELECT ((status IN ('ready','retry','approval','reconcile') "
-                    "AND due_at<=clock_timestamp()) "
-                    "OR (status='leased' AND lease_expiry<=clock_timestamp())) AS ok FROM jobs "
+                    "SELECT (status IN ('ready','retry','approval','reconcile') "
+                    "AND due_at<=clock_timestamp()) AS ok FROM jobs "
                     "WHERE tenant_id=%s AND conversation_id=%s AND job_id=%s",
                     (*self.store._scope(context), row["job_id"]),
                 ).fetchone()
@@ -215,9 +220,14 @@ class PostgresQueue:
                     continue
 
                 if state.phase == "reconcile" and handler.reconcile is None:
+                    self._stop(connection, context, row["job_id"], FailureReason.LOOKUP_UNAVAILABLE)
                     continue
 
-                if state.phase == "dispatch" and not replay_safe(state, handler):
+                if (
+                    row["effect_pending"]
+                    and state.phase != "reconcile"
+                    and not replay_safe(state, handler)
+                ):
                     self._park(connection, context, row["job_id"], state, "reconcile")
                     continue
 
@@ -236,15 +246,18 @@ class PostgresQueue:
                 ).rowcount
 
                 if not budget:
-                    if state.phase != "reconcile":
-                        self._finish_exhausted(connection, context, row["job_id"])
-
+                    self._finish_exhausted(
+                        connection,
+                        context,
+                        row["job_id"],
+                        reason=FailureReason.RUN_BUDGET_EXHAUSTED,
+                    )
                     continue
 
                 connection.execute(
                     "UPDATE jobs SET status='leased', attempt=attempt+1, lease_owner=%s, "
                     "lease_expiry=clock_timestamp()+%s*interval '1 second', "
-                    "ownership_token=ownership_token+1 WHERE tenant_id=%s "
+                    "ownership_token=ownership_token+1, failure_reason='none' WHERE tenant_id=%s "
                     "AND conversation_id=%s AND job_id=%s",
                     (owner, seconds, *self.store._scope(context), row["job_id"]),
                 )
@@ -256,11 +269,146 @@ class PostgresQueue:
                     checkpoint,
                     state,
                     row["attempt"] + 1,
+                    row["effect_pending"],
                 )
 
             return None
 
         return self.store._retry(transaction)
+
+    def recover_expired(self, queue: str) -> None:
+        """Account for lost processes even when this deployment lacks their handler."""
+
+        def transaction(connection: Database) -> None:
+            self.store._generation(connection)
+            rows = connection.execute(
+                "SELECT j.tenant_id,j.conversation_id,j.run_id,j.job_id,c.user_id "
+                "FROM jobs j JOIN conversations c USING (tenant_id,conversation_id) "
+                "WHERE operation=%s AND recovery IS NOT NULL AND status='leased' "
+                "AND lease_expiry<=clock_timestamp() "
+                "AND NOT c.deleted ORDER BY lease_expiry LIMIT 64 FOR UPDATE OF c SKIP LOCKED",
+                (queue,),
+            ).fetchall()
+
+            for candidate in rows:
+                context = RunContext(
+                    candidate["tenant_id"],
+                    candidate["user_id"],
+                    candidate["conversation_id"],
+                    candidate["run_id"],
+                )
+                head = self.store._head(connection, context)
+                self.store._load(connection, context, head)
+                row = self._row(connection, context, candidate["job_id"])
+
+                # A heartbeat may have won the job lock after the candidate read.
+                # Evaluate expiry again under that lock using database wall time.
+                updated = connection.execute(
+                    "UPDATE jobs SET status='ready', lease_expiry=NULL, crash_count=crash_count+1, "
+                    "failure_reason='process_lost' WHERE tenant_id=%s AND conversation_id=%s "
+                    "AND job_id=%s AND status='leased' AND lease_expiry<=clock_timestamp()",
+                    (*self.store._scope(context), row["job_id"]),
+                ).rowcount
+
+                if not updated:
+                    continue
+
+                state = Recovery.decode(row["recovery"])
+
+                if row["attempt"] >= state.attempt_limit:
+                    self._finish_exhausted(connection, context, row["job_id"])
+                else:
+                    budget = connection.execute(
+                        "SELECT worker_attempts>=worker_budget AS exhausted FROM runs "
+                        "WHERE tenant_id=%s AND conversation_id=%s AND run_id=%s",
+                        self.store._key(context),
+                    ).fetchone()
+                    assert budget is not None
+
+                    if budget["exhausted"]:
+                        self._finish_exhausted(
+                            connection,
+                            context,
+                            row["job_id"],
+                            reason=FailureReason.RUN_BUDGET_EXHAUSTED,
+                        )
+
+        self.store._retry(transaction)
+
+    def release(self, lease: Lease) -> None:
+        """Refund an undispatched claim on orderly shutdown, once per ownership token."""
+
+        self._timeline(lease)
+
+        def transaction(connection: Database) -> None:
+            head = self.store._head(connection, lease.context)
+            self.store._load(connection, lease.context, head)
+            row = self._row(connection, lease.context, lease.job_id)
+
+            if row["released_token"] == lease.token:
+                return
+
+            self._fence(connection, lease)
+
+            # Claim 4 reserves attempt 2, but shutdown can arrive before dispatch.
+            # Refund only when prepare/lookup never used token 4. A process that
+            # already contacted a provider must settle, drain, or expire normally.
+            if row["prepared_token"] == lease.token:
+                raise StateConflictError("prepared work cannot refund its execution allowance")
+
+            connection.execute(
+                "UPDATE jobs SET status='ready', attempt=attempt-1, released_token=%s, "
+                "lease_expiry=NULL, failure_reason='none' WHERE tenant_id=%s "
+                "AND conversation_id=%s AND job_id=%s",
+                (lease.token, *self._key(lease)),
+            )
+            connection.execute(
+                "UPDATE runs SET worker_attempts=worker_attempts-1 WHERE tenant_id=%s "
+                "AND conversation_id=%s AND run_id=%s",
+                self.store._key(lease.context),
+            )
+
+        self.store._retry(transaction)
+
+    def begin_lookup(self, lease: Lease) -> None:
+        """Reserve the lookup boundary so draining cannot refund an in-flight lookup."""
+
+        def transaction(connection: Database) -> None:
+            row = self._owned(connection, lease)
+
+            if Recovery.decode(row["recovery"]).phase != "reconcile":
+                raise StateConflictError("lookup requires reconciliation phase")
+
+            if not self._approval_current(connection, lease.context, lease.job_id):
+                raise ApprovalExpiredError("approval expired before lookup")
+
+            connection.execute(
+                "UPDATE jobs SET prepared_token=ownership_token WHERE tenant_id=%s "
+                "AND conversation_id=%s AND job_id=%s",
+                self._key(lease),
+            )
+
+        self.store._retry(transaction)
+
+    def reject(self, lease: Lease, reason: FailureReason) -> None:
+        """Retain unknown effects when access or approval no longer permits execution."""
+
+        def transaction(connection: Database) -> bool:
+            row = self._owned(connection, lease)
+
+            if row["effect_pending"]:
+                self._stop(connection, lease.context, lease.job_id, reason)
+                return True
+
+            return False
+
+        if not self.store._retry(transaction):
+            self.settle(lease, Completion(RunStatus.FAILED), reason=reason)
+
+    def approval_current(self, lease: Lease) -> bool:
+        with self.store._connect() as connection:
+            self._owned(connection, lease)
+            return self._approval_current(connection, lease.context, lease.job_id)
 
     def renew(self, lease: Lease, *, seconds: float = 30) -> None:
         if not 0 < seconds <= 3600:
@@ -295,9 +443,13 @@ class PostgresQueue:
             if state.phase == "reconcile":
                 raise StateConflictError("reconciliation cannot dispatch an operation")
 
+            if not self._approval_current(connection, lease.context, lease.job_id):
+                raise ApprovalExpiredError("approval expired before dispatch")
+
             prepared = state.model_copy(update={"phase": "dispatch"})
             connection.execute(
-                "UPDATE jobs SET recovery=%s WHERE tenant_id=%s AND conversation_id=%s "
+                "UPDATE jobs SET recovery=%s, effect_pending=true, prepared_token=ownership_token "
+                "WHERE tenant_id=%s AND conversation_id=%s "
                 "AND job_id=%s",
                 (Jsonb(prepared.encode()), *self._key(lease)),
             )
@@ -305,11 +457,17 @@ class PostgresQueue:
 
         return self.store._retry(transaction)
 
-    def settle(self, lease: Lease, completion: Completion) -> Checkpoint:
+    def settle(
+        self, lease: Lease, completion: Completion, *, reason: FailureReason = FailureReason.NONE
+    ) -> Checkpoint:
         """Fence ownership, then reuse the journal's atomic checkpoint transition."""
 
         payload = plain(completion)
         payload["next_task"] = completion.next_task.encode() if completion.next_task else None
+
+        if reason != FailureReason.NONE:
+            payload["failure_reason"] = reason.value
+
         digest = fingerprint(payload)
         change = self.store.checkpoint_change(
             lease.context,
@@ -369,10 +527,11 @@ class PostgresQueue:
             # past its lease rolls back its output and continuation together.
             updated = connection.execute(
                 "UPDATE jobs SET settlement_fingerprint=%s, settlement_response=%s, "
+                "effect_pending=false, failure_reason=%s, "
                 "recovery=jsonb_set(recovery,'{phase}','\"complete\"') "
                 "WHERE tenant_id=%s AND conversation_id=%s AND job_id=%s "
                 "AND lease_owner=%s AND ownership_token=%s AND lease_expiry>clock_timestamp()",
-                (digest, Jsonb(response["response"]), *self._identity(lease)),
+                (digest, Jsonb(response["response"]), reason.value, *self._identity(lease)),
             ).rowcount
 
             if updated != 1:
@@ -396,6 +555,7 @@ class PostgresQueue:
         if not 0 <= seconds <= 86400 * 30:
             raise ValueError("wait duration outside supported bound")
 
+        self._timeline(lease)
         digest = fingerprint([self._identity(lease), seconds, approval])
 
         def transaction(connection: Database) -> None:
@@ -413,16 +573,22 @@ class PostgresQueue:
             ):
                 raise StateConflictError("unknown effect requires safe replay or reconciliation")
 
+            if approval and row["approval_fingerprint"] is not None:
+                raise StateConflictError("approval is already bound to this operation")
+
             phase = "approval" if approval else "retry"
             connection.execute(
                 "UPDATE jobs SET status=%s, recovery=%s, control_fingerprint=%s, "
+                "failure_reason=%s, "
                 "due_at=clock_timestamp()+%s*interval '1 second', "
-                "wait_expiry=CASE WHEN %s THEN clock_timestamp()+%s*interval '1 second' END "
+                "wait_expiry=CASE WHEN %s THEN clock_timestamp()+%s*interval '1 second' "
+                "ELSE wait_expiry END "
                 "WHERE tenant_id=%s AND conversation_id=%s AND job_id=%s",
                 (
                     phase,
                     Jsonb(state.model_copy(update={"phase": phase}).encode()),
                     digest,
+                    "none" if approval else "execution_retry",
                     seconds,
                     approval,
                     seconds,
@@ -433,6 +599,8 @@ class PostgresQueue:
         self.store._retry(transaction)
 
     def reconcile(self, lease: Lease) -> None:
+        self._timeline(lease)
+
         def transaction(connection: Database) -> None:
             head = self.store._head(connection, lease.context)
             self.store._load(connection, lease.context, head)
@@ -521,8 +689,10 @@ class PostgresQueue:
             # explicit unknown-effect record for provider lookup/operator review;
             # no cancelled job becomes eligible for automatic execution again.
             connection.execute(
-                "UPDATE jobs SET status=CASE WHEN recovery->>'phase' IN ('dispatch','reconcile') "
-                "THEN 'cancelled_unknown' ELSE 'cancelled' END "
+                "UPDATE jobs SET status=CASE WHEN effect_pending "
+                "THEN 'cancelled_unknown' ELSE 'cancelled' END, "
+                "failure_reason=CASE WHEN effect_pending THEN 'unknown_effect' "
+                "ELSE 'cancelled' END "
                 "WHERE tenant_id=%s AND conversation_id=%s AND run_id=%s "
                 "AND recovery IS NOT NULL AND settlement_fingerprint IS NULL",
                 self.store._key(context),
@@ -621,6 +791,7 @@ class PostgresQueue:
             checkpoint,
             Recovery.decode(row["recovery"]),
             row["attempt"],
+            row["effect_pending"],
         )
         self._fence(connection, lease)
         return lease
@@ -642,7 +813,8 @@ class PostgresQueue:
     ) -> None:
         phase = "reconcile" if status == "reconcile" else state.phase
         connection.execute(
-            "UPDATE jobs SET status=%s, recovery=%s, due_at=clock_timestamp()+interval '1 second' "
+            "UPDATE jobs SET status=%s, recovery=%s, failure_reason='unknown_effect', "
+            "due_at=clock_timestamp()+interval '1 second' "
             "WHERE tenant_id=%s AND conversation_id=%s "
             "AND job_id=%s",
             (
@@ -652,6 +824,24 @@ class PostgresQueue:
                 job_id,
             ),
         )
+
+    def _stop(
+        self, connection: Database, context: RunContext, job_id: str, reason: FailureReason
+    ) -> None:
+        connection.execute(
+            "UPDATE jobs SET status='stopped', failure_reason=%s, lease_expiry=NULL "
+            "WHERE tenant_id=%s AND conversation_id=%s AND job_id=%s",
+            (reason.value, *self.store._scope(context), job_id),
+        )
+
+    def _approval_current(self, connection: Database, context: RunContext, job_id: str) -> bool:
+        row = connection.execute(
+            "SELECT (wait_expiry IS NULL OR (approval_fingerprint IS NOT NULL "
+            "AND wait_expiry>clock_timestamp())) AS allowed FROM jobs WHERE tenant_id=%s "
+            "AND conversation_id=%s AND job_id=%s",
+            (*self.store._scope(context), job_id),
+        ).fetchone()
+        return row is not None and row["allowed"]
 
     def _timeline(self, lease: Lease) -> None:
         if lease.checkpoint.conversation.recovery_id != self.store.recovery_id:
@@ -664,13 +854,26 @@ class PostgresQueue:
         job_id: str,
         *,
         approval: bool = False,
+        reason: FailureReason = FailureReason.ATTEMPTS_EXHAUSTED,
     ) -> None:
 
-        # Attempt/run budgets and approval expiry are durable terminal reasons.
-        # For example, the third failed attempt at revision 1 ends the run and
-        # releases the next accepted turn; it cannot leave the active slot stuck.
+        # Exhaustion without an uncertain effect ends the run and activates its
+        # next turn. A prepared operation with no known outcome stays stopped;
+        # its operation ID remains available for reconciliation or cancellation.
+        # Budget exhaustion never proves that the external effect did not happen.
         head = self.store._head(connection, context)
         checkpoint = self.store._load(connection, context, head)
+        row = self._row(connection, context, job_id)
+
+        if approval:
+            reason = FailureReason.APPROVAL_EXPIRED
+        elif row["crash_count"] >= Recovery.decode(row["recovery"]).attempt_limit:
+            reason = FailureReason.CRASH_LIMIT
+
+        if row["effect_pending"]:
+            self._stop(connection, context, job_id, reason)
+            return
+
         connection.execute(
             "UPDATE jobs SET status='completed' WHERE tenant_id=%s AND conversation_id=%s "
             "AND job_id=%s",
@@ -688,8 +891,14 @@ class PostgresQueue:
             status=status,
         )(connection)
         connection.execute(
-            "UPDATE jobs SET status=%s WHERE tenant_id=%s AND conversation_id=%s AND job_id=%s",
-            ("approval_expired" if approval else "exhausted", *self.store._scope(context), job_id),
+            "UPDATE jobs SET status=%s, failure_reason=%s, lease_expiry=NULL "
+            "WHERE tenant_id=%s AND conversation_id=%s AND job_id=%s",
+            (
+                "approval_expired" if approval else "exhausted",
+                reason.value,
+                *self.store._scope(context),
+                job_id,
+            ),
         )
 
     def _key(self, lease: Lease) -> tuple[str, str, str]:

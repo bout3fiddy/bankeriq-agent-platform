@@ -627,10 +627,10 @@ class PostgresStateStore:
             )
             self._write(
                 connection,
-                "UPDATE jobs SET status = CASE WHEN recovery->>'phase' IN ('dispatch','reconcile') "
+                "UPDATE jobs SET status = CASE WHEN effect_pending "
                 "THEN 'cancelled_unknown' ELSE 'cancelled' END WHERE tenant_id = %s "
                 "AND conversation_id = %s AND status IN "
-                "('blocked','ready','waiting','leased','retry','approval','reconcile')",
+                "('blocked','ready','waiting','leased','retry','approval','reconcile','stopped')",
                 self._scope(context),
             )
             head["deletion_generation"] += 1

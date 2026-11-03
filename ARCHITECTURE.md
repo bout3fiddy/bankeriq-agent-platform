@@ -849,6 +849,8 @@ PostgreSQL storage, transactional synthetic job records and shared prompt
 publication/resolution, Redis sessions and bounded history projection are implemented.
 The [durable worker adapter](src/bankeriq_agent_platform/workers/README.md) now executes
 synthetic registered tasks with leases, replay policy and atomic checkpoint settlement.
+It also provides bounded crash recovery, safe scoped inspection and audited operator
+retry/reconciliation controls; recovery cannot reset budgets or reopen terminal work.
 The later asynchronous coordinator group extracts one resumable model-step
 boundary from `Coordinator._run_loop`, preserving existing behaviour with the
 in-memory profile. Add an async model adapter and queued tool

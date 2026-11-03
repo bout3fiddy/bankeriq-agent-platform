@@ -11,8 +11,8 @@ Task groups run in this order: initial runtime → containerisation → PostgreS
 journal and job records → shared system prompts → Redis sessions and asynchronous
 history → durable workers → asynchronous coordinator and tools → recovery and
 scaling validation → Azure runtime deployment. Each group has its own task
-numbering. Durable PostgreSQL workers remain in progress for inspectable failure
-states, bounded crash recovery and authorised recovery controls.
+numbering. Durable PostgreSQL workers are complete, including failure inspection,
+bounded crash recovery and authorised controls. Asynchronous execution is next.
 
 The selected stack is PostgreSQL plus ephemeral Redis. PostgreSQL contains durable
 conversation deltas, history snapshots and the message queue. Redis serves active
@@ -47,7 +47,7 @@ file determine execution eligibility. Follow-up groups remain after infrastructu
 - 05 — Redis sessions and asynchronous history
   [completed](05-completed-redis-sessions-and-history.md)
 - 06 — Durable PostgreSQL workers
-  [in-progress](06-in-progress-durable-postgresql-workers.md)
+  [completed](06-completed-durable-postgresql-workers.md)
 - 07 — Asynchronous coordinator and tool queues
   [planned](07-planned-asynchronous-coordinator-and-tools.md)
 - 08 — Recovery and horizontal scaling validation
@@ -61,7 +61,7 @@ file determine execution eligibility. Follow-up groups remain after infrastructu
 - 12 — Follow-up runtime work
   [planned](12-planned-follow-up-runtime-work.md)
 
-Current: [durable PostgreSQL workers](06-in-progress-durable-postgresql-workers.md).
+Next: [asynchronous execution](07-planned-asynchronous-coordinator-and-tools.md).
 
 Use exactly three statuses: `planned`, `in-progress` and `completed`.
 `planned` means work has not started. Mark a group `in-progress` as soon as work

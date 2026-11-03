@@ -96,15 +96,19 @@ def main() -> None:
     deadline = time.monotonic() + 5
 
     while lease is None and time.monotonic() < deadline:
-        lease = queue.claim(kind, handlers, seconds=0.5 if mode in ("die", "effect-die") else 5)
+        lease = queue.claim(
+            kind, handlers, seconds=0.5 if mode in ("die", "effect-die", "pre-die") else 5
+        )
 
         if lease is None:
             time.sleep(0.03)
 
     assert lease is not None
 
-    if mode in ("die", "effect-die"):
-        queue.prepare(lease)
+    if mode in ("die", "effect-die", "pre-die"):
+        if mode != "pre-die":
+            queue.prepare(lease)
+
         Path(sys.argv[3]).write_text(lease.state.operation_id)
         time.sleep(60)
     else:

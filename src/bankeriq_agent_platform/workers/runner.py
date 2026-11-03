@@ -7,12 +7,12 @@ from time import monotonic
 
 import psycopg
 
-from agent_runtime.runs.state import RunStatus
 from agent_runtime.storage.interface import StateConflictError
 from bankeriq_agent_platform.storage.postgres import CommitUnknownError
 
-from .queue import Lease, PostgresQueue
-from .state import Completion, Handlers, replay_safe
+from .queue import ApprovalExpiredError, Lease, PostgresQueue
+from .reasons import FailureReason
+from .state import Handlers, policy_permitted, replay_safe
 
 
 class Listener:
@@ -117,16 +117,17 @@ class Worker:
                         pending.add(maintenance_future)
                         next_maintenance = monotonic() + self.poll_seconds
 
-                    if len(pending) < self.concurrency:
+                    if len(pending) < self.concurrency and not stop.is_set():
                         lease = self.queue.claim(
                             self.queue_name, self.handlers, seconds=self.lease_seconds
                         )
 
                         if lease is not None:
 
-                            # A stop racing the committed claim leaves recoverable
-                            # work for lease expiry. No new handler is dispatched.
+                            # No provider was contacted by this claim. Return its
+                            # reservation without recording a crash or failure.
                             if stop.is_set():
+                                self.queue.release(lease)
                                 break
 
                             pending.add(executor.submit(self.execute, lease))
@@ -165,21 +166,34 @@ class Worker:
             handler = self.handlers.resolve(lease.state)
 
             # Recheck access with fresh dependencies after every wait, retry and
-            # restart. A revoked permission commits a fixed terminal state without
-            # handing the saved arguments to the external operation.
-            if not handler.authorize(lease.context, lease.state):
-                self.queue.settle(lease, Completion(RunStatus.FAILED))
+            # restart. A revoked permission stops execution with a fixed reason;
+            # an unknown effect retains its identity for later reconciliation.
+            if not policy_permitted(handler.authorize, lease.context, lease.state):
+                self.queue.reject(lease, FailureReason.ACCESS_DENIED)
+                return
+
+            if not policy_permitted(handler.approval_valid, lease.context, lease.state):
+                self.queue.reject(lease, FailureReason.APPROVAL_DENIED)
+                return
+
+            if not self.queue.approval_current(lease):
+                self.queue.reject(lease, FailureReason.APPROVAL_EXPIRED)
                 return
 
             if lease.state.phase == "reconcile":
                 assert handler.reconcile is not None
-                outcome = handler.reconcile(lease.context, lease.state)
+                self.queue.begin_lookup(lease)
+
+                try:
+                    outcome = handler.reconcile(lease.context, lease.state)
+                except Exception:
+                    outcome = None
 
                 if outcome is None:
                     self.queue.reconcile(lease)
                     return
             else:
-                if lease.state.phase == "dispatch" and not replay_safe(lease.state, handler):
+                if lease.effect_pending and not replay_safe(lease.state, handler):
                     self.queue.reconcile(lease)
                     return
 
@@ -209,6 +223,8 @@ class Worker:
                 # settle retries only this captured result's database writes.
                 # Its retry loop has no reference to handler.execute.
                 self.queue.settle(lease, outcome)
+        except ApprovalExpiredError:
+            self.queue.reject(lease, FailureReason.APPROVAL_EXPIRED)
         except StateConflictError, CommitUnknownError, psycopg.OperationalError:
 
             # A late or uncertain result cannot authorize another dispatch here.

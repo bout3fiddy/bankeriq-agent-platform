@@ -89,10 +89,14 @@ def save(
 
 
 def snapshot(dsn: str, tenant: str) -> list[list[tuple[Any, ...]]]:
+
+    # Several jobs share tenant/conversation/run, so the first three columns do
+    # not order them uniquely. Include the fourth identity/sequence column to
+    # compare logical rows across rollback and PostgreSQL heap/plan changes.
     with psycopg.connect(dsn) as connection:
         return [
             connection.execute(
-                sql.SQL("SELECT * FROM {} WHERE tenant_id = %s ORDER BY 1,2,3").format(
+                sql.SQL("SELECT * FROM {} WHERE tenant_id = %s ORDER BY 1,2,3,4").format(
                     sql.Identifier(table)
                 ),
                 (tenant,),
