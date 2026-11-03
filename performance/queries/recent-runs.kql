@@ -1,0 +1,14 @@
+// Read-only lifecycle metadata for operator performance investigations.
+// Filter the exported run_id to a selected sample before attributing durations.
+ContainerAppConsoleLogs_CL
+| where TimeGenerated > ago(24h)
+| extend e=parse_json(Log_s)
+| where isnotempty(e.event)
+| project emitted_utc=todatetime(e["time"]),
+    app=tostring(column_ifexists("ContainerAppName_s", "")),
+    event_name=tostring(e.event),
+    run_id=tostring(e.run),
+    queue=tostring(e.queue),
+    attempt=toint(e.attempt),
+    elapsed_ms=toint(e.elapsed_ms)
+| order by emitted_utc asc

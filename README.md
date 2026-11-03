@@ -63,6 +63,8 @@ Accepted messages, explicit activity signals and live-worker maintenance renew R
 retention. Passive history/status/SSE reads allow idle expiry; PostgreSQL retains the
 conversation. The [persistent test deployment](infra/azure/LIVE.md) supports operator chat
 and metadata-only backend inspection.
+The [performance register](performance/README.md) records proposed latency targets,
+dated measurements, measurement gaps and the procedure for refreshing evidence.
 The [durable synthetic workers](src/bankeriq_agent_platform/workers/README.md) add
 leased execution, restart reconstruction, atomic settlement and bounded maintenance.
 Worker recovery also exposes scoped failure inspection, bounded crash recovery and

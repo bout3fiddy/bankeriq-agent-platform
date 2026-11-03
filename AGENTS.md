@@ -15,6 +15,10 @@
 - For roadmap work, read [build-order/AGENTS.md](build-order/AGENTS.md) and the
   [build-order index](build-order/README.md), then the selected task-group file.
   Keep group statuses, evidence and index links aligned when work changes.
+- For performance targets, measurements or optimisation, read
+  [performance/AGENTS.md](performance/AGENTS.md) and
+  [performance/REQUIREMENTS.md](performance/REQUIREMENTS.md). Keep dated evidence
+  and the latest-results index aligned; distinguish targets from measured results.
 - Prefer focused, incremental changes and justify additional abstractions.
 - Use descriptive names and blank lines between logical stages.
 - Keep authored source, configuration and documentation lines at 100 characters

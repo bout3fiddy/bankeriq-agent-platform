@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "observed_date": "2026-11-03",
+  "timestamp_timezone": "UTC",
+  "evidence_kind": "individual_observations",
+  "recorded_against_commit": "69a423115c4b8a9ffa58b7bdb65805f653b0629e",
+  "branch": "codex/active-session-retention",
+  "environment": {
+    "region": "swedencentral",
+    "model": "gpt-4o",
+    "model_version": "2024-11-20",
+    "deployment_type": "Standard",
+    "model_capacity": 10,
+    "max_completion_tokens": 256,
+    "image_registry": "bankeriqlive415eb635images.azurecr.io",
+    "image_repository": "runtime",
+    "image_sha256": "43b6231b1755f3f82c1f7a348f954d025a3259d059f69a95943eb2ceb19b57b4",
+    "replicas_per_role": 1,
+    "cpu_per_replica": 0.5,
+    "memory_gib_per_replica": 1,
+    "postgres_version": "17",
+    "postgres_sku": "GP_Standard_D2ds_v5",
+    "redis_sku": "Balanced_B0",
+    "session_idle_seconds": 1800,
+    "worker_poll_seconds": 0.25,
+    "client_poll_seconds": 0.5
+  },
+  "measurement_scope": {
+    "sample_count": 5,
+    "workload": "five distinct sequential turns in one conversation",
+    "concurrent_active_conversations": 1,
+    "warmup_controlled": false,
+    "fixed_input_history_tokens": null,
+    "client_token_acquisition_included": false,
+    "client_history_retrieval_included": true,
+    "p50": null,
+    "p95": null,
+    "requirement_compliance": "unmeasured; no qualifying comparable cohort"
+  },
+  "samples": [
+    {
+      "source_file": "scratch/live-turn-1.json",
+      "workload": "seed_short",
+      "run_id": "40e92095-d28f-4c0b-840f-6c02b39d7691",
+      "status": "completed",
+      "admission_seconds": 1.81,
+      "turn_seconds": 2.492,
+      "tool_children": 0,
+      "delivery_count": 0,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cache_state_before_send": null,
+      "output_review": "confirmed supplied synthetic values"
+    },
+    {
+      "source_file": "scratch/live-turn-2.json",
+      "workload": "recall_values",
+      "run_id": "a13c47e5-b2e2-43f0-926d-1ffd0741a107",
+      "status": "completed",
+      "admission_seconds": 0.159,
+      "turn_seconds": 2.511,
+      "tool_children": 0,
+      "delivery_count": 0,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cache_state_before_send": null,
+      "output_review": "recalled values; incorrect memory disclaimer"
+    },
+    {
+      "source_file": "scratch/live-turn-3.json",
+      "workload": "calculate_and_report",
+      "run_id": "90a058c0-35a9-4af3-b58a-a50e8260e0e8",
+      "status": "completed",
+      "admission_seconds": 0.163,
+      "turn_seconds": 5.835,
+      "tool_children": 2,
+      "delivery_count": 1,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cache_state_before_send": null,
+      "output_review": "correct total; two tools and separate delivery"
+    },
+    {
+      "source_file": "scratch/live-introduction.json",
+      "workload": "introduction",
+      "run_id": "b41e01c3-506a-45b1-a84a-dbc47074c3b2",
+      "status": "completed",
+      "admission_seconds": 0.158,
+      "turn_seconds": 11.936,
+      "tool_children": 0,
+      "delivery_count": 0,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cache_state_before_send": null,
+      "output_review": "listed tools; incorrect no-memory limitation"
+    },
+    {
+      "source_file": "scratch/live-previous-message-recall.json",
+      "workload": "recall_previous_request",
+      "run_id": "3d32107b-e3ba-4c59-ab0e-3e47b0e083d2",
+      "status": "completed",
+      "admission_seconds": 0.171,
+      "turn_seconds": 2.509,
+      "tool_children": 0,
+      "delivery_count": 0,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cache_state_before_send": null,
+      "output_review": "recalled prior request; misleading verbatim-recall disclaimer"
+    }
+  ],
+  "recall_breakdown": {
+    "run": "3d32107b-e3ba-4c59-ab0e-3e47b0e083d2",
+    "client_total_seconds": 2.509,
+    "client_admission_seconds_overlaps_server_phases": 0.171,
+    "phase_seconds": {
+      "initial_queue_and_claim": 0.225578,
+      "prepare_worker": 0.142331,
+      "inference_queue_and_claim": 0.186453,
+      "inference_worker_including_provider_and_database": 1.253432,
+      "completion_until_history_read": 0.515506,
+      "cache_reconstruction": 0.01746,
+      "remaining_client_transport_and_admission": 0.16824
+    },
+    "limits": [
+      "One observed completed turn.",
+      "Cross-process UTC clocks assumed aligned.",
+      "Inference span includes history/prompt reads, provider network and settlement.",
+      "Provider prefill, time to first token and generation are not separately instrumented."
+    ]
+  },
+  "recall_lifecycle_events": [
+    {
+      "emitted_utc": "2026-11-03T14:54:20.903061Z",
+      "event": "admission.accepted",
+      "queue": null,
+      "attempt": null,
+      "elapsed_ms": null
+    },
+    {
+      "emitted_utc": "2026-11-03T14:54:20.910581Z",
+      "event": "session.activity",
+      "queue": null,
+      "attempt": null,
+      "elapsed_ms": null
+    },
+    {
+      "emitted_utc": "2026-11-03T14:54:21.128639Z",
+      "event": "worker.claimed",
+      "queue": "model_prepare",
+      "attempt": 1,
+      "elapsed_ms": null
+    },
+    {
+      "emitted_utc": "2026-11-03T14:54:21.169454Z",
+      "event": "worker.started",
+      "queue": "model_prepare",
+      "attempt": 1,
+      "elapsed_ms": null
+    },
+    {
+      "emitted_utc": "2026-11-03T14:54:21.27097Z",
+      "event": "worker.settled",
+      "queue": "model_prepare",
+      "attempt": 1,
+      "elapsed_ms": 142
+    },
+    {
+      "emitted_utc": "2026-11-03T14:54:21.457423Z",
+      "event": "worker.claimed",
+      "queue": "model_infer",
+      "attempt": 1,
+      "elapsed_ms": null
+    },
+    {
+      "emitted_utc": "2026-11-03T14:54:21.497045Z",
+      "event": "worker.started",
+      "queue": "model_infer",
+      "attempt": 1,
+      "elapsed_ms": null
+    },
+    {
+      "emitted_utc": "2026-11-03T14:54:22.710855Z",
+      "event": "worker.settled",
+      "queue": "model_infer",
+      "attempt": 1,
+      "elapsed_ms": 1253
+    },
+    {
+      "emitted_utc": "2026-11-03T14:54:23.226361Z",
+      "event": "cache.miss",
+      "queue": null,
+      "attempt": null,
+      "elapsed_ms": null
+    },
+    {
+      "emitted_utc": "2026-11-03T14:54:23.243821Z",
+      "event": "cache.rebuilt",
+      "queue": null,
+      "attempt": null,
+      "elapsed_ms": null
+    }
+  ]
+}
