@@ -1,0 +1,28 @@
+[
+  {
+    "turns": 10,
+    "iterations": 100,
+    "cpu_seconds": 0.05915799999999999,
+    "postgres_per_update": {
+      "read_calls": 11.0,
+      "wal_bytes": 324.0,
+      "shared_hits": 16.0,
+      "shared_reads": 0.0
+    },
+    "redis_input_bytes_per_update": 679.09,
+    "retained_progress_entries": 32
+  },
+  {
+    "turns": 3000,
+    "iterations": 100,
+    "cpu_seconds": 0.057630000000000015,
+    "postgres_per_update": {
+      "read_calls": 11.0,
+      "wal_bytes": 324.0,
+      "shared_hits": 22.02,
+      "shared_reads": 0.0
+    },
+    "redis_input_bytes_per_update": 681.09,
+    "retained_progress_entries": 32
+  }
+]

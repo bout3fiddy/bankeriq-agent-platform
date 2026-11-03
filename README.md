@@ -65,6 +65,9 @@ idempotent operator controls with durable audit decisions.
 Local tests use real PostgreSQL/Redis and independent worker processes. Real
 asynchronous coordinator/tool execution is implemented in the
 [queued profile](src/bankeriq_agent_platform/workers/asynchronous.md).
+[Recovery and scaling validation](build-order/08-completed-recovery-and-scaling-validation.md)
+adds bounded primary pooling, eligible-backlog observations, progress isolation and
+executed local outage/restore and 2,800-job load evidence. Cloud deployment remains planned.
 
 ## Development
 

@@ -5,7 +5,9 @@ import os
 import sys
 from dataclasses import replace
 from pathlib import Path
+from uuid import uuid4
 
+from agent_runtime.conversations.messages import Message, MessageRole
 from agent_runtime.coordinator.control import RunLimits
 from agent_runtime.coordinator.model import ModelReply, ModelRequest
 from agent_runtime.prompts.resolution import FixedPromptResolver
@@ -26,22 +28,31 @@ from .harness import CALCULATE, PERMISSIONS, FakeAccess
 
 class AsyncModel:
     async def complete(self, request: ModelRequest) -> ModelReply:
-        if any(isinstance(item, VisibleResult) for item in request.history):
+        start = max(
+            index
+            for index, item in enumerate(request.history)
+            if isinstance(item, Message) and item.role == MessageRole.USER
+        )
+
+        if any(isinstance(item, VisibleResult) for item in request.history[start:]):
             return ModelReply(answer="Synthetic total saved")
 
+        prefix = "call" if start == 0 else "call-" + uuid4().hex
         return ModelReply(
-            calls=tuple(ToolCall(f"call-{i}", "calculate", {"values": [2, 3]}) for i in range(3))
+            calls=tuple(
+                ToolCall(f"{prefix}-{i}", "calculate", {"values": [2, 3]}) for i in range(3)
+            )
         )
 
 
-def composition(store: PostgresStateStore, *, fail_fast: bool = False):
+def composition(store: PostgresStateStore, *, fail_fast: bool = False, tenant_concurrency: int = 4):
     prompts = FixedPromptResolver(
         "Batch independent calls. Wait for inputs before dependent calls."
     )
     queue = OrchestrationQueue(store, prompts)
 
     for kind in ("model_prepare", "model_infer", "tool"):
-        queue.configure(kind, concurrency=4, tenant_concurrency=4)
+        queue.configure(kind, concurrency=4, tenant_concurrency=tenant_concurrency)
 
     registry = ToolRegistry((CALCULATE,))
     access = FakeAccess()

@@ -36,9 +36,19 @@ class AsyncWorker(Worker):
                 pending -= finished
 
                 if len(pending) < self.concurrency:
-                    lease = await asyncio.to_thread(
-                        self.queue.claim, self.queue_name, self.handlers, seconds=self.lease_seconds
-                    )
+                    try:
+                        lease = await asyncio.to_thread(
+                            self.queue.claim,
+                            self.queue_name,
+                            self.handlers,
+                            seconds=self.lease_seconds,
+                        )
+                    except psycopg.OperationalError, CommitUnknownError:
+
+                        # A database outage admits no work. Keep the process alive
+                        # and use the bounded poll delay before reconnecting to the
+                        # primary; a lost claim remains recoverable by its lease.
+                        lease = None
 
                     if lease is not None:
                         if stop.is_set():

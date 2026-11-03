@@ -136,7 +136,7 @@ docker rm -f bankeriq-workers-postgres bankeriq-workers-redis
 
 Executed counts and service versions are recorded in the
 [group evidence](../../../build-order/06-completed-durable-postgresql-workers.md).
-HA failover, restoration, production authentication/network isolation, throughput SLOs,
+HA failover, production authentication/network isolation, throughput SLOs,
 cloud hosting and semantic compaction remain deferred.
 
 ## Failure inspection and recovery controls
@@ -212,3 +212,26 @@ external failure. Stopped work permits other eligible conversations/tenants to p
 The upgrade from migration 009 conservatively retains uncertainty for legacy retry
 phases whose external outcome cannot be established. No migration resets usage or
 changes the saved operation identity. Local upgrade acceptance exercises that path.
+
+## Local recovery and scaling evidence
+
+[Group 08](../../../build-order/08-completed-recovery-and-scaling-validation.md) retains
+multiprocess load, query plans, process-loss, primary outage and backup-restore evidence.
+The local measured profile uses two coordinator and two tool processes, two execution
+slots per queue/process, four global slots per queue and two per tenant. Lease expiry
+is five seconds, heartbeat interval one-third of the lease, and idle polling 50 ms.
+Synthetic calls take 10 ms; real adapters need their own latency/quota measurements.
+
+Use `pressure(queue, kind, handlers)` from `workers.scaling` for a bounded primary-side
+observation. It reports compatible due work and oldest age, excluding approval waits,
+future retries, exhausted budgets, unsafe replay, unavailable lookup handlers and
+held resources/tenant slots. Counts cap at 10,000 with `capped=True`; live permissions
+are still checked on dispatch. Global capacity remains explicit configuration.
+Scaling policy and hosting replicas belong to application infrastructure.
+
+The measured six queue loops reserve 56 database slots including eight API/reserve
+slots. Each load process uses a four-connection state pool; peak observed primary
+connections were 15. Projection batches are ten chats with 50-event thresholds.
+These are workload settings, not automatic production capacity recommendations.
+On a failed claim connection, workers wait for their next bounded poll and reconnect;
+unknown claim commits retain their durable owner/lease and operation identities.

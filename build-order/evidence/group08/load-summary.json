@@ -1,0 +1,31 @@
+{
+  "early_window_end_seconds": 10.144548750016838,
+  "early_completed": {
+    "tenant-0": 64,
+    "tenant-1": 65
+  },
+  "late_window_start_seconds": 30.473036041948944,
+  "late_window_end_seconds": 40.84317841695156,
+  "late_completed": {
+    "tenant-0": 35,
+    "tenant-1": 35
+  },
+  "rss_deltas_after_drain_bytes": [
+    -2686976,
+    -3096576,
+    -2703360,
+    -2818048,
+    -10305536,
+    -8306688
+  ],
+  "peak_connections": 15,
+  "peak_queue_age_seconds": 33.995438,
+  "peak_projection_lag_cursors": 73,
+  "admission_including_commit_ms": {
+    "median": 11.748500051908195,
+    "p95": 16.97899994906038,
+    "max": 27.74916705675423
+  },
+  "worker_cpu_seconds": 35.158127,
+  "wal_bytes": 42366408
+}

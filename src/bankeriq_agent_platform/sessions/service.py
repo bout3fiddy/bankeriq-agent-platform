@@ -87,7 +87,7 @@ class SessionService:
         return {
             **view,
             "pending": visible_pending,
-            "progress": [json.loads(raw) for raw in (cached or {}).get("progress", [])],
+            "progress": self.cache.progress(head),
         }
 
     def publish(
@@ -199,8 +199,7 @@ class SessionService:
             if row is None:
                 raise StateNotFoundError("run unavailable")
 
-        self.cache.apply(
-            "progress",
+        self.cache.progress(
             head,
             sequence=str(sequence),
             progress_generation=str(row["admission_sequence"]),
@@ -216,6 +215,47 @@ class SessionService:
                 }
             ),
         )
+
+    def progress_view(self, context: RunContext) -> dict[str, Any]:
+        """Read safe run metadata without reconstructing or copying conversation history.
+
+        The conversation lock checks tenant/user/deletion and protects a consistent
+        child/status snapshot. For example, call-b can show completed while call-a
+        still runs; only the ordered durable join decides the next model step.
+        Results and arguments stay outside this view; delivery remains separate.
+        """
+
+        with self.store._connect() as connection:
+            head = self.store._head(connection, context)
+            run = connection.execute(
+                "SELECT revision,status FROM runs WHERE tenant_id=%s AND conversation_id=%s "
+                "AND run_id=%s",
+                self.store._key(context),
+            ).fetchone()
+
+            if run is None:
+                raise StateNotFoundError("run unavailable")
+
+            children = connection.execute(
+                "SELECT call_id,status,attempt,ownership_token,failure_reason,effect_pending "
+                "FROM jobs WHERE tenant_id=%s AND conversation_id=%s AND run_id=%s "
+                "AND group_id IS NOT NULL ORDER BY input_revision,call_position LIMIT 100",
+                self.store._key(context),
+            ).fetchall()
+            deliveries = connection.execute(
+                "SELECT delivery FROM results WHERE tenant_id=%s AND conversation_id=%s "
+                "AND run_id=%s AND delivery IS NOT NULL ORDER BY call_id",
+                self.store._key(context),
+            ).fetchall()
+
+        return {
+            "run_id": context.run_id,
+            **run,
+            "disposable": True,
+            "children": children,
+            "deliveries": [row["delivery"] for row in deliveries],
+            "progress": self.cache.progress(head),
+        }
 
     def project_due(self, policy: ProjectionPolicy | None = None, *, limit: int = 100) -> int:
         contexts = self.history.due(policy or ProjectionPolicy(), limit=limit)

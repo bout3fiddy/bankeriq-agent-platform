@@ -74,7 +74,7 @@ planned BankerIQ requirements, with acceptance evidence owned by each group:
   by Pi's [ownership changes][pi-ownership-history] and
   [folded watch updates][pi-watch-history]. PostgreSQL remains the authority
   for jobs; Redis and bounded per-connection buffers carry disposable progress.
-- [Group 08](08-planned-recovery-and-scaling-validation.md) adds long-lived worker
+- [Group 08](08-completed-recovery-and-scaling-validation.md) adds long-lived worker
   and growing-history workloads, informed by [scheduler indexing][pi-scheduler-history]
   and [incremental parsing][pi-stream-history]. Pi's reported timings are not
   BankerIQ performance evidence or targets.

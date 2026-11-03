@@ -118,9 +118,15 @@ class Worker:
                         next_maintenance = monotonic() + self.poll_seconds
 
                     if len(pending) < self.concurrency and not stop.is_set():
-                        lease = self.queue.claim(
-                            self.queue_name, self.handlers, seconds=self.lease_seconds
-                        )
+                        try:
+                            lease = self.queue.claim(
+                                self.queue_name, self.handlers, seconds=self.lease_seconds
+                            )
+                        except psycopg.OperationalError, CommitUnknownError:
+
+                            # Keep polling through primary outages. An uncertain
+                            # claim retains its durable owner and expires normally.
+                            lease = None
 
                         if lease is not None:
 

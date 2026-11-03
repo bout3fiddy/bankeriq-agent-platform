@@ -26,6 +26,31 @@ class RedisSessions:
             Path(__file__).with_name("session.lua").read_text()
         )
 
+        self._progress_script = self.client.register_script(
+            Path(__file__).with_name("progress.lua").read_text()
+        )
+
+    def progress(self, head: dict[str, Any], **values: Any) -> list[dict[str, Any]]:
+        """Read/write only the bounded progress document, scoped to this generation.
+
+        A restored database uses a different base key; deletion also changes this
+        suffix. An old producer can leave an expiring disposable key, but a current
+        reader never serves it. No transcript is fetched or serialized here.
+        """
+
+        try:
+            raw = self._progress_script(
+                keys=[self.key(head) + f":progress:{head['deletion_generation']}"],
+                args=["write" if values else "read", json.dumps(values), self.ttl_seconds],
+            )
+            return (
+                [json.loads(item) for item in json.loads(cast(bytes | str, raw))["progress"]]
+                if raw
+                else []
+            )
+        except RedisError, ValueError, TypeError, KeyError:
+            return []
+
     def close(self) -> None:
         self.client.close()
 

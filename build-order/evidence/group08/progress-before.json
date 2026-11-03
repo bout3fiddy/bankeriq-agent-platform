@@ -1,0 +1,35 @@
+[
+  {
+    "turns": 10,
+    "iterations": 30,
+    "median_ms": 40.40206247009337,
+    "p95_ms": 43.20700000971556,
+    "cpu_seconds": 0.525986,
+    "history_reads": 60,
+    "retained_bytes": 46853,
+    "peak_bytes": 131720,
+    "redis_input_bytes_per_update": 886.3333333333334
+  },
+  {
+    "turns": 300,
+    "iterations": 30,
+    "median_ms": 243.73893754091114,
+    "p95_ms": 249.80008299462497,
+    "cpu_seconds": 5.734076,
+    "history_reads": 60,
+    "retained_bytes": 93897,
+    "peak_bytes": 773189,
+    "redis_input_bytes_per_update": 889.3333333333334
+  },
+  {
+    "turns": 3000,
+    "iterations": 30,
+    "median_ms": 243.92160400748253,
+    "p95_ms": 250.28829101938754,
+    "cpu_seconds": 5.740815,
+    "history_reads": 60,
+    "retained_bytes": 75966,
+    "peak_bytes": 760224,
+    "redis_input_bytes_per_update": 892.1666666666666
+  }
+]

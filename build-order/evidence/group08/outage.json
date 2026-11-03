@@ -1,0 +1,7 @@
+{
+  "worker_survived_primary_outage": true,
+  "admission_acknowledged_during_outage": false,
+  "same_request_recovered": true,
+  "graceful_drain": true,
+  "restart_to_completion_seconds": 2.1747340420261025
+}

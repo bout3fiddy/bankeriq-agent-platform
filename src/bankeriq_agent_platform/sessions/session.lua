@@ -1,4 +1,5 @@
--- One bounded document keeps view, provisional input and progress changes atomic.
+-- One document keeps the history view and provisional input changes atomic.
+-- Progress uses its own bounded key and never parses this history document.
 -- Cursors are decimal strings: Lua doubles cannot exactly compare all bigint values.
 local function older(a, b)
     return #a < #b or (#a == #b and a < b)
@@ -23,7 +24,7 @@ end
 if state and older(incoming.generation, state.generation) then return false end
 if not state or older(state.generation, incoming.generation) then
     state = {schema='1', generation=incoming.generation, cursor='0', view='',
-             pending={}, progress={}, progress_sequence='0', deleted=false,
+             pending={}, deleted=false,
              last_access=now - math.max(0, incoming.last_activity_age)}
 end
 if state.deleted and op ~= 'tombstone' and op ~= 'peek' then return false end
@@ -44,35 +45,15 @@ elseif op == 'stage' then
     state.pending[incoming.request_key] = incoming.pending
 elseif op == 'reconcile' then
     for _, key in ipairs(incoming.keys) do state.pending[key] = nil end
-elseif op == 'progress' then
-    -- A later run/attempt starts a new disposable sequence. Late producers from
-    -- an older attempt cannot replace the current run's display after reconnect.
-    local generation = state.progress_generation or '0'
-    local attempt = state.progress_attempt or '0'
-    if older(incoming.progress_generation, generation) then return false end
-    if incoming.progress_generation == generation and older(incoming.attempt, attempt) then
-        return false
-    end
-    if generation ~= incoming.progress_generation or attempt ~= incoming.attempt then
-        state.progress = {}
-        state.progress_sequence = '0'
-    end
-    state.progress_generation = incoming.progress_generation
-    state.progress_attempt = incoming.attempt
-    if not older(state.progress_sequence, incoming.sequence) then return false end
-    table.insert(state.progress, incoming.progress)
-    if #state.progress > 32 then table.remove(state.progress, 1) end
-    state.progress_sequence = incoming.sequence
 elseif op == 'tombstone' then
     state.deleted = true
     state.view = ''
     state.cursor = incoming.cursor
     state.pending = {}
-    state.progress = {}
 else
     return redis.error_reply('unsupported session operation')
 end
-if op == 'read' or op == 'stage' or op == 'progress' or incoming.touch then
+if op == 'read' or op == 'stage' or incoming.touch then
     state.last_access = now
 end
 state.epoch = ARGV[3]

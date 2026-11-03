@@ -182,3 +182,17 @@ The [durable synthetic worker](../workers/README.md) now accepts a bounded maint
 callback for `project_due()` and idle cleanup. PostgreSQL retains dirty work across
 worker/Redis loss. The dated session-group evidence above predates worker ownership;
 worker failure tests and limits are recorded in the worker guide.
+
+## Bounded progress reads
+
+Progress uses a separate Redis key scoped by recovery and deletion generation. Its
+32-entry document has its own TTL and run/attempt/sequence fencing. Token writes and
+SSE metadata polls never deserialize the cached transcript or reconstruct a checkpoint.
+Durable history remains cursor-paginated; child status and separate delivery metadata
+come from primary reads. Idle cleanup evicts the history view; the progress key expires
+on its independent TTL. Deleted/old-generation keys cannot be served by current readers.
+
+[Group 08 measurements](../../../build-order/08-completed-recovery-and-scaling-validation.md)
+compare fixed-size progress updates at 10 and 3,000 retained turns, including SQL reads,
+WAL, Redis traffic, CPU and memory. This does not bound durable database growth; storage
+retention and capacity controls remain planned in group 13.

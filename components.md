@@ -246,6 +246,11 @@ The coordinator selects bounded complete-turn context and blocks oversized infer
 permitted outcomes remain durable and pageable. The
 [worker adapter](src/bankeriq_agent_platform/workers/README.md) implements synthetic
 ownership, retry/wait recovery, atomic settlement and bounded maintenance scheduling.
+The PostgreSQL adapter optionally owns a bounded primary pool, closed after drain.
+Queue pressure observations support external scaling policy. Separate bounded Redis
+progress keys and primary metadata reads avoid transcript reconstruction on each poll.
+Local failure/load evidence is recorded in
+[group 08](build-order/08-completed-recovery-and-scaling-validation.md).
 
 ### Worker recovery controls
 

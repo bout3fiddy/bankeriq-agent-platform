@@ -1,11 +1,13 @@
 # Proposed architecture
 
-Design updated: 2 November 2026. PostgreSQL conversations and durable queues,
+Design updated: 3 November 2026. PostgreSQL conversations and durable queues,
 with Redis for active sessions, replace the earlier Durable Task Scheduler choice.
 This document specifies the target design. The
 [PostgreSQL journal and synthetic job-record adapter](src/bankeriq_agent_platform/storage/README.md)
 is implemented and locally validated. Redis sessions and synthetic durable workers
 and queued coordinator/tool execution are implemented locally; hosted scaling remains future work.
+[Local recovery and scaling evidence](build-order/08-completed-recovery-and-scaling-validation.md)
+covers bounded primary pooling, indexed claims and independent worker processes.
 The completed runtime milestone at
 `2fa515b` and local container evidence remain in [build-order/README.md](build-order/README.md).
 

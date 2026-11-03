@@ -124,32 +124,9 @@ class ProgressStream:
             self.cursor = Cursor(page.recovery_id, page.deletion_generation, page.next_cursor)
             self.buffer.offer("saved", {"items": encode_items(page.items)}, self.cursor)
 
-        # Delivery references remain a separate event and never enter model text.
-        checkpoint = self.sessions.store.load_run(self.context)
-        deliveries = self.sessions.store.deliveries(self.context)
-
-        # Include safe child status in the refreshed view even before the ordered
-        # join appends results to history. A Redis outage therefore cannot hide a
-        # stopped/unknown child from reconnecting clients. Never read its payload.
-        with self.sessions.store._connect() as connection:
-            self.sessions.store._head(connection, self.context)
-            children = connection.execute(
-                "SELECT call_id,status,attempt,ownership_token,failure_reason,effect_pending "
-                "FROM jobs WHERE tenant_id=%s AND conversation_id=%s AND run_id=%s "
-                "AND group_id IS NOT NULL ORDER BY input_revision,call_position LIMIT 100",
-                self.sessions.store._key(self.context),
-            ).fetchall()
-
-        view = self.sessions.read(self.context)
-        progress = {
-            "run_id": self.context.run_id,
-            "revision": checkpoint.run.revision,
-            "status": checkpoint.run.status.value,
-            "disposable": True,
-            "progress": view["progress"],
-            "children": children,
-            "deliveries": plain(deliveries),
-        }
+        # Ordinary progress reads only metadata and its separate bounded Redis
+        # key. History is fetched solely by the explicit durable cursor above.
+        progress = self.sessions.progress_view(self.context)
         encoded = json.dumps(progress, sort_keys=True)
 
         if encoded != self._last_progress:

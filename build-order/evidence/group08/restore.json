@@ -1,0 +1,9 @@
+{
+  "logical_backup_bytes": 55677,
+  "old_generation_fenced": true,
+  "external_effect_lookups": 1,
+  "external_effect_replays": 0,
+  "post_backup_acceptance_recovered": true,
+  "redis_rebuilt": true,
+  "dispatch_paused_during_cutover": true
+}

@@ -707,13 +707,33 @@ def test_sse_stalled_reader_overflows_while_tools_finish(
         first = await anext(reader)
         assert first
 
+        # A reader may briefly hold the head lock. SKIP LOCKED is allowed to
+        # return no candidate; bounded polling mirrors the production worker.
         for _ in range(3):
-            lease = runtime.queue.claim("tool", handlers)
+            lease = None
+
+            for _ in range(100):
+                lease = await asyncio.to_thread(runtime.queue.claim, "tool", handlers)
+
+                if lease is not None:
+                    break
+
+                await asyncio.sleep(0.01)
+
             assert lease is not None
             await AsyncWorker(runtime.queue, handlers, queue_name="tool").execute_async(lease)
 
         for kind in ("model_prepare", "model_infer"):
-            lease = runtime.queue.claim(kind, handlers)
+            lease = None
+
+            for _ in range(100):
+                lease = await asyncio.to_thread(runtime.queue.claim, kind, handlers)
+
+                if lease is not None:
+                    break
+
+                await asyncio.sleep(0.01)
+
             assert lease is not None
             await AsyncWorker(runtime.queue, handlers, queue_name=kind).execute_async(lease)
 

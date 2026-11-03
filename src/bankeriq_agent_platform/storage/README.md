@@ -47,8 +47,14 @@ store = PostgresStateStore(environment["BANKERIQ_POSTGRES_DSN"])
 ```
 
 Use separate migration/runtime roles in deployment. Production authentication,
-connection pooling, private connectivity and database role provisioning remain
-Azure deployment work. The adapter opens and closes one connection per operation.
+private connectivity and database role provisioning remain Azure deployment work.
+By default the adapter opens and closes one connection per operation. For sustained
+workers, construct `PostgresStateStore(dsn, pool_size=4)` and call `store.close()` after
+all workers drain. Each adapter then reuses at most four primary connections, queues
+at most eight borrowers, and waits at most one second before an operational error.
+Pool saturation enters the existing bounded retry/unknown-commit path; it cannot
+justify retrying an external effect. Include every API, worker, prompt and maintenance
+client in deployment connection budgets. Pool ownership stays outside core runtime.
 It requires a read/write server with `target_session_attrs=read-write` and uses
 `READ COMMITTED`; there is no replica route.
 

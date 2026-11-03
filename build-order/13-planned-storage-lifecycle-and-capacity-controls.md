@@ -3,7 +3,7 @@
 Status: planned. Part of Operational reliability and capacity management. Depends on
 PostgreSQL journal/job records, Redis sessions/history and asynchronous coordinator/tool
 execution (groups 03, 05–07). Coordinate load measurements and recovery scenarios with
-[group 08](08-planned-recovery-and-scaling-validation.md). This item does not change the
+[group 08](08-completed-recovery-and-scaling-validation.md). This item does not change the
 current next group or authorise implementation, deployment or cloud provisioning.
 
 ## Purpose and current boundary

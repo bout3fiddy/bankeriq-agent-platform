@@ -1,6 +1,7 @@
 """Primary-only PostgreSQL journal adapter for the synchronous synthetic runtime."""
 
 from collections.abc import Callable
+from contextlib import AbstractContextManager
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, LiteralString
@@ -35,6 +36,7 @@ from agent_runtime.tools.results import (
 )
 
 from .codec import decode_item, encode_items, fingerprint, plain
+from .connections import PrimaryConnections
 
 type Database = Connection[dict[str, Any]]
 
@@ -98,17 +100,24 @@ class PostgresStateStore:
     No model, tool, permission resolution or scheduling runs inside these transactions.
     """
 
-    def __init__(self, dsn: str, *, fault: Callable[[str], None] | None = None) -> None:
+    def __init__(
+        self, dsn: str, *, fault: Callable[[str], None] | None = None, pool_size: int = 0
+    ) -> None:
         self._dsn = dsn
+        self._connections = PrimaryConnections(dsn, size=pool_size)
         self._fault = fault or (lambda phase: None)
 
         # Pin this instance to the database timeline it opened. For example,
         # after operators replace recovery-A with recovery-B, an old instance
         # fails its next generation check before accepting more conversation work.
-        with self._connect() as connection:
-            row = connection.execute("SELECT recovery_id FROM runtime_generation").fetchone()
-            assert row is not None
-            self.recovery_id: str = row["recovery_id"]
+        try:
+            with self._connect() as connection:
+                row = connection.execute("SELECT recovery_id FROM runtime_generation").fetchone()
+                assert row is not None
+                self.recovery_id: str = row["recovery_id"]
+        except BaseException:
+            self.close()
+            raise
 
     def create_conversation(
         self, *, tenant_id: str, user_id: str, conversation_id: str
@@ -684,12 +693,13 @@ class PostgresStateStore:
                 self.recovery_id,
             )
 
-    def _connect(self) -> Database:
-        connection = Connection[dict[str, Any]].connect(
-            self._dsn, row_factory=dict_row, target_session_attrs="read-write"
-        )
-        connection.isolation_level = psycopg.IsolationLevel.READ_COMMITTED
-        return connection
+    def close(self) -> None:
+        """Release pooled connections after the application's workers have drained."""
+
+        self._connections.close()
+
+    def _connect(self) -> AbstractContextManager[Database]:
+        return self._connections.connection()
 
     def _retry[T](self, transaction: Callable[[Database], T]) -> T:
 
