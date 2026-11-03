@@ -31,20 +31,13 @@ applicable nested instructions in the source directories you change.
 
 ## Status and evidence maintenance
 
-- Filenames use `NN-status-topic.md` with the lifecycle `planned` → `in-progress`
-  → `complete`. Match the filename to the file's Status paragraph and index entry.
-  `planned` means work has not started. `in-progress` means implementation or required
-  validation remains. `complete` means the group's stated acceptance gates passed,
-  including its required implementation, tests and supporting documentation.
-- Completion is scoped to the group. A locally validated storage group can be complete
-  while production HA remains in a later group. Record validation environment, executed
-  evidence and remaining limitations inside the file. Live-model or cloud validation
-  is required only when the group's acceptance gates require it.
-- Do not use `implemented` as a separate group status. It previously labelled locally
-  validated groups while `complete` labelled the original live-validated runtime;
-  that mixed implementation status with validation scope. Use `implemented` in prose
-  to describe existing behaviour, and keep a group `in-progress` if a required gate
-  remains unmet. Future features explicitly outside its scope do not prevent completion.
+- Use exactly three statuses in filenames, Status paragraphs and index entries:
+  `planned`, `in-progress` and `completed`.
+- `planned`: work has not started.
+- `in-progress`: work has started and is not yet completed. Set this status as soon
+  as work starts on a planned group, and keep it until all required work is finished.
+- `completed`: all requirements, tests and documentation for the group are finished
+  and its acceptance gates have passed. Record validation evidence inside the file.
 - When status changes, rename the file and update every inbound Markdown link,
   including this folder's index and any links elsewhere in the repository. Update
   the index's next-group statement when a milestone changes. Preserve stable numbers

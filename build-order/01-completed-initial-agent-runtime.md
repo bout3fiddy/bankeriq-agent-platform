@@ -1,6 +1,6 @@
 # Initial agent runtime
 
-Status: complete.
+Status: completed.
 
 Steps 1–13 were completed on 2 November 2026 and merged into `main` at `2fa515b`,
 including live-model validation with synthetic integrations. Preserve this milestone

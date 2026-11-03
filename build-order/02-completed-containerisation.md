@@ -1,6 +1,6 @@
 # Containerisation
 
-Status: complete and validated locally on Linux ARM64. Depends on initial runtime.
+Status: completed and validated locally on Linux ARM64. Depends on initial runtime.
 
 1. **Package the application** — Reuse the synthetic composition with locked
    dependencies, pinned base images and non-root execution.
