@@ -81,7 +81,7 @@ planned BankerIQ requirements, with acceptance evidence owned by each group:
 - [Group 10](10-planned-reviewed-composite-business-tools.md) rejects cyclic
   dependencies in reviewed compositions, informed by [Pi's wait-cycle fix][pi-cycle-history].
   Model-written execution graphs remain conditional work.
-- [Group 11](11-planned-semantic-compaction-and-retrieval.md) budgets summarization
+- [Group 11](11-completed-semantic-compaction-and-retrieval.md) budgets summarization
   itself and makes required-compaction failure stop dispatch, informed by
   [oversized summary inputs][pi-summary-history] and [failure handling][pi-compaction-history].
 

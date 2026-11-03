@@ -75,6 +75,12 @@ asynchronous coordinator/tool execution is implemented in the
 [Recovery and scaling validation](build-order/08-completed-recovery-and-scaling-validation.md)
 adds bounded primary pooling, eligible-backlog observations, progress isolation and
 executed local outage/restore and 2,800-job load evidence.
+The [semantic memory profile](src/bankeriq_agent_platform/memory/README.md)
+adds source-linked PostgreSQL summaries, token-budgeted context and scoped history retrieval.
+It is required by queued startup and enabled in the persistent Azure test deployment.
+Automatic headroom checks retain a bounded verbatim tail, preserve explicit source facts,
+compact completed prefixes of long turns and permit one durable context-overflow retry.
+The synchronous in-memory profile remains unchanged.
 [Azure deployment](build-order/09-completed-azure-runtime-deployment.md) is complete for
 the synthetic Container Apps pilot, with delegated Entra admission, private services,
 worker drain/restart, HA failover, fenced restore and model-throttling evidence.

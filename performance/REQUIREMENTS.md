@@ -1,8 +1,8 @@
 # Pilot performance requirements
 
 Status: proposed engineering targets. Recorded on 3 November 2026.
-These targets are not achieved service commitments or Azure guarantees. Performance
-optimisation is deferred beyond the current active-session-retention change.
+These targets are not achieved service commitments or Azure guarantees. The current
+latency goal uses these targets for assessment; historical results retain their original scope.
 
 ## Workload envelope
 

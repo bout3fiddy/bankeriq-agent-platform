@@ -8,14 +8,18 @@ from pathlib import Path
 from uuid import uuid4
 
 from agent_runtime.conversations.messages import Message, MessageRole
+from agent_runtime.conversations.semantic import TokenBudget
 from agent_runtime.coordinator.control import RunLimits
 from agent_runtime.coordinator.model import ModelReply, ModelRequest
 from agent_runtime.prompts.resolution import FixedPromptResolver
+from agent_runtime.providers.foundry.tokens import FoundryTokenCounter
 from agent_runtime.tools.bindings import ExecutionOutput, ToolBinding
 from agent_runtime.tools.definitions import ToolCall
 from agent_runtime.tools.gateway import ToolGateway
 from agent_runtime.tools.registry import ToolRegistry
 from agent_runtime.tools.results import VisibleResult
+from bankeriq_agent_platform.memory.service import HistoryPolicy, SemanticMemory
+from bankeriq_agent_platform.memory.storage import SemanticStore
 from bankeriq_agent_platform.runtime import compose_queued_runtime
 from bankeriq_agent_platform.storage.postgres import PostgresStateStore
 from bankeriq_agent_platform.workers.asynchronous import AsyncWorker
@@ -24,6 +28,7 @@ from bankeriq_agent_platform.workers.groups import OrchestrationQueue
 from bankeriq_agent_platform.workers.state import Handlers
 
 from .harness import CALCULATE, PERMISSIONS, FakeAccess
+from .summary_model import Extractor
 
 
 class AsyncModel:
@@ -68,6 +73,17 @@ def composition(store: PostgresStateStore, *, fail_fast: bool = False, tenant_co
         },
         access,
     )
+    counter = FoundryTokenCounter("gpt-4o")
+    memory = SemanticMemory(
+        SemanticStore(store),
+        Extractor(),
+        prompts=FixedPromptResolver("Memory format version 1."),
+        summary_budget=TokenBudget("fixture-summary", 8192, 1024, counter),
+        context_budget=TokenBudget("fixture-context", 8192, 1024, counter),
+        access_for=lambda context: HistoryPolicy(
+            "fixture-1", frozenset({"calculate"}), lambda fact: True
+        ),
+    )
     limits = RunLimits()
     runtime = compose_queued_runtime(
         store=store,
@@ -79,6 +95,7 @@ def composition(store: PostgresStateStore, *, fail_fast: bool = False, tenant_co
         limits=limits,
         bind=QueuedCoordinator.bind_tool,
         fail_fast=fail_fast,
+        memory=memory,
     )
     handlers = dict(runtime.handlers().entries)
 

@@ -64,7 +64,7 @@ run "reject_excessive_capacity" {
   command = plan
 
   variables {
-    model_capacity = 11
+    model_capacity = 51
   }
 
   expect_failures = [var.model_capacity]

@@ -2,8 +2,9 @@
 
 Read [REQUIREMENTS.md](REQUIREMENTS.md), [the current index](README.md) and its latest
 record before working here. Root AGENTS.md still applies. This folder owns targets,
-measurement procedures and dated evidence. Optimisation is deferred beyond the current
-branch; adding this register does not authorise runtime changes or deployment changes.
+measurement procedures and dated evidence. The current user-authorised latency goal includes
+runtime measurements and fixes. The register
+itself grants no authority for runtime changes, deployment changes or additional cloud services.
 
 ## Evidence rules
 
@@ -108,15 +109,20 @@ from timed requests, and document that the current CLI excludes token acquisitio
 Fetch lifecycle data after ingestion catches up, retaining safe fields only.
 
 The CLI supplies admission_seconds, turn_seconds, status and correlation IDs. It waits
-up to 180 seconds and can return a nonterminal status; check status explicitly. Review
+up to 600 seconds by default (`--wait-seconds` accepts 1 through 900) and can return a
+nonterminal status; check status explicitly. Review
 the response and expected tool behavior locally before removing payloads from the retained
-record. Preserve failed/timeout counts. Actual model token usage and first-token timing
-need future instrumentation before their requirement boundaries can be evaluated.
+record. Preserve failed/timeout counts. Current `model.request` events report actual token usage,
+numeric provider duration, HTTP status
+and effective quota. Older releases lack those fields. First-token timing remains unavailable
+while the adapter uses `stream=False`. Separate summary calls from coordinator calls.
 
 ## Attribute latency correctly
 
 - Use the emitted event timestamp, not Log Analytics ingestion time. KQL accesses the
   time property as e["time"]. Its ingestion delay is unrelated to conversation latency.
+- model.request elapsed_ms covers the provider adapter call and validated response, using a
+  monotonic clock. Match run_id and summary; do not replace actual usage with tokenizer estimates.
 - worker.settled elapsed_ms covers the entire claimed attempt, including policy checks,
   preparation, handler execution and settlement. The model_infer worker includes database
   reads and commits as well as the provider call. It is not pure generation time.
@@ -162,3 +168,44 @@ git diff --check
 
 This procedure does not authorise a commit, push, deployment or a new monitoring service.
 Follow the current user's task scope and preserve an already authorised active deployment.
+
+## Fixed short-answer and summary workloads
+
+The retained workloads under `workloads/` use synthetic data and the existing authenticated
+runtime. `short_answers.py` creates a new conversation per attempt, preserves all attempted
+outcomes, separates one warmup and checks the exact response `READY`. Declare the per-worker
+arrival interval: the recorded pilot uses 3 seconds for one worker and 6 seconds for two,
+up to 20 admitted messages/minute in each cohort. The two-worker cohort submits overlapping
+pairs. This characterizes that offered load, not saturation throughput. Idle spacing is outside
+turn timing and is solely a benchmark input; the runtime has no corresponding quota delay.
+
+```sh
+uv run python performance/workloads/short_answers.py \
+  --config scratch/live-client.json --concurrency 1 --interval-seconds 3 --count 100 \
+  --output scratch/short-serial-new.json
+uv run python performance/workloads/short_answers.py \
+  --config scratch/live-client.json --concurrency 2 --interval-seconds 6 --count 100 \
+  --output scratch/short-paired-new.json
+```
+
+Run these cohorts sequentially with other inference experiments stopped. Config is read-only;
+new conversations leave the original chat untouched. After log ingestion, export numeric
+observations with `queries/model-requests.kql`, match by run_id and verify actual output tokens,
+status, model-call count and quota. A missing observation remains an evidence gap until recovered.
+For this one-call workload, subtract the observed adapter duration from client turn duration to
+estimate overhead. This includes network/queue/storage/delivery and is not a server-only span.
+
+`summary_generations.py` uses four reviewed fictional source fixtures, five repetitions each,
+through the private relay documented in `tests/azure/README.md`. It validates excerpts using
+normal runtime source selection and preserves failed attempts and unresolved retirement advice.
+It does not read or write a database. Use the already-authorised model and owner-only socket:
+
+```sh
+PYTHONPATH=. uv run python performance/workloads/summary_generations.py \
+  --socket /tmp/bankeriq-semantic-relay.sock --output scratch/summary-samples-new.json
+```
+
+This probe's output includes reviewed synthetic excerpts for local quality review. Export only
+allowlisted numeric metadata, case identity and correctness counts into performance records;
+application transcripts belong in the explicitly requested build-order evidence. Keep the
+20-sample summary speed/correctness gate separate from qualified latency percentiles.

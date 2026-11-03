@@ -14,7 +14,7 @@ prefix `bankeriq-li-c19afe58` to fit Azure name limits. Local Terraform state an
   Fixed minimum/maximum replicas keep the processes available while conversations idle.
 - Private PostgreSQL 17, General Purpose D2ds v5, 32 GiB, seven-day backups, single primary.
 - Private Azure Managed Redis Balanced B0, finite 30-minute session idle TTL and LRU eviction.
-- Foundry `gpt-4o` version `2024-11-20`, regional Standard, capacity 10.
+- Foundry `gpt-4o` version `2024-11-20`, regional Standard, capacity 50 (50,000 TPM).
 - Separate managed identities, Entra operator allowlist, immutable registry image and
   private network/DNS. Only the coordinator can call inference.
 - Existing Log Analytics collects application JSON lifecycle events and platform logs.
@@ -105,10 +105,10 @@ The released image uses registry `bankeriqlive415eb635images.azurecr.io`, reposi
 and this immutable digest:
 
 ```text
-sha256:43b6231b1755f3f82c1f7a348f954d025a3259d059f69a95943eb2ceb19b57b4
+sha256:842393e2bb8b82873541e62ef81b6cd15f148251a477de8db4fb78a793a7cc5c
 ```
 
-Executed artifact publication and migration commands:
+Historical activity-only publication commands, before the semantic-memory release:
 
 ```sh
 live_registry=bankeriqlive415eb635images.azurecr.io
@@ -120,6 +120,65 @@ az containerapp job start -g bankeriq-live-runtime -n bankeriq-li-c19afe58-migra
 az containerapp job execution list -g bankeriq-live-runtime \
   -n bankeriq-li-c19afe58-migration -o json
 ```
+
+The historical activity image used this digest:
+
+```text
+sha256:43b6231b1755f3f82c1f7a348f954d025a3259d059f69a95943eb2ceb19b57b4
+```
+
+## Initial semantic memory release (historical)
+
+The user authorised an in-place application upgrade on 3 November 2026. The existing
+resource group, database, Redis, identities, network and original conversation are retained.
+Migration 013 adds semantic summary/operation/retrieval tables and runtime grants. The
+normal queued application always enables compaction and scoped `retrieve_history`.
+No per-conversation flag or separate summarization service is required.
+
+The context window is 8,192 estimated tokens including 512 completion tokens; summary calls
+use 8,192 including 2,048 completion tokens. The model selects source candidate identifiers;
+trusted code restores exact quotations and attribution, then validates durable publication.
+A shared process-local allowance of 8,500 estimated tokens per 65 seconds paces this one
+coordinator's model traffic. Large conversations can wait for that allowance. It is not a
+replica-wide quota controller and does not coordinate other users of the Foundry deployment.
+
+The initial semantic image included the tokenizer cache, verified with networking disabled.
+Its digest was `sha256:c3b422f8170105ef414e84dc966f39de6af9d977fa4224a1a0f3bea1c8c77f8c`.
+It was built from this branch's uncommitted implementation. The earlier activity-only image
+and its five-turn performance record remain historical evidence. The migration job image
+was updated first using an intentionally targeted Terraform plan; the full application plan
+then updates only the three app images. Both plans contain zero additions or deletions.
+
+```sh
+az acr login --name bankeriqlive415eb635images
+semantic_image=bankeriqlive415eb635images.azurecr.io/runtime:semantic-20261103
+docker buildx build --platform linux/amd64 --load -f infra/azure/Dockerfile \
+  -t "$semantic_image" .
+docker push "$semantic_image"
+# Set runtime_image in runtime-live.tfvars to the inspected immutable digest above.
+terraform -chdir=infra/azure plan -var-file=runtime-live.tfvars \
+  -target='module.runtime[0].azurerm_container_app_job.migration[0]' \
+  -out=semantic-migration.tfplan
+terraform -chdir=infra/azure show semantic-migration.tfplan
+terraform -chdir=infra/azure apply semantic-migration.tfplan
+az containerapp job start -g bankeriq-live-runtime -n bankeriq-li-c19afe58-migration
+az containerapp job execution list -g bankeriq-live-runtime \
+  -n bankeriq-li-c19afe58-migration -o json
+# Require a successful execution before applying the application plan.
+terraform -chdir=infra/azure plan -var-file=runtime-live.tfvars -out=semantic-apps.tfplan
+terraform -chdir=infra/azure show semantic-apps.tfplan
+terraform -chdir=infra/azure apply semantic-apps.tfplan
+```
+
+The migration image update took 22 seconds; its execution succeeded in 37 seconds.
+The three app image updates took 18–19 seconds; all reached ready revision `--0000001`.
+The final Terraform plan reported no changes. Eighteen hosted turns completed, one summary
+was published, an omitted source detail was retrieved, and scoped Redis-view loss recovered.
+The original conversation and client file remain intact. The transcript records selection
+quality limits and quota waits; these long-turn samples establish no latency percentile.
+The [group-11 evidence](../../build-order/11-completed-semantic-compaction-and-retrieval.md)
+records local acceptance and live conversation results. This release preserves the original
+client file; its new synthetic conversation uses `scratch/group11-hosted-client.json`.
 
 ## Execution evidence and limits
 
@@ -185,3 +244,62 @@ terraform -chdir=infra/azure apply live-cleanup.tfplan
 ```
 
 [log-delay]: https://learn.microsoft.com/en-us/azure/container-apps/log-options
+
+
+## Automatic compaction and responsive admission release
+
+On 3 November 2026, Terraform increased the existing Standard model deployment from 10 to
+50 quota units (10,000 to 50,000 configured tokens per minute). The reviewed saved plan changed
+only `azurerm_cognitive_deployment.coordinator` in place; application images and data resources
+were unchanged by that apply. The apply completed at approximately 21:50 UTC.
+Initial inference headers still advertised 10,000 TPM after management reported capacity 50.
+Microsoft documents [up to 15 minutes for quota changes to propagate][quota-propagation].
+Fresh inference responses at approximately 22:06 UTC advertised 50,000 TPM and 300 RPM.
+The application has no artificial rolling-minute wait. A genuine HTTP 429 causes a durable
+bounded retry deadline and releases the worker; available capacity still bounds sustained load.
+
+The first `compaction-fast-20261103` image used this digest:
+
+```text
+sha256:257b983ac6a2351f5a9e6aed7f5927b7904f9a02dc9fa16a8f89288b49d2f729
+```
+ Migration job image
+update took 20 seconds; execution `bankeriq-li-c19afe58-migration-8xpbsz9` succeeded from
+22:15:32 to 22:16:05 UTC (33 seconds), applying additive migrations 014–015 and runtime grants.
+The reviewed full plan updated only three app images, in 17–18 seconds. All roles reached
+ready revision `--0000002`; the API emitted `runtime.ready` at 22:17:04 UTC. Control-plane
+apply completion precedes application readiness. The final refreshed plan had no changes.
+
+This image keeps two recent turns when the request budget allows, triggers compaction at
+20% free headroom and targets 40%. Summary input/output share an 8,192-token estimated budget
+with 1,024 reserved output tokens. Main inference keeps its 8,192/512 budget. Source-checked
+structured summaries, explicit corrections, retained active user input and durable one-time
+context-overflow recovery are enabled by normal queued startup.
+
+Numeric `model.request` events now report adapter duration, actual usage, HTTP status and
+provider quota headers. `memory.assembled` and `memory.compacted` report local token estimates.
+These observations contain no prompts, responses, credentials or raw provider errors.
+Application Insights and production alerting remain separate work.
+
+The user's original conversation remains unchanged: five runs, 14 journal events, 18 completed
+jobs and cursor 21. Separate synthetic chats exercise the new image. Its release evidence and
+measurement limits are recorded in the group-11 and performance guides.
+
+[quota-propagation]: https://learn.microsoft.com/azure/foundry/openai/how-to/quota
+
+The subsequent `compaction-identity-final-20261103` image preserved user identities.
+The final `compaction-assertions-20261103` image is the current digest above. It
+preserves explicit user name/ownership excerpts after a hosted test exposed nickname omission.
+The reviewed plan changes only the migration-job and three app images. No additional migration
+is needed; the database is already through 015. Earlier synthetic trials are retained with their
+fidelity failures. Existing user conversations and data resources remain intact.
+
+The final image additionally preserves explicit user confirmations/corrections. All three roles
+reached revision `--0000004`; image updates took 19 seconds and the migration-job image update
+20 seconds. No extra schema change was needed. A trial request crossed old/new worker profiles
+during rollout and failed visibly with `memory_profile_changed`; no output or source was lost.
+Wait for old coordinator/tool revisions to have zero replicas and `Stopped` state before sending
+validation traffic after a profile-changing release. `latestReadyRevisionName` alone does not
+establish that old queue consumers have drained. Prepared work remains pinned and incompatible
+workers fail closed. A general zero-downtime migration between incompatible runtime profiles
+requires a separately designed rollout/drain procedure; no such guarantee is claimed here.

@@ -2,10 +2,13 @@
 
 import asyncio
 from collections.abc import Callable
+from dataclasses import replace
+from time import monotonic
 
 from agent_runtime.conversations.messages import Message, MessageRole
+from agent_runtime.conversations.semantic import MemoryBlocked
 from agent_runtime.coordinator.control import RunLimits
-from agent_runtime.coordinator.model import AsyncModelClient
+from agent_runtime.coordinator.model import AsyncModelClient, ModelContextOverflow
 from agent_runtime.coordinator.reply_validation import is_valid_reply
 from agent_runtime.coordinator.runner import Coordinator
 from agent_runtime.runs.context import RunContext
@@ -13,9 +16,14 @@ from agent_runtime.runs.state import RunStatus
 from agent_runtime.tools.definitions import ToolCall, ToolDefinition
 from agent_runtime.tools.gateway import ToolGateway
 from agent_runtime.tools.results import PendingToolCall, WaitReason
-from bankeriq_agent_platform.storage.codec import plain
+from bankeriq_agent_platform.memory.recovery import ContextRecovery
+from bankeriq_agent_platform.memory.service import SemanticMemory
+from bankeriq_agent_platform.storage.codec import fingerprint, plain
+from bankeriq_agent_platform.storage.history import encoded_size
+from bankeriq_agent_platform.telemetry import emit
 
 from .groups import OrchestrationQueue
+from .queue import Lease
 from .state import ChildTask, Completion, Handler, Handlers, Recovery
 
 
@@ -38,6 +46,7 @@ class QueuedCoordinator:
         limits: RunLimits,
         bind: Callable[[RunContext, ToolCall, ToolDefinition, Recovery], ChildTask],
         fail_fast: bool = False,
+        memory: SemanticMemory,
     ) -> None:
         self.queue = queue
         self.coordinator = coordinator
@@ -46,6 +55,7 @@ class QueuedCoordinator:
         self.limits = limits
         self.bind = bind
         self.fail_fast = fail_fast
+        self.memory = memory
 
     def initial(self, context: RunContext, *, budget: int = 100) -> Recovery:
         return Recovery(
@@ -76,7 +86,7 @@ class QueuedCoordinator:
                     lambda c, s: True,
                     self._async_required,
                     idempotent=True,
-                    async_execute=self.infer,
+                    async_execute_with_lease=self.infer_leased,
                 ),
                 ("tool", 1): Handler(
                     lambda c, s: self.gateway.can_dispatch(
@@ -101,18 +111,104 @@ class QueuedCoordinator:
             next_task=Recovery(
                 kind="model_infer",
                 operation_id=f"model:{context.run_id}:{next_step}",
-                arguments={"step": next_step},
+                arguments={
+                    "step": next_step,
+                    "memory_profile": self.memory.profile,
+                },
                 idempotent=True,
                 run_budget=state.run_budget,
             ),
         )
 
-    async def infer(self, context: RunContext, state: Recovery) -> Completion:
+    async def infer_leased(
+        self,
+        context: RunContext,
+        state: Recovery,
+        lease: Lease,
+    ) -> Completion:
         checkpoint = await asyncio.to_thread(
             self.queue.store.load_model_step, context, state.arguments["step"]
         )
-        request, definitions = await asyncio.to_thread(self.coordinator.prepare_request, checkpoint)
-        reply = await self.model.complete(request)
+
+        # Reuse the prepared step's prompt, then reconstruct historical data
+        # from its fixed durable boundary. Summarizer publication checks this
+        # exact lease in its transaction; an expired owner cannot publish.
+        request, definitions = await asyncio.to_thread(
+            self.coordinator.prepare_request, checkpoint, assemble_history=False
+        )
+
+        recovery = ContextRecovery(self.memory.storage)
+
+        def fence(db):
+            return self.queue._owned(db, lease)
+
+        for dispatch in range(2):
+            try:
+                if state.arguments.get("memory_profile") != self.memory.profile:
+                    raise MemoryBlocked("memory_profile_changed")
+
+                _, policy_key = self.memory.policy(context)
+                rejected = await asyncio.to_thread(recovery.read, checkpoint, policy_key)
+
+                if rejected and rejected["retry_claimed"]:
+                    raise MemoryBlocked("context_recovery_exhausted")
+
+                assembled_at = monotonic()
+                request = await self.memory.assemble(
+                    checkpoint,
+                    request,
+                    fence=fence,
+                    recovery_tokens=rejected["input_tokens"] if rejected else None,
+                )
+                current, definitions = await asyncio.to_thread(
+                    self.coordinator.prepare_request, checkpoint, assemble_history=False
+                )
+                request = replace(request, tools=current.tools, instructions=current.instructions)
+                self.memory.context_budget.require(request)
+
+                if (
+                    len(request.history) > self.limits.context_items
+                    or encoded_size(plain([request.instructions, request.tools, request.history]))
+                    > self.limits.context_bytes
+                ):
+                    raise MemoryBlocked("context_storage_limit")
+
+                self.memory._current(context, policy_key)
+                await asyncio.to_thread(self.memory._guard, checkpoint, fence)
+                emit(
+                    "memory.assembled",
+                    context,
+                    elapsed_ms=round((monotonic() - assembled_at) * 1000),
+                    estimated_input_tokens=self.memory.context_budget.count(request),
+                )
+
+                if rejected:
+                    await asyncio.to_thread(
+                        recovery.claim,
+                        checkpoint,
+                        self.memory.context_budget.count(request),
+                        fence=fence,
+                    )
+
+                reply = await self.model.complete(request)
+                break
+            except ModelContextOverflow:
+                await asyncio.to_thread(
+                    recovery.reject,
+                    checkpoint,
+                    policy_key,
+                    fingerprint(plain(request)),
+                    self.memory.context_budget.count(request),
+                    fence=fence,
+                )
+
+                if dispatch or rejected:
+                    return self._memory_failed("provider_context_overflow_after_recovery")
+            except MemoryBlocked as error:
+                return self._memory_failed(str(error))
+        else:
+            raise AssertionError("bounded model context recovery did not terminate")
+
         seen = {
             item.call_id for item in checkpoint.conversation.items if isinstance(item, ToolCall)
         }
@@ -171,6 +267,13 @@ class QueuedCoordinator:
             RunStatus.RUNNING,
             (output.model_result,),
             artifacts=(output.artifact,) if output.artifact else (),
+        )
+
+    @staticmethod
+    def _memory_failed(reason: str) -> Completion:
+        return Completion(
+            RunStatus.FAILED,
+            (Message(MessageRole.ASSISTANT, "Conversation memory unavailable: " + reason),),
         )
 
     @staticmethod

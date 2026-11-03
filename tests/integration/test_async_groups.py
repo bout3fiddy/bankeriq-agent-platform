@@ -598,7 +598,7 @@ def test_cancellation_races_atomic_fanout(
     lease = runtime.queue.claim("model_infer", handlers)
     assert lease is not None
     runtime.queue.prepare(lease)
-    completion = asyncio.run(runtime.infer(context, lease.state))
+    completion = asyncio.run(runtime.infer_leased(context, lease.state, lease))
     barrier = Barrier(2)
 
     def fan_out():
@@ -784,7 +784,7 @@ def test_failed_fanout_transaction_exposes_no_partial_children(
     lease = runtime.queue.claim("model_infer", handlers)
     assert lease is not None
     runtime.queue.prepare(lease)
-    completion = asyncio.run(runtime.infer(context, lease.state))
+    completion = asyncio.run(runtime.infer_leased(context, lease.state, lease))
     bad_child = replace(completion.children[-1], resource_key="")
 
     with pytest.raises(ValueError):

@@ -87,6 +87,16 @@ Business/user-class overlays are deferred. Their future selection comes from
 trusted application context and retains the global layer. Prompt changes cannot
 grant permissions, remove output enforcement or change tool concurrency limits.
 
+The [semantic memory adapter](src/bankeriq_agent_platform/memory/README.md)
+selects source-linked excerpts, publishes versioned PostgreSQL summaries and assembles
+summary-plus-tail context at the prepared run's fixed visibility boundary. Separate model
+budgets cover summary generation and coordinator requests, including prompts and tools.
+Before each inference, automatic headroom checks retain recent turns and compact older sources.
+Explicit replacements retire protected excerpts with source links. Long turns retain their
+original user input and latest complete exchanges; a clean provider overflow has one durable retry.
+The existing registry/gateway exposes bounded history retrieval. Summary publication uses
+the worker's lease and current policy/generation fences; Redis remains disposable UI state.
+
 ## Tool registry and discovery
 
 Stores versioned tool definitions, argument schemas, required permissions,

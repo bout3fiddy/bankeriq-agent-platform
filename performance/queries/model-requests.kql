@@ -1,0 +1,11 @@
+// Numeric provider observations only; no prompt, response text or raw error fields.
+ContainerAppConsoleLogs_CL
+| where TimeGenerated > ago(24h)
+| extend e=parse_json(Log_s)
+| where e.event == "model.request"
+| project emitted_utc=todatetime(e["time"]), run_id=tostring(e.run),
+    elapsed_ms=toint(e.elapsed_ms), status_code=toint(e.status_code),
+    summary=(tostring(e.purpose) == "summary"), input_tokens=toint(e.input_tokens),
+    output_tokens=toint(e.output_tokens), token_limit=toint(e.token_limit),
+    tokens_remaining=toint(e.tokens_remaining)
+| order by emitted_utc asc

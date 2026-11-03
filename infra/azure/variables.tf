@@ -39,10 +39,10 @@ variable "model_capacity" {
 
   validation {
     condition = (
-      var.model_capacity >= 1 && var.model_capacity <= 10 &&
+      var.model_capacity >= 1 && var.model_capacity <= 50 &&
       floor(var.model_capacity) == var.model_capacity
     )
-    error_message = "Use 1 through 10 quota units for this bounded development deployment."
+    error_message = "Use 1 through 50 quota units within the region's verified available quota."
   }
 }
 

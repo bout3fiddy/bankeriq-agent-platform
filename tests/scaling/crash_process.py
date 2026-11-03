@@ -80,7 +80,9 @@ async def run() -> None:
     prepared = runtime.queue.prepare(lease)
     handler = handlers.resolve(prepared)
     result = (
-        await handler.async_execute(context, prepared)
+        await handler.async_execute_with_lease(context, prepared, lease)
+        if handler.async_execute_with_lease
+        else await handler.async_execute(context, prepared)
         if handler.async_execute
         else handler.execute(context, prepared)
     )

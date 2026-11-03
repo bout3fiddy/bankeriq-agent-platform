@@ -6,9 +6,30 @@ from enum import StrEnum
 from typing import Protocol
 
 from ..conversations.conversation import ConversationItem
+from ..helpers.json_snapshot import _freeze_object
 from ..prompts.resolution import PromptManifest
 from ..tools.definitions import ToolCall
 from ..types.json_value import JsonValue
+
+
+class ModelContextOverflow(RuntimeError):
+    """The provider explicitly rejected context before producing an inference result."""
+
+
+class ModelRateLimited(RuntimeError):
+    """A clean provider rejection with an application-scheduled retry deadline.
+
+    An adapter may supply ModelRateLimited(1.5) from retry-after-ms=1500.
+    The worker releases its lease and persists the delay; the model interface
+    performs no sleeps or retries and consumes one physical dispatch attempt.
+    """
+
+    def __init__(self, retry_after: float) -> None:
+        if not 0 < retry_after <= 300:
+            raise ValueError("invalid provider retry delay")
+
+        super().__init__("model capacity temporarily unavailable")
+        self.retry_after = retry_after
 
 
 class ReasoningEffort(StrEnum):
@@ -51,6 +72,20 @@ class ModelRequest:
     # available to application recovery and stays outside conversation history.
     instructions: str = field(default="", repr=False)
     prompt_manifest: PromptManifest | None = None
+
+    # Semantic context accounting reserves this many completion tokens. Adapters
+    # cap their configured output at this request-local value when supplied.
+    max_output_tokens: int | None = None
+
+    # Example: a memory extractor supplies an object schema with an entries array.
+    # The provider enforces JSON shape; source quotation and access checks still
+    # belong to the caller. Snapshot nested fields so mutation cannot change a
+    # request after its complete-input budget has been checked.
+    output_schema: Mapping[str, JsonValue] | None = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        if self.output_schema is not None:
+            object.__setattr__(self, "output_schema", _freeze_object(self.output_schema))
 
 
 @dataclass(frozen=True, slots=True)

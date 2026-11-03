@@ -213,7 +213,7 @@ def test_unfinished_or_malformed_responses_cannot_become_answers(body: object) -
     assert "PRIVATE_MARKER" not in str(error.value)
 
 
-@pytest.mark.parametrize("status", [401, 429, 500])
+@pytest.mark.parametrize("status", [401, 500])
 def test_api_errors_are_sanitised_and_are_not_retried(status: int) -> None:
     with (
         connected_model({"error": {"message": "PRIVATE_MARKER"}}, status=status) as (

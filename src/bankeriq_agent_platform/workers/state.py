@@ -3,7 +3,7 @@
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -13,6 +13,9 @@ from agent_runtime.runs.state import RunStatus
 from agent_runtime.tools.definitions import ToolCall
 from agent_runtime.tools.results import ArtifactReference, PendingToolCall
 from bankeriq_agent_platform.storage.codec import strict_json
+
+if TYPE_CHECKING:
+    from .queue import Lease
 
 
 class Recovery(BaseModel):
@@ -109,6 +112,13 @@ class Handler:
     async_execute: Callable[[RunContext, Recovery], Awaitable[Completion]] | None = None
     approval_required: Callable[[RunContext, Recovery], bool] = lambda context, state: False
     approval_valid: Callable[[RunContext, Recovery], bool] = lambda context, state: True
+
+    # Memory publication is a database write during inference. Its application
+    # adapter needs the actual lease so publication can check the same ownership
+    # token in its transaction, including after an awaited summarizer response.
+    async_execute_with_lease: (
+        Callable[[RunContext, Recovery, Lease], Awaitable[Completion]] | None
+    ) = None
 
 
 class Handlers:

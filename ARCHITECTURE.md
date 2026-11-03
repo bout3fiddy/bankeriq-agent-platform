@@ -415,7 +415,9 @@ Durable execution uses PostgreSQL leases; async model/tool scheduling is impleme
 Session admission refreshes immediately; other transitions repair on read or projection.
 Every cached read checks a primary head. The refill lease is advisory and contenders can
 hydrate independently. Recent context is bounded to 200 items/256 KiB with complete-turn
-selection; provider token accounting and semantic compaction remain future work.
+selection. The [semantic memory profile](src/bankeriq_agent_platform/memory/README.md)
+adds model-specific token estimates, durable extractive summaries and scoped source retrieval.
+Existing deployments retain their selected profile until explicitly upgraded.
 The numbered lifecycle below describes the configured application lifecycle.
 
 1. On a miss, hydrate recent history from the latest PostgreSQL snapshot plus
@@ -446,7 +448,10 @@ The numbered lifecycle below describes the configured application lifecycle.
 
 Large conversations have bounded active context and paginated history. Context
 selection preserves system instructions and tool-call/result pairs; if it cannot
-fit the configured model budget, reject or pause explicitly until compaction exists.
+fit the configured model budget, the semantic profile compacts whole historical turns.
+For an oversized active turn, it can compact earlier completed exchanges while retaining the
+original user input, latest exchange and authoritative waits. An indivisible oversized exchange
+or failed mandatory compaction stops inference with a fixed reason.
 Idle time is not a prerequisite for protecting a long-running conversation.
 
 ### Durable queue and asynchronous execution
@@ -871,6 +876,26 @@ dispatcher, and adapt `ContinuationHandler` to durable result groups. Do not cre
 a generic workflow framework or move SDKs, connection pools, timers or worker
 scheduling into core types. Each group in [build-order/README.md](build-order/README.md) includes
 its own implementation, tests and evidence before the next integration begins.
+
+## Semantic memory implementation
+
+The queued profile requires `SemanticMemory`; synchronous composition remains unchanged.
+Migration 013 stores immutable summary versions, source cursors, covered admission sequences,
+format/prompt versions and generation fences. Version and attempt comparisons serialize
+publication; the existing worker lease and run budget govern summary inference and writes.
+Summary-plus-tail assembly reads a fixed prepared-step cursor and excludes later queued input.
+Migrations 014–015 add explicit partial-turn coverage, retained original input, retirement
+provenance and the durable single-retry allowance for classified provider context overflow.
+Headroom checks run before every model step. Current source policy applies to the verbatim
+recent tail and to summaries. Protected source excerpts include explicit user decisions,
+confirmations, names and responsibilities; their user origin supplies no execution authority.
+Provider throttling uses bounded durable retry deadlines; the worker releases its slot.
+Numeric provider duration/usage observations stay in the application-owned telemetry path.
+The registered `retrieve_history` tool returns bounded, currently permitted source excerpts
+through the existing gateway and tool budget. No Redis model-context cache is introduced.
+See the [memory guide](src/bankeriq_agent_platform/memory/README.md) for composition, token
+accounting, failure behavior and validation limits. The [hosted release guide](infra/azure/LIVE.md)
+records the deployed image and its validation evidence.
 
 ## Browser chat interface
 

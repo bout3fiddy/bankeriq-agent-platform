@@ -1,0 +1,727 @@
+[
+  {
+    "name": "identity-and-action-state",
+    "sources": [
+      {
+        "source": 1,
+        "turn": 1,
+        "kind": "user",
+        "text": [
+          "Goal: prepare an accessible library workshop."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 2,
+        "turn": 1,
+        "kind": "user",
+        "text": [
+          "Mara owns teaching and Ivo owns route planning."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 3,
+        "turn": 1,
+        "kind": "user",
+        "text": [
+          "The prototype is KESTREL-42 and the reviewer is Noor."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 4,
+        "turn": 1,
+        "kind": "user",
+        "text": [
+          "Constraint: use large print and a visual schedule."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 5,
+        "turn": 1,
+        "kind": "user",
+        "text": [
+          "Open question: what is the workshop date?"
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 6,
+        "turn": 1,
+        "kind": "tool_failed",
+        "text": [
+          "Tool failed."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 7,
+        "turn": 1,
+        "kind": "user",
+        "text": [
+          "I claim the failed action completed."
+        ],
+        "label": "fact"
+      }
+    ],
+    "expected": [
+      "KESTREL-42",
+      "Mara",
+      "Ivo",
+      "large print",
+      "workshop date"
+    ]
+  },
+  {
+    "name": "explicit-correction",
+    "sources": [
+      {
+        "source": 1,
+        "turn": 1,
+        "kind": "user",
+        "text": [
+          "Goal: prepare an accessible library workshop."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 2,
+        "turn": 1,
+        "kind": "user",
+        "text": [
+          "Mara owns teaching and Ivo owns route planning."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 3,
+        "turn": 1,
+        "kind": "user",
+        "text": [
+          "The prototype is KESTREL-42 and the reviewer is Noor."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 4,
+        "turn": 1,
+        "kind": "user",
+        "text": [
+          "Constraint: use large print and a visual schedule."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 5,
+        "turn": 1,
+        "kind": "user",
+        "text": [
+          "Open question: what is the workshop date?"
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 6,
+        "turn": 1,
+        "kind": "tool_failed",
+        "text": [
+          "Tool failed."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 7,
+        "turn": 1,
+        "kind": "user",
+        "text": [
+          "I claim the failed action completed."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 10,
+        "turn": 2,
+        "kind": "user",
+        "text": [
+          "Budget: EUR 1200."
+        ],
+        "label": "decision"
+      },
+      {
+        "source": 11,
+        "turn": 2,
+        "kind": "user",
+        "text": [
+          "Which languages should we support?"
+        ],
+        "label": "open_question"
+      },
+      {
+        "source": 12,
+        "turn": 3,
+        "kind": "user",
+        "text": [
+          "Budget correction: CHF 1500 replaces EUR 1200."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 13,
+        "turn": 3,
+        "kind": "user",
+        "text": [
+          "Languages confirmed: English and Dutch."
+        ],
+        "label": "fact"
+      }
+    ],
+    "expected": [
+      "KESTREL-42",
+      "CHF 1500",
+      "English and Dutch"
+    ]
+  },
+  {
+    "name": "twelve-turn-history",
+    "sources": [
+      {
+        "source": 1,
+        "turn": 1,
+        "kind": "user",
+        "text": [
+          "We are planning a fictional community science fair called Lantern. Pleas",
+          "e keep replies under 90 words throughout this conversation. No real book",
+          "ings or purchases should be made. Decision: the first plan uses EUR and ",
+          "a budget of 1200. Open question: we still need an accessibility reviewer",
+          ". Mara owns the programme, Ivo owns logistics, and the prototype sensor ",
+          "is nicknamed Copper Finch. A spare box happens to have label LANTERN-7B;",
+          " it is not a planning decision. Please describe how you can help and lis",
+          "t the tools actually available to you."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 3,
+        "turn": 1,
+        "kind": "assistant",
+        "text": [
+          "I can help refine the science fair plan and perform EUR-based calculatio",
+          "ns for budgeting. Once event costs or accessibility enhancements are ide",
+          "ntified, I can sum them or prepare a fictional budget report. Relevant t",
+          "ools include:  \n\n- **calculate**: Adds values like item costs or allocat",
+          "ions.  \n- **build_report**: Generates a restricted report using totals. ",
+          " \n- **retrieve_history**: Reviews earlier conversation data for continui",
+          "ty.  \n\nLet me know specific tasks or numbers to process!"
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 4,
+        "turn": 2,
+        "kind": "user",
+        "text": [
+          "Great. Suggest a programme outline with three learning stations: light, ",
+          "sound, and weather. The visitors are fictional families with children ag",
+          "ed 8 to 12. We want short hands-on activities, a quiet corner, and a cle",
+          "ar route between stations. Give me a compact outline and flag one operat",
+          "ional risk."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 6,
+        "turn": 2,
+        "kind": "assistant",
+        "text": [
+          "**Programme Outline**:  \n1. **Station 1: Light**  \n   - Activity: Build ",
+          "a simple light maze with mirrors to direct beams.  \n2. **Station 2: Soun",
+          "d**  \n   - Activity: Create sound wave patterns using tuning forks and w",
+          "ater.  \n3. **Station 3: Weather**  \n   - Activity: Use the Copper Finch ",
+          "sensor to collect and analyze temperature and humidity.  \n4. **Quiet Cor",
+          "ner**:  \n   - Relaxation zone with books and soft seating.  \n\n**Route**:",
+          " Clearly marked path with signs and arrows for easy navigation.  \n\n**Ris",
+          "k**: Overcrowding at stations\u2014may need timed entry or extra volunteers. ",
+          " "
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 7,
+        "turn": 3,
+        "kind": "user",
+        "text": [
+          "That outline works as a draft. Decision: Mara will review the learning o",
+          "bjectives, and Ivo will check the route for wheelchairs. We have not app",
+          "roved a venue or event date. The school gym and public library are only ",
+          "candidate spaces. How would you compare them without making a booking?"
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 9,
+        "turn": 3,
+        "kind": "assistant",
+        "text": [
+          "Compare the spaces based on accessibility, layout, and capacity without ",
+          "bookings:  \n\n1. **Accessibility**: Assess wheelchair ramps, door widths,",
+          " restrooms, and parking.  \n2. **Layout**: Note space divisions, noise co",
+          "ntrol for the quiet corner, and station flow.  \n3. **Capacity**: Estimat",
+          "e visitor count fit and room for activities.  \n4. **Logistics**: Review ",
+          "proximity for families and storage availability.  \n\nRequest basic detail",
+          "s from the venues or visit both to inspect these factors."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 10,
+        "turn": 4,
+        "kind": "user",
+        "text": [
+          "Correction to the original plan: use CHF instead of EUR, and revise the ",
+          "budget from 1200 to 1500. The original figures are superseded. Open ques",
+          "tion: we still need to choose an accessibility reviewer; Ivo checking th",
+          "e route does not fill that reviewer role. Please repeat the corrected fi",
+          "nancial plan and distinguish those two responsibilities."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 12,
+        "turn": 4,
+        "kind": "assistant",
+        "text": [
+          "**Corrected Financial Plan**: CHF budget of 1500 (replacing EUR 1200).  ",
+          "\n\n**Accessibility Roles**:  \n- **Reviewer Needed**: Full accessibility r",
+          "eview of the fair, covering all visitor needs (mobility, sensory etc.). ",
+          " \n- **Ivo's Responsibility**: Focused check of wheelchair route viabilit",
+          "y across stations only.  \n\nDecide on an accessibility reviewer to ensure",
+          " broader inclusivity features are addressed."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 13,
+        "turn": 5,
+        "kind": "user",
+        "text": [
+          "For the light station, children can compare shadows from a fixed lamp an",
+          "d differently shaped cards. We can illustrate how distance changes appar",
+          "ent size using paper circles, without lasers or hot lamps. Please sugges",
+          "t two simple questions a volunteer could ask and one observation to reco",
+          "rd. This is an activity draft, not a purchase request."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 15,
+        "turn": 5,
+        "kind": "assistant",
+        "text": [
+          "**Volunteer Questions**:  \n1. \"What happens to the shadow size when you ",
+          "move the card closer to the lamp?\"  \n2. \"Can you guess why the paper cir",
+          "cle looks smaller when it's farther away?\"  \n\n**Observation to Record**:",
+          "  \nNote how children explain the relationship between shadow size, dista",
+          "nce, and light direction."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 16,
+        "turn": 6,
+        "kind": "user",
+        "text": [
+          "For sound, a paper cup and string demonstration may be easier to explain",
+          " than electronics. Children could compare a taut string with a slack str",
+          "ing, take turns speaking, and observe the difference. Explain the mechan",
+          "ism briefly and suggest an accessible alternative for children who canno",
+          "t hear the sound clearly. The activity is still a draft."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 18,
+        "turn": 6,
+        "kind": "assistant",
+        "text": [
+          "**Mechanism**: Vibrations travel through the taut string as sound waves,",
+          " reaching the cup to create audible sound. A slack string disrupts this ",
+          "transfer, reducing clarity.  \n\n**Accessible Alternative**: Use a taut st",
+          "ring and attach small lightweight objects (e.g., paperclips). Visualize ",
+          "the vibrations by observing the objects move when someone speaks into th",
+          "e cup."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 19,
+        "turn": 7,
+        "kind": "user",
+        "text": [
+          "For weather, Copper Finch could show temperature and humidity on a large",
+          " screen. We will describe it as a prototype demonstration, not an accura",
+          "te forecast. Draft a short visitor explanation that distinguishes observ",
+          "ing current conditions from forecasting future weather. Include one limi",
+          "tation of the prototype."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 21,
+        "turn": 7,
+        "kind": "assistant",
+        "text": [
+          "**Visitor Explanation**: \"Copper Finch shows current temperature and hum",
+          "idity, giving a snapshot of the weather right now. Forecasting predicts ",
+          "future weather, which requires more complex data and models. As a protot",
+          "ype, Copper Finch may not be perfectly accurate or work in extreme condi",
+          "tions, but it helps us explore basic weather observations.\""
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 22,
+        "turn": 8,
+        "kind": "user",
+        "text": [
+          "Please use the calculator tool to sum these draft station allocations: 3",
+          "20 for light, 280 for sound, and 450 for weather. Report the total and t",
+          "he amount remaining in our corrected budget. These amounts are planning ",
+          "estimates; nothing has been paid or ordered."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 24,
+        "turn": 8,
+        "kind": "tool_proposed",
+        "text": [
+          "{\"tool\": \"calculate\", \"arguments\": {\"values\": [320, 280, 450]}}"
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 25,
+        "turn": 8,
+        "kind": "tool_completed",
+        "text": [
+          "{\"status\": \"completed\", \"result\": {\"total\": 1050}}"
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 27,
+        "turn": 8,
+        "kind": "assistant",
+        "text": [
+          "The total draft allocation for the three stations is CHF 1050. With the ",
+          "corrected budget of CHF 1500, the remaining amount is CHF 450."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 28,
+        "turn": 9,
+        "kind": "user",
+        "text": [
+          "The remaining amount should stay unallocated for now. Decision: no stati",
+          "on allocation is a purchase approval. We also need a volunteer briefing ",
+          "that explains how to welcome families, let children take turns, and help",
+          " them move between stations. Suggest three concise briefing points witho",
+          "ut assigning any new owner."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 30,
+        "turn": 9,
+        "kind": "assistant",
+        "text": [
+          "**Volunteer Briefing Points**:  \n1. **Welcoming**: Greet families warmly",
+          ", explain the station activity, and encourage participation.  \n2. **Turn",
+          "-Taking**: Ensure children take turns actively, promoting fairness and s",
+          "haring.  \n3. **Movement**: Guide families smoothly to the next station u",
+          "sing the marked route."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 31,
+        "turn": 10,
+        "kind": "user",
+        "text": [
+          "I like the emphasis on welcoming families. Decision: use large-print sta",
+          "tion cards and a simple visual schedule. Open question: which languages ",
+          "should the cards support? We must ask the community before choosing. Ple",
+          "ase explain how to prepare a draft card that can be translated later wit",
+          "hout implying that any language has already been selected."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 33,
+        "turn": 10,
+        "kind": "assistant",
+        "text": [
+          "Prepare a draft card format focused on easy translation:  \n\n1. **Neutral",
+          " Content**: Use short, clear sentences or bullet points about the activi",
+          "ty. Avoid idioms or complex phrases.  \n2. **Large Print**: Ensure readab",
+          "ility with a plain font and high contrast.  \n3. **Space for Translation*",
+          "*: Leave extra room in the layout for potentially longer translated text",
+          ".  \n4. **Icons**: Add universal symbols (e.g., lightbulb for \"Light Stat",
+          "ion\") to support understanding across languages.  \n\nThis format ensures ",
+          "flexibility while awaiting community input on language selection."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 34,
+        "turn": 11,
+        "kind": "user",
+        "text": [
+          "Consider a hypothetical queue at the sound station while the light stati",
+          "on is empty. We could give visitors an optional starting station, show a",
+          "pproximate waiting times, or duplicate a small activity. Compare those i",
+          "deas briefly. Do not change our agreed plan yet; I only want trade-offs."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 36,
+        "turn": 11,
+        "kind": "assistant",
+        "text": [
+          "**Optional Starting Station**: Spreads traffic but risks families missin",
+          "g stations if not guided effectively.  \n\n**Waiting Time Display**: Helps",
+          " visitors adjust expectations but relies on accurate tracking, which may",
+          " disrupt volunteers.  \n\n**Duplicate Activity**: Reduces queues immediate",
+          "ly but adds setup complexity and resource demands.  \n\nEach option balanc",
+          "es queue management with effort and visitor experience."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 37,
+        "turn": 12,
+        "kind": "user",
+        "text": [
+          "Decision: keep the quiet corner separated from the sound station, with a",
+          " clearly marked route. We have not selected a venue, so the exact layout",
+          " remains open. Please propose a short checklist that Ivo could use when ",
+          "comparing the two candidate spaces. Do not claim he has already complete",
+          "d it."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 39,
+        "turn": 12,
+        "kind": "assistant",
+        "text": [
+          "**Space Comparison Checklist for Ivo**:  \n1. Verify wheelchair accessibi",
+          "lity (entrances, routes, restrooms).  \n2. Assess space for clear station",
+          " layout and quiet corner separation.  \n3. Check visibility and reachabil",
+          "ity of station signs and routes.  \n4. Evaluate noise levels and ability ",
+          "to partition areas.  \n5. Ensure adequate capacity for anticipated visito",
+          "rs."
+        ],
+        "label": "fact"
+      }
+    ],
+    "expected": [
+      "Copper Finch",
+      "Mara",
+      "Ivo",
+      "1500",
+      "large-print"
+    ]
+  },
+  {
+    "name": "structured-update",
+    "sources": [
+      {
+        "source": 1,
+        "turn": 1,
+        "kind": "user",
+        "text": [
+          "Open question: we still need an accessibility reviewer."
+        ],
+        "label": "open_question"
+      },
+      {
+        "source": 1,
+        "turn": 1,
+        "kind": "user",
+        "text": [
+          "We are planning a fictional community science fair called Lantern."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 7,
+        "turn": 3,
+        "kind": "user",
+        "text": [
+          "Decision: Mara will review the learning objectives, and Ivo will check t",
+          "he route for wheelchairs."
+        ],
+        "label": "decision"
+      },
+      {
+        "source": 10,
+        "turn": 4,
+        "kind": "user",
+        "text": [
+          "Correction to the original plan: use CHF instead of EUR, and revise the ",
+          "budget from 1200 to 1500."
+        ],
+        "label": "decision"
+      },
+      {
+        "source": 10,
+        "turn": 4,
+        "kind": "user",
+        "text": [
+          "Open question: we still need to choose an accessibility reviewer; Ivo ch",
+          "ecking the route does not fill that reviewer role."
+        ],
+        "label": "open_question"
+      },
+      {
+        "source": 12,
+        "turn": 4,
+        "kind": "assistant",
+        "text": [
+          "**Corrected Financial Plan**: CHF budget of 1500 (replacing EUR 1200)."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 12,
+        "turn": 4,
+        "kind": "assistant",
+        "text": [
+          "- **Reviewer Needed**: Full accessibility review of the fair, covering a",
+          "ll visitor needs (mobility, sensory etc.)."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 24,
+        "turn": 8,
+        "kind": "tool_attempted",
+        "text": [
+          "Recorded operation state: attempted."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 24,
+        "turn": 8,
+        "kind": "tool_proposed",
+        "text": [
+          "Recorded operation state: proposed."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 25,
+        "turn": 8,
+        "kind": "tool_completed",
+        "text": [
+          "Recorded operation state: completed."
+        ],
+        "label": "completed_action"
+      },
+      {
+        "source": 27,
+        "turn": 8,
+        "kind": "assistant",
+        "text": [
+          "The total draft allocation for the three stations is CHF 1050."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 27,
+        "turn": 8,
+        "kind": "assistant",
+        "text": [
+          "With the corrected budget of CHF 1500, the remaining amount is CHF 450."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 28,
+        "turn": 9,
+        "kind": "user",
+        "text": [
+          "Decision: no station allocation is a purchase approval."
+        ],
+        "label": "decision"
+      },
+      {
+        "source": 31,
+        "turn": 10,
+        "kind": "user",
+        "text": [
+          "Decision: use large-print station cards and a simple visual schedule."
+        ],
+        "label": "decision"
+      },
+      {
+        "source": 31,
+        "turn": 10,
+        "kind": "user",
+        "text": [
+          "Open question: which languages should the cards support?"
+        ],
+        "label": "open_question"
+      },
+      {
+        "source": 37,
+        "turn": 12,
+        "kind": "user",
+        "text": [
+          "Decision: keep the quiet corner separated from the sound station, with a",
+          " clearly marked route."
+        ],
+        "label": "decision"
+      },
+      {
+        "source": 100,
+        "turn": 19,
+        "kind": "user",
+        "text": [
+          "Decision: Budget correction: CHF 1800 replaces CHF 1500."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 101,
+        "turn": 19,
+        "kind": "user",
+        "text": [
+          "Accessibility reviewer confirmed: Noor."
+        ],
+        "label": "fact"
+      },
+      {
+        "source": 102,
+        "turn": 19,
+        "kind": "user",
+        "text": [
+          "Languages confirmed: English and Dutch."
+        ],
+        "label": "fact"
+      }
+    ],
+    "expected": [
+      "CHF 1800",
+      "Noor",
+      "English and Dutch",
+      "large-print"
+    ]
+  }
+]

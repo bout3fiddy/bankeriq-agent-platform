@@ -24,10 +24,13 @@ from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from agent_runtime.prompts.resolution import PromptScope
+from agent_runtime.conversations.semantic import TokenBudget
+from agent_runtime.prompts.resolution import FixedPromptResolver, PromptScope
 from agent_runtime.providers.foundry.model import AsyncFoundryModelClient
+from agent_runtime.providers.foundry.tokens import FoundryTokenCounter
 from agent_runtime.runs.context import RunContext
 from agent_runtime.tools.bindings import ExecutionOutput, ToolBinding
+from agent_runtime.tools.definitions import OutputPolicy
 from agent_runtime.tools.gateway import ToolGateway
 from agent_runtime.tools.registry import ToolRegistry
 from bankeriq_agent_platform.azure.authentication import (
@@ -36,13 +39,16 @@ from bankeriq_agent_platform.azure.authentication import (
     synthetic_input,
 )
 from bankeriq_agent_platform.azure.connections import token_connection
+from bankeriq_agent_platform.memory.retrieval import HISTORY_TOOL, HistoryRetrieval
+from bankeriq_agent_platform.memory.service import HistoryPolicy, SemanticMemory
+from bankeriq_agent_platform.memory.storage import SemanticStore
 from bankeriq_agent_platform.runtime import compose_queued_runtime
 from bankeriq_agent_platform.sessions.cache import RedisSessions
 from bankeriq_agent_platform.sessions.service import SessionService
 from bankeriq_agent_platform.storage.connections import PrimaryConnections
 from bankeriq_agent_platform.storage.postgres import CommitUnknownError, PostgresStateStore
 from bankeriq_agent_platform.storage.prompts import PostgresPromptResolver
-from bankeriq_agent_platform.telemetry import configure, emit
+from bankeriq_agent_platform.telemetry import ACTIVE_RUN, configure, emit
 from bankeriq_agent_platform.workers.api import create_async_app
 from bankeriq_agent_platform.workers.asynchronous import AsyncWorker
 from bankeriq_agent_platform.workers.coordinator import QueuedCoordinator
@@ -64,7 +70,7 @@ class Access:
 
     def permissions_for(self, context):
         return (
-            frozenset({"validation.use"})
+            frozenset({"validation.use", "history.read"})
             if (context.tenant_id == self.tenant and context.user_id in self.users)
             else frozenset()
         )
@@ -81,7 +87,21 @@ class NoModel:
         raise RuntimeError("this process has no inference authority")
 
 
-def composition(store, prompts, model, access, tool_delay: float = 0):
+def observe_model(record):
+    emit(
+        "model.request",
+        ACTIVE_RUN.get(),
+        elapsed_ms=record.elapsed_ms,
+        input_tokens=record.input_tokens,
+        output_tokens=record.output_tokens,
+        status_code=record.status_code,
+        token_limit=record.token_limit,
+        tokens_remaining=record.tokens_remaining,
+        summary=record.summary,
+    )
+
+
+def composition(store, prompts, model, access, tool_delay: float = 0, *, summarizer=None):
     def execute_calculation(context, arguments):
 
         # A bounded synthetic delay makes active lease renewal and platform drain
@@ -89,10 +109,42 @@ def composition(store, prompts, model, access, tool_delay: float = 0):
         time.sleep(tool_delay)
         return calculate(context, arguments)
 
-    registry = ToolRegistry((CALCULATE, REPORT))
+    # Every queued conversation uses durable memory. Startup owns the clients;
+    # API/tool roles supply NoModel and only the coordinator can perform inference.
+    # A source policy derives from the same current grants used by the gateway.
+    # Changing the allowlist removes access before either summary reuse or retrieval.
+    counter = FoundryTokenCounter("gpt-4o-2024-11-20")
+    registry = ToolRegistry((CALCULATE, REPORT, HISTORY_TOOL))
+
+    def history_access(context):
+        grants = access.permissions_for(context)
+        return HistoryPolicy(
+            "pilot-memory-1:" + ",".join(sorted(grants)),
+            frozenset(
+                tool.name
+                for tool in registry.discover(grants)
+                if tool.output_policy == OutputPolicy.VISIBLE
+            ),
+            lambda fact: "history.read" in grants,
+        )
+
+    memory = SemanticMemory(
+        SemanticStore(store),
+        summarizer if summarizer is not None else model,
+        prompts=FixedPromptResolver(
+            "Memory format version 2. Select at most 24 concise candidate identifiers. "
+            "Prioritize user decisions, corrections, names, responsibilities, open questions "
+            "and tool outcomes. Keep user identifiers, including names and nicknames. Omit routine "
+            "acknowledgements and illustrative examples. Return raw JSON only."
+        ),
+        summary_budget=TokenBudget("gpt-4o-2024-11-20-summary-v3", 8192, 1024, counter),
+        context_budget=TokenBudget("gpt-4o-2024-11-20-context-v1", 8192, 512, counter),
+        access_for=history_access,
+    )
     gateway = ToolGateway(
         registry,
         {
+            ("retrieve_history", "1"): HistoryRetrieval(memory).binding(),
             ("calculate", "v1"): ToolBinding(execute_calculation, validate_values, public_total),
             ("build_report", "v1"): ToolBinding(
                 lambda c, a: ExecutionOutput(
@@ -111,6 +163,7 @@ def composition(store, prompts, model, access, tool_delay: float = 0):
         permissions_for=access.permissions_for,
         prompts=prompts,
         bind=QueuedCoordinator.bind_tool,
+        memory=memory,
     )
     original = runtime.bind
 
@@ -279,7 +332,10 @@ async def main():
                 )
             )
             model = AsyncFoundryModelClient(
-                client, deployment="coordinator", max_completion_tokens=256
+                client,
+                deployment="coordinator",
+                max_completion_tokens=2048,
+                observer=observe_model,
             )
 
         tool_delay = float(os.environ.get("PILOT_TOOL_DELAY_SECONDS", "0"))

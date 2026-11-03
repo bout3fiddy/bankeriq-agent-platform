@@ -2,9 +2,9 @@
 
 Status: planned after the infrastructure groups.
 
-1. **Semantic context compaction** — Implement the
-   [compaction and retrieval group](11-planned-semantic-compaction-and-retrieval.md),
-   including durable action/decision summaries and bounded model-accessible history.
+1. **Semantic context compaction** — Implemented in the
+   [compaction and retrieval group](11-completed-semantic-compaction-and-retrieval.md).
+   Its required queued profile retains the documented model-quality and capacity limits.
 2. **Richer streaming and scheduling** — Extend the initial progress/reconnect path
    and tune fairness or priorities only when measured workloads require it.
 3. **Database growth** — Follow the

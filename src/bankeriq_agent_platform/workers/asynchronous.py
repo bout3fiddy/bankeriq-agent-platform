@@ -6,9 +6,10 @@ from time import monotonic
 
 import psycopg
 
+from agent_runtime.coordinator.model import ModelRateLimited
 from agent_runtime.storage.interface import StateConflictError
 from bankeriq_agent_platform.storage.postgres import CommitUnknownError
-from bankeriq_agent_platform.telemetry import emit
+from bankeriq_agent_platform.telemetry import ACTIVE_RUN, emit
 
 from .queue import ApprovalExpiredError, Lease
 from .reasons import FailureReason
@@ -69,6 +70,7 @@ class AsyncWorker(Worker):
     async def execute_async(self, lease: Lease) -> None:
         lost = asyncio.Event()
         started = monotonic()
+        context_token = ACTIVE_RUN.set(lease.context)
         emit("worker.claimed", lease.context, queue=self.queue_name, attempt=lease.attempt)
 
         async def heartbeat() -> None:
@@ -132,11 +134,27 @@ class AsyncWorker(Worker):
                 emit("worker.started", lease.context, queue=self.queue_name, attempt=lease.attempt)
 
                 try:
-                    outcome = (
-                        await handler.async_execute(lease.context, prepared)
-                        if handler.async_execute is not None
-                        else await asyncio.to_thread(handler.execute, lease.context, prepared)
-                    )
+                    if handler.async_execute_with_lease is not None:
+                        outcome = await handler.async_execute_with_lease(
+                            lease.context, prepared, lease
+                        )
+                    elif handler.async_execute is not None:
+                        outcome = await handler.async_execute(lease.context, prepared)
+                    else:
+                        outcome = await asyncio.to_thread(handler.execute, lease.context, prepared)
+                except ModelRateLimited as error:
+                    if replay_safe(prepared, handler):
+                        emit("worker.retry", lease.context, queue=self.queue_name)
+                        await asyncio.to_thread(
+                            self.queue.pause,
+                            lease,
+                            seconds=error.retry_after,
+                            handler=handler,
+                        )
+                    else:
+                        await asyncio.to_thread(self.queue.reconcile, lease)
+
+                    return
                 except Exception:
                     if replay_safe(prepared, handler):
                         emit("worker.retry", lease.context, queue=self.queue_name)
@@ -166,6 +184,7 @@ class AsyncWorker(Worker):
         except StateConflictError, CommitUnknownError, psycopg.OperationalError:
             return
         finally:
+            ACTIVE_RUN.reset(context_token)
             renewal.cancel()
 
             with suppress(asyncio.CancelledError):

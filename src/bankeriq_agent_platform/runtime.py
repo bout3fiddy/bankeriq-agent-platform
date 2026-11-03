@@ -25,6 +25,7 @@ from .configuration import RuntimeSettings
 from .providers import hosting_providers, model_providers
 
 if TYPE_CHECKING:
+    from .memory.service import SemanticMemory
     from .storage.postgres import PostgresStateStore
     from .workers.coordinator import QueuedCoordinator
     from .workers.state import ChildTask, Recovery
@@ -105,12 +106,15 @@ def compose_queued_runtime(
     bind: Callable[[RunContext, ToolCall, ToolDefinition, Recovery], ChildTask],
     limits: RunLimits | None = None,
     fail_fast: bool = False,
+    memory: SemanticMemory,
 ) -> QueuedCoordinator:
     """Explicit asynchronous profile with application-owned clients and worker lifecycle.
 
     Supply an AsyncModelClient whose async context manager is owned by startup,
-    a PostgresStateStore, and the same ToolGateway and permission source used by
-    open_runtime(). The returned runtime only admits and reconstructs work. Start
+    a PostgresStateStore, a SemanticMemory service, and the same ToolGateway and
+    permission source used by open_runtime(). Memory is a required startup dependency;
+    every prepared model step pins its profile before assembly or compaction.
+    The returned runtime only admits and reconstructs work. Start
     AsyncWorker instances separately with its handler registrations and queue limits.
     The ordinary open_runtime() path retains its synchronous in-memory behavior.
     """
@@ -124,5 +128,12 @@ def compose_queued_runtime(
         store, registry, gateway, None, permissions_for, selected_limits, prompts=prompts
     )
     return QueuedCoordinator(
-        queue, coordinator, model, gateway, limits=selected_limits, bind=bind, fail_fast=fail_fast
+        queue,
+        coordinator,
+        model,
+        gateway,
+        limits=selected_limits,
+        bind=bind,
+        fail_fast=fail_fast,
+        memory=memory,
     )

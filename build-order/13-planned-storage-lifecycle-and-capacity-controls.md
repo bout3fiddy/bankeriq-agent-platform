@@ -17,8 +17,9 @@ policy decisions during this group's implementation; none are selected by this p
 ## Planned requirements
 
 1. **Define retention and recovery windows** — Inventory conversation events, snapshots,
-   history pages, runs, jobs, results, approvals, prompt manifests/versions, deduplication
-   records and audit evidence. Define retention by record class and tenant policy, including
+   history pages, runs, jobs, results, approvals, prompt manifests/versions, semantic summary
+   versions, compaction attempts, retrieval receipts, deduplication records and audit evidence.
+   Define retention by record class and tenant policy, including
    deletion holds and dependencies. Specify supported retry, reconnect and recovery windows
    and the response to requests older than those windows. Retain referenced prompt versions
    and the minimum identity evidence needed to prevent old requests executing again.
@@ -26,6 +27,8 @@ policy decisions during this group's implementation; none are selected by this p
    execution records in small, restartable batches. Preserve active work, unresolved unknown
    effects, approvals, required audit evidence and deletion/recovery fences. Coordinate
    journal pruning with durable snapshots, history reads, cursors and projection progress.
+   Include [semantic memory](11-completed-semantic-compaction-and-retrieval.md) provenance
+   and retrieval windows; a semantic summary alone does not permit source-journal deletion.
    Fence late workers and cache refills so cleanup cannot resurrect deleted state. Expose
    dry-run eligibility and counts before enabling destructive cleanup under an approved policy.
 3. **Enforce tenant quotas and admission limits** — Measure retained usage and define limits

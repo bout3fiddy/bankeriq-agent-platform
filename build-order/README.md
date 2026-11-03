@@ -59,13 +59,14 @@ file determine execution eligibility. Follow-up groups remain after infrastructu
 - 10 — Reviewed composite business tools
   [planned](10-planned-reviewed-composite-business-tools.md)
 - 11 — Semantic compaction and history retrieval
-  [planned](11-planned-semantic-compaction-and-retrieval.md)
+  [completed](11-completed-semantic-compaction-and-retrieval.md)
 - 12 — Follow-up runtime work
   [planned](12-planned-follow-up-runtime-work.md)
 
-Next: [Semantic compaction and history retrieval](11-planned-semantic-compaction-and-retrieval.md).
-Group 10 remains planned for later. Group 11's infrastructure prerequisites are complete;
-it does not depend on group 10. Both groups remain planned until implementation starts.
+Completed: [Semantic compaction and history
+retrieval](11-completed-semantic-compaction-and-retrieval.md), including automatic compaction and
+hosted latency validation. Next: [Follow-up runtime work](12-planned-follow-up-runtime-work.md).
+Group 10 remains planned for later at the user's request.
 
 Use exactly three statuses: `planned`, `in-progress` and `completed`.
 `planned` means work has not started. Mark a group `in-progress` as soon as work

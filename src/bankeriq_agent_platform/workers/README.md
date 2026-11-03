@@ -136,8 +136,10 @@ docker rm -f bankeriq-workers-postgres bankeriq-workers-redis
 
 Executed counts and service versions are recorded in the
 [group evidence](../../../build-order/06-completed-durable-postgresql-workers.md).
-HA failover, production authentication/network isolation, throughput SLOs,
-cloud hosting and semantic compaction remain deferred.
+These group-06 tests did not validate HA, hosted deployment or semantic memory.
+Later [Azure lifecycle evidence](../../../build-order/09-completed-azure-runtime-deployment.md)
+and the [semantic memory adapter](../memory/README.md) cover those additions.
+Production authentication/network policy and throughput SLOs need separate evidence.
 
 ## Failure inspection and recovery controls
 

@@ -15,7 +15,12 @@ def main() -> None:
     parser.add_argument("--config", type=Path, default=Path("scratch/live-client.json"))
     parser.add_argument("action", choices=["new", "send", "read", "inspect", "status", "activity"])
     parser.add_argument("--text")
+    parser.add_argument("--wait-seconds", type=int, default=600)
     args = parser.parse_args()
+
+    if not 1 <= args.wait_seconds <= 900:
+        parser.error("wait-seconds must be between 1 and 900")
+
     config = json.loads(args.config.read_text())
 
     # Local configuration holds endpoints and opaque conversation IDs only. CLI
@@ -68,7 +73,7 @@ def main() -> None:
             response.raise_for_status()
             admitted = time.monotonic() - started
             status = {}
-            deadline = time.monotonic() + 180
+            deadline = time.monotonic() + args.wait_seconds
 
             while time.monotonic() < deadline:
                 response = client.get("/status")

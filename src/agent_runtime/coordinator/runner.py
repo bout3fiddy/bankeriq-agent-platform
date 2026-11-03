@@ -236,7 +236,7 @@ class Coordinator:
         return self._model.complete(request), definitions
 
     def prepare_request(
-        self, checkpoint: Checkpoint
+        self, checkpoint: Checkpoint, *, assemble_history: bool = True
     ) -> tuple[ModelRequest, tuple[ToolDefinition, ...]]:
         """Reconstruct a prepared request with its saved prompt and current access."""
 
@@ -247,7 +247,7 @@ class Coordinator:
         # Passing permissions_for=permissions_for makes every model request use
         # current trusted grants. Removing reports.create after step one removes
         # that tool from step two even if the global prompt still requests it.
-        if not checkpoint.conversation.context_complete:
+        if assemble_history and not checkpoint.conversation.context_complete:
             raise ContextBudgetExceeded("current turn requires compaction before inference")
 
         permissions = self._permissions_for(checkpoint.run.context)
@@ -263,14 +263,21 @@ class Coordinator:
         # select v8 after the checkpoint recorded v7 and break exact recovery.
         # Request-local fields also let simultaneous sessions use different
         # prepared versions through the same model client.
+        # assemble_history=False supplies only that trusted envelope to the
+        # queued semantic-memory adapter. It must reconstruct and budget history
+        # before dispatch; the synchronous profile continues to select its tail here.
         assert checkpoint.run.prompt_manifest is not None
         instructions = self._prompts.instructions(checkpoint.run.prompt_manifest)
-        history = bounded_context(
-            checkpoint.conversation.items,
-            instructions=instructions,
-            tools=model_tools,
-            max_items=self._limits.context_items,
-            max_bytes=self._limits.context_bytes,
+        history = (
+            bounded_context(
+                checkpoint.conversation.items,
+                instructions=instructions,
+                tools=model_tools,
+                max_items=self._limits.context_items,
+                max_bytes=self._limits.context_bytes,
+            )
+            if assemble_history
+            else ()
         )
         request = ModelRequest(
             history,

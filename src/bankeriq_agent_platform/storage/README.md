@@ -154,8 +154,12 @@ materialised pages. Metadata-only transitions can leave event-sequence gaps.
 
 Recent context selects whole turns up to 200 items/256 KiB, excluding later queued
 turns from an active run. An oversized newest turn keeps its committed outcomes
-and reports incomplete context; further inference fails explicitly. Semantic
-compaction remains deferred. Growing transcripts are never rewritten into checkpoints.
+and reports incomplete context; further inference fails explicitly in that profile.
+The [semantic memory adapter](../memory/README.md) uses migrations 013–015 for
+versioned summaries and fixed-scope source retrieval before inference.
+Later additions record safe within-turn coverage, retained original input, retirement source
+links and the one-time context-overflow retry. They permit no journal deletion.
+Growing transcripts are never rewritten into checkpoints.
 
 Projection work coalesces to the latest durable cursor, including state changes
 without text. The explicit projector commits bounded immutable pages, snapshots and

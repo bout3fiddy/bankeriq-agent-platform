@@ -9,6 +9,9 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-dev --no-install-project \
     --extra postgres --extra redis --extra foundry-model --extra azure-runtime
+ENV TIKTOKEN_CACHE_DIR=/app/token-cache
+RUN uv run --no-sync python -c \
+    "import tiktoken; tiktoken.encoding_for_model('gpt-4o-2024-11-20')"
 COPY src/ src/
 COPY prompts/ prompts/
 RUN uv sync --locked --no-dev --no-editable \
@@ -17,6 +20,8 @@ RUN uv sync --locked --no-dev --no-editable \
 FROM python:3.14-slim-bookworm@${PYTHON_DIGEST}
 ENV PATH="/app/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
+ENV TIKTOKEN_CACHE_DIR=/app/token-cache
+COPY --from=build /app/token-cache /app/token-cache
 COPY --from=build /app/.venv /app/.venv
 COPY tests/__init__.py tests/__init__.py
 COPY tests/validation/ tests/validation/

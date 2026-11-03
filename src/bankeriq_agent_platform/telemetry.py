@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import sys
+from contextvars import ContextVar
 from datetime import UTC, datetime
 from typing import Literal
 
@@ -24,8 +25,12 @@ Event = Literal[
     "worker.retry",
     "worker.uncertain",
     "worker.lease_lost",
+    "model.request",
+    "memory.assembled",
+    "memory.compacted",
 ]
 LOGGER = logging.getLogger("bankeriq.lifecycle")
+ACTIVE_RUN: ContextVar[RunContext | None] = ContextVar("active_run", default=None)
 
 
 def configure() -> None:
@@ -45,6 +50,14 @@ def emit(
     queue: str | None = None,
     attempt: int | None = None,
     elapsed_ms: int | None = None,
+    input_tokens: int | None = None,
+    output_tokens: int | None = None,
+    status_code: int | None = None,
+    token_limit: int | None = None,
+    tokens_remaining: int | None = None,
+    summary: bool | None = None,
+    estimated_input_tokens: int | None = None,
+    estimated_context_tokens: int | None = None,
 ) -> None:
     """Emit correlation IDs and bounded counters without application payloads.
 
@@ -75,5 +88,20 @@ def emit(
 
     if elapsed_ms is not None:
         record["elapsed_ms"] = elapsed_ms
+
+    for name, value in (
+        ("input_tokens", input_tokens),
+        ("output_tokens", output_tokens),
+        ("status_code", status_code),
+        ("token_limit", token_limit),
+        ("tokens_remaining", tokens_remaining),
+        ("estimated_input_tokens", estimated_input_tokens),
+        ("estimated_context_tokens", estimated_context_tokens),
+    ):
+        if value is not None:
+            record[name] = value
+
+    if summary is not None:
+        record["purpose"] = "summary" if summary else "conversation"
 
     LOGGER.info(json.dumps(record, separators=(",", ":")))

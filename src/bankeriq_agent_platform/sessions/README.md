@@ -75,7 +75,9 @@ schemas through `RunLimits.context_items/context_bytes`. These are JSON byte/ite
 bounds, not provider token estimates. An oversized newest turn commits its permitted
 results, returns `context_complete=false` with empty recent events, and blocks
 further inference with `ContextBudgetExceeded` (HTTP 422). Its full permitted history
-remains pageable. Semantic compaction and tokenizer-specific budgets remain future work.
+remains pageable. The [semantic memory profile](../memory/README.md) adds
+durable summaries and tokenizer-specific budgets through separate primary reads.
+It does not consume the Redis UI view as model context or change session inactivity.
 
 The new context window applies to existing retained checkpoints as well. Drain
 prepared inference before upgrading when exact reproduction of the previous,
