@@ -1,7 +1,7 @@
 # BankerIQ build order
 
 Build from core runtime logic towards external integrations. These steps are
-planned except where marked implemented. Keep external I/O mocked until the adapter steps.
+planned except where marked complete. Keep external I/O mocked until the adapter steps.
 
 Work one component at a time. Each step includes its implementation, meaningful
 tests and supporting documentation before the next step begins. Reuse the existing
@@ -37,13 +37,13 @@ file determine execution eligibility. Follow-up groups remain after infrastructu
 - 01 — Initial agent runtime
   [complete](01-complete-initial-agent-runtime.md)
 - 02 — Containerisation
-  [implemented](02-implemented-containerisation.md)
+  [complete](02-complete-containerisation.md)
 - 03 — PostgreSQL journal and job records
-  [implemented](03-implemented-postgresql-journal-and-job-records.md)
+  [complete](03-complete-postgresql-journal-and-job-records.md)
 - 04 — Shared system prompts
-  [implemented](04-implemented-shared-system-prompts.md)
+  [complete](04-complete-shared-system-prompts.md)
 - 05 — Redis sessions and asynchronous history
-  [implemented](05-implemented-redis-sessions-and-history.md)
+  [complete](05-complete-redis-sessions-and-history.md)
 - 06 — Durable PostgreSQL workers
   [planned](06-planned-durable-postgresql-workers.md)
 - 07 — Asynchronous coordinator and tool queues
@@ -61,10 +61,12 @@ file determine execution eligibility. Follow-up groups remain after infrastructu
 
 Next: [durable PostgreSQL workers](06-planned-durable-postgresql-workers.md).
 
-The filename status matches the group's declared status. `complete` preserves the
-completed initial-runtime milestone. `implemented` means the group's documented local
-gates passed; its evidence still defines limits. `planned` has no completion claim.
-Use `in-progress` while implementing a group and retain unchecked work explicitly.
+The filename status matches the group's declared status: `planned` → `in-progress`
+→ `complete`. Complete means the group's stated acceptance gates passed, including
+implementation, required tests and documentation. Validation scope and remaining
+limitations stay inside each group file; completion alone makes no production claim.
+`implemented` is descriptive prose, with no separate group status. See
+[AGENTS.md](AGENTS.md#status-and-evidence-maintenance) for the full definitions.
 Rename the file and update inbound links whenever its status changes.
 
 ## Scope boundary

@@ -1,6 +1,6 @@
 # Redis sessions and asynchronous history
 
-Status: implemented and locally validated. Depends on PostgreSQL records and shared system prompts.
+Status: complete and locally validated. Depends on PostgreSQL records and shared system prompts.
 
 1. **Serve active views** — Hydrate recent context from a PostgreSQL snapshot plus
    journal tail, then serve API reads from tenant/conversation Redis keys. Page old

@@ -1,6 +1,6 @@
 # PostgreSQL journal and job records
 
-Status: implemented and validated locally on PostgreSQL 17.11. Depends on containerisation.
+Status: complete and validated locally on PostgreSQL 17.11. Depends on containerisation.
 
 1. **Map existing storage operations** — Review `StateStore`, run transitions and
    `open_runtime()` before adding focused transactional queue methods. Define

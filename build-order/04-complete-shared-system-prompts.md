@@ -1,6 +1,6 @@
 # Shared system prompts
 
-Status: implemented and locally validated. Depends on PostgreSQL journal and job records.
+Status: complete and locally validated. Depends on PostgreSQL journal and job records.
 
 1. **Separate instructions from client lifetime** — Add explicit resolved
    instructions and a prompt manifest to the provider-neutral model request. Use the
