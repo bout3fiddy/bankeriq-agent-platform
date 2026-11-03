@@ -71,6 +71,17 @@ when its requirements, tests, documentation and acceptance gates are satisfied.
 Keep filenames, Status paragraphs and index entries aligned. See
 [AGENTS.md](AGENTS.md#status-and-evidence-maintenance) for maintenance guidance.
 
+## Operational reliability and capacity management
+
+Cross-cutting work for sustained operation, horizontal scalability and infrastructure
+state growth. [Group 08](08-planned-recovery-and-scaling-validation.md) owns recovery
+and horizontal scaling validation. The item below owns storage lifecycle and capacity
+controls; its dependencies determine execution order. Existing group numbers and the
+next-group selection remain unchanged.
+
+- 13 — Storage lifecycle and capacity controls
+  [planned](13-planned-storage-lifecycle-and-capacity-controls.md)
+
 ## Scope boundary
 
 Real tool applications, durable workers, persistent storage, enterprise identity

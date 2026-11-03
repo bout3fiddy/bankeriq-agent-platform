@@ -7,9 +7,9 @@ Status: planned after the infrastructure groups.
    including durable action/decision summaries and bounded model-accessible history.
 2. **Richer streaming and scheduling** — Extend the initial progress/reconnect path
    and tune fairness or priorities only when measured workloads require it.
-3. **Database growth** — Partition/archive large event and job tables; consider
-   larger primary capacity before adding write shards. Add read replicas only for
-   measured lag-tolerant demand; they do not increase write capacity.
+3. **Database growth** — Follow the
+   [storage lifecycle group](13-planned-storage-lifecycle-and-capacity-controls.md)
+   for retention, quotas, archival, partitioning and capacity planning.
 4. **Tenant sharding, conditional** — Implement trusted tenant routing only after
    measured write bottlenecks justify it. Co-locate all tenant conversation/queue/
    deduplication records. Test fenced shard moves and prompt resolution from the
