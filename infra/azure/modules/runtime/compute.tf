@@ -97,7 +97,7 @@ resource "azurerm_container_app" "runtime" {
     identity = azurerm_user_assigned_identity.runtime[each.key].id
   }
   dynamic "ingress" {
-    for_each = each.key == "api" ? [1] : []
+    for_each = each.key == "api" && !var.paused ? [1] : []
     content {
       external_enabled           = true
       allow_insecure_connections = false
@@ -110,7 +110,7 @@ resource "azurerm_container_app" "runtime" {
     }
   }
   template {
-    min_replicas                     = var.replicas
+    min_replicas                     = var.paused ? 0 : var.replicas
     max_replicas                     = var.replicas
     termination_grace_period_seconds = 60
     container {
@@ -137,6 +137,35 @@ resource "azurerm_container_app" "runtime" {
   }
   depends_on = [azurerm_role_assignment.pull, azurerm_role_assignment.inference,
   azurerm_managed_redis_access_policy_assignment.runtime]
+}
+
+# A zero minimum is only a scaling hint: an existing polling worker can remain
+# alive. Deactivate the paused revision explicitly before running migrations.
+# For example, revision 0000005 becomes inactive; resume creates revision 0000006
+# with the selected image and restores ingress. Removing this action from state
+# invokes no Azure operation, so it cannot deactivate the resumed revision.
+data "azapi_resource" "pause_target" {
+  for_each               = var.paused ? azurerm_container_app.runtime : {}
+  type                   = "Microsoft.App/containerApps@2025-07-01"
+  resource_id            = each.value.id
+  response_export_values = ["properties.latestRevisionName"]
+
+  # Changing the minimum replica count can create a new revision. AzureRM once
+  # planned revision 8 here and returned revision 9 during apply, invalidating
+  # the action's known resource ID. Read the actual target after the app update;
+  # Terraform then keeps the action target unknown until that read completes.
+  depends_on = [azurerm_container_app.runtime]
+}
+
+resource "azapi_resource_action" "pause" {
+  for_each = data.azapi_resource.pause_target
+  type     = "Microsoft.App/containerApps/revisions@2025-07-01"
+  resource_id = format(
+    "%s/revisions/%s", each.value.resource_id, each.value.output.properties.latestRevisionName
+  )
+  action = "deactivate"
+  method = "POST"
+  when   = "apply"
 }
 
 output "api_url" {

@@ -1,0 +1,12 @@
+ContainerAppConsoleLogs_CL
+| where TimeGenerated > ago(6h)
+| extend e = parse_json(Log_s)
+| where tostring(e.event) in ("model.request", "memory.compacted", "memory.assembled")
+| where tostring(e.event) != "model.request" or tostring(e.purpose) == "summary"
+| extend event_time = todatetime(e["time"]), event = tostring(e.event)
+| extend elapsed_ms = tolong(e.elapsed_ms), input_tokens = tolong(e.input_tokens)
+| summarize samples = count(), maximum_ms = max(elapsed_ms),
+    over_ten_seconds = countif(elapsed_ms > 10000), total_input_tokens = sum(input_tokens)
+    by bin(event_time, 5m), event
+| order by event_time desc
+| take 200

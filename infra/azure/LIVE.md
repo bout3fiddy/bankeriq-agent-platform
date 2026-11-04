@@ -1,10 +1,11 @@
 # Persistent operator test deployment
 
-Source refactor note (4 November 2026): the repository now uses `agent_harness`,
-`agent_runtime` and `agent_platform`. This structural change has not been deployed.
-The image/digests and historical evidence below retain their original meaning. HTTP chat
-commands remain compatible; container-side Python diagnostics must use the source version
-matching the deployed image until an explicitly authorised application upgrade occurs.
+Current release (4 November 2026): revision `0000012` uses the `agent_harness`,
+`agent_runtime` and `agent_platform` packages and the group-12 streaming implementation.
+Migrations through 020 are applied. The earlier image/digests below remain historical evidence.
+It includes memory v10/system 1.2.0, batched reads, completion-triggered worker wakeup,
+five preparation slots and active-memory source reuse. The full
+twenty-case live memory suite passed twice; group-12 hosted performance acceptance remains open.
 
 This environment is authorised to remain running for non-sensitive conversations and
 idle-cache experiments. It incurs ongoing Azure charges until explicitly stopped and
@@ -85,7 +86,9 @@ Ingestion can lag; immediate console logs are also available through `az contain
 Microsoft documents a [several-minute ingestion delay][log-delay] for saved Container Apps logs.
 The optional app-name field lets the query work before the first app records arrive;
 the migration job creates this table initially with job-specific columns.
-No additional logging service is needed for this experiment. Alerting, production telemetry
+Four approved Azure Monitor rules now evaluate queue age, provider failures, streaming
+failures and missing telemetry. They deliver to Azure Monitor with no email/webhook action
+group. See the [operator queries](../../performance/queries/README.md). Production telemetry
 budgets and database lifecycle/capacity controls remain separate work.
 
 ## Reproduce the release
@@ -109,6 +112,95 @@ Terraform state is local and protected for this operator; shared/CI state remain
 
 The released image uses registry `bankeriqlive415eb635images.azurecr.io`, repository `runtime`,
 and this immutable digest:
+
+```text
+sha256:543edf85d8ed885841077771da6ff4efb8ed3f9c320281dbfdae2799d76c8c19
+```
+
+Admission closed at revision 7 with zero unfinished runs. The reviewed pause plan deactivated
+all three actual latest revisions after the app updates; the previous stale-target failure did
+not recur. Migration execution `bankeriq-li-c19afe58-migration-659o3f0` succeeded in 22 seconds,
+with migrations through 020 unchanged. Resume briefly reactivated revision 10, so admission
+stayed closed until only healthy revision-12 replicas remained. Admission reopened at revision 8;
+the measured maintenance upper bound was 648.46 seconds. All four existing alerts are enabled.
+No data service was replaced or additional resource provisioned.
+
+The network-disabled image check verified its prompt assets, tokenizer cache, migration files
+and selected runtime changes. Full local verification passed 717 tests with zero skips using
+real PostgreSQL/Redis. The cold canary completed correctly in 2.177 seconds;
+its next turn took 1.516 seconds.
+Hosted qualification is recorded separately in the performance register.
+Optional `worker_budget` accepts 1–100 attempts, default 100; finite experiments select eight
+and reserve all possible in-flight attempts against their campaign cap. The earlier cancelled
+unknown model outcome remains retained. The original conversation is preserved.
+
+### Earlier revision 10
+
+Revision 10 used registry `bankeriqlive415eb635images.azurecr.io`, repository `runtime`,
+and this immutable digest:
+
+```text
+sha256:94f2a1ead6269dea8131e5ba4715fde53c356b08638b805eec65d828e08db0e9
+```
+
+Admission closed at revision 5 with zero unfinished runs. Pausing generated revision 9 and
+exposed an AzAPI stale-target planning error; a fresh reviewed plan deactivated those three
+revisions. All replicas were stopped before migration. The migration job succeeded in 34 seconds.
+Resume briefly reactivated revision 9, so admission stayed closed until only healthy revision-10
+replicas remained. Reopening at revision 6 ended an approximately 392-second maintenance window.
+The cold streamed canary completed in 2.213 seconds, first text 1.840 seconds, using 1,396 input
+and 39 output tokens. The original conversation retained cursor 21 and its expired Redis keys.
+All four existing alerts were re-enabled. No data service was replaced or new service created.
+
+The [memory report](../../performance/records/2026-11-04-memory-coverage.md) records 707 passing
+local tests with zero skips and the separate live quality results. The pause configuration now
+reads the latest revision after app updates, avoiding a prematurely fixed deactivation target;
+its deferred target subsequently passed the revision-12 live maintenance pause above.
+
+### Earlier revision 8
+
+Revision 8 used
+`sha256:6140fa844b4d4cd4f220d8358f5f21ec280b37b5a2a20abe8a05ec03d280a45c`.
+That compatible release followed the completed soak. Admission closed at revision 3 with
+zero unfinished runs; migration 020 succeeded in 39 seconds. All three revision-8 apps
+became healthy and old revision-7 consumers stopped before admission reopened at revision 4.
+The cold canary completed in 2.94 seconds, using 1,328 input and 40 output tokens. Passive
+30-second RSS/task/pool samples are now ingested from every role. The earlier uncertain
+synthetic model outcome remains preserved. Full local verification passed 687 tests, zero skips.
+
+Alert creation initially failed because Insights was unregistered. AzureRM's registration
+lookup requires the lowercase namespace `microsoft.insights`; the provider configuration now
+registers it when alerts are enabled. The subsequent reviewed plan created exactly four rules,
+with no changes or deletions. Registration survives application teardown. Terraform validation
+and fourteen mock plan tests passed. All four rules fired and automatically resolved; see
+[the monitoring record](../../performance/records/2026-11-04-hosted-monitoring.md).
+
+### Earlier group-12 release and soak
+
+Revision 7 used
+`sha256:93f4cb61d246cc2d2b83751f5a390b880b09fb47bebf3dac0d2a5dfa5d073de7`.
+The approved group-12 upgrade paused ingress at 11:05:41 UTC. A zero minimum replica setting
+left workers running; Terraform-managed revision deactivation then stopped all old processes.
+Migration execution `bankeriq-li-c19afe58-migration-2x2lejc` succeeded in 37 seconds.
+All 280 preexisting terminal runs and twelve joined tool groups were preserved.
+
+The first candidate rejected Azure's prompt-filter metadata frame and exhausted three bounded
+model attempts. That synthetic canary was explicitly cancelled; its unknown model outcome remains
+recorded. The corrected parser passed a direct live stream, 76 provider tests and full verification
+with 670 tests and zero skips. No applied migration or persisted prompt version was rewritten.
+
+After the fix, admission reopened and a cold canary completed at 11:25 UTC: 351 ms admission,
+2.22 seconds to visible text and 2.73 seconds to completion, using 1,357 input/44 output tokens.
+This single sample establishes functionality; it does not qualify a latency percentile.
+Terraform reported no drift. The separate two-hour soak began at 11:26:15 UTC under the existing
+operator, with fresh conversation IDs. It completed 75 correct turns and 41 compactions
+over two hours, including recall after cache expiry. See the
+[soak record](../../performance/records/2026-11-04-hosted-soak.md) for resource gaps.
+
+Streaming commands and the audited release gate are described in
+[the concurrency guide](../../docs/concurrent-sessions.md). Subsequent compatible releases can
+close admission while accepted work drains; inspect actual worker termination before reopening.
+The original group-11 image was:
 
 ```text
 sha256:842393e2bb8b82873541e62ef81b6cd15f148251a477de8db4fb78a793a7cc5c

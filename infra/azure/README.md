@@ -13,6 +13,15 @@ The separately authorised [persistent operator deployment](LIVE.md) stays runnin
 non-sensitive conversations and idle-cache inspection; its lifetime differs from the
 completed disposable group-09 exercise.
 
+Group-12 alert definitions reuse the existing workspace. Source defaults are disabled;
+the retained deployment has four user-approved rules with `runtime_alerts_enabled=true`.
+Optional existing notification routes use `runtime_alert_action_group_ids`; the retained
+deployment uses Azure Monitor portal delivery without an action group. Read the [operator
+runbook][operator-queries]
+for thresholds, costs/ingestion boundaries and outstanding delivery validation.
+
+[operator-queries]: ../../performance/queries/README.md
+
 The original first milestone ran a local coordinator against a deployed Foundry model.
 The hosted pilot adds the durable API/worker profile. Logical
 responsibilities are described in [components.md](../../components.md).

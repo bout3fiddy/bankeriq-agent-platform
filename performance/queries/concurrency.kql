@@ -1,0 +1,14 @@
+ContainerAppConsoleLogs_CL
+| where TimeGenerated > ago(6h)
+| extend e = parse_json(Log_s)
+| where tostring(e.event) in ("worker.claimed", "worker.settled", "admission.accepted")
+| extend event_time = todatetime(e["time"]), event = tostring(e.event)
+| extend queue = tostring(e.queue), wait_ms = tolong(e.queue_wait_ms)
+| extend wait_upper_ms = tolong(e.queue_wait_upper_ms)
+| extend elapsed_ms = tolong(e.elapsed_ms)
+| summarize samples = count(), candidate_age_p95_ms = percentile(wait_ms, 95),
+    candidate_age_max_ms = max(wait_ms), claim_upper_p95_ms = percentile(wait_upper_ms, 95),
+    claim_upper_max_ms = max(wait_upper_ms), elapsed_p95_ms = percentile(elapsed_ms, 95)
+    by bin(event_time, 5m), event, queue
+| order by event_time desc
+| take 200

@@ -73,6 +73,12 @@ variable "runtime_ready" {
   type        = bool
   default     = false
 }
+
+variable "runtime_paused" {
+  description = "Maintenance: disable ingress and scale consumers to zero without deleting apps."
+  type        = bool
+  default     = false
+}
 variable "runtime_replicas" {
   description = "Fixed pilot replicas per role, bounded by worker/database capacity."
   type        = number
@@ -116,4 +122,13 @@ variable "runtime_session_idle_seconds" {
   description = "Cache inactivity window; passive SSE/status traffic does not renew it."
   type        = number
   default     = 1800
+}
+variable "runtime_alerts_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "runtime_alert_action_group_ids" {
+  type    = set(string)
+  default = []
 }

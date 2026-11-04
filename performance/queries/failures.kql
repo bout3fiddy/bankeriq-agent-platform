@@ -1,0 +1,11 @@
+ContainerAppConsoleLogs_CL
+| where TimeGenerated > ago(6h)
+| extend e = parse_json(Log_s)
+| where tostring(e.event) in ("worker.retry", "worker.uncertain", "worker.lease_lost",
+    "stream.overflow", "stream.failed", "telemetry.dropped")
+    or (tostring(e.event) == "model.request" and toint(e.status_code) >= 400)
+| extend event_time = todatetime(e["time"])
+| project event_time, event = tostring(e.event), run = tostring(e.run), job = tostring(e.job),
+    attempt = toint(e.attempt), queue = tostring(e.queue), status_code = toint(e.status_code)
+| order by event_time desc
+| take 200

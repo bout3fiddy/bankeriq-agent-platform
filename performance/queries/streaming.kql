@@ -1,0 +1,9 @@
+ContainerAppConsoleLogs_CL
+| where TimeGenerated > ago(6h)
+| extend e = parse_json(Log_s)
+| where tostring(e.event) startswith "stream."
+| extend event_time = todatetime(e["time"]), event = tostring(e.event)
+| summarize samples = count(), runs = dcount(tostring(e.run))
+    by bin(event_time, 5m), event
+| order by event_time desc
+| take 200

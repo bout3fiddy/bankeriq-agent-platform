@@ -3,6 +3,23 @@ variable "interactive" {
   default = false
 }
 
+variable "alerts_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "alert_action_group_ids" {
+  type    = set(string)
+  default = []
+  validation {
+    condition = alltrue([for id in var.alert_action_group_ids : can(regex(join("", [
+      "(?i)^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/",
+      "microsoft.insights/actionGroups/[^/]+$"
+    ]), id))])
+    error_message = "Use existing authorised Azure Monitor action-group resource IDs."
+  }
+}
+
 variable "session_idle_seconds" {
   type    = number
   default = 1800
@@ -44,6 +61,11 @@ variable "image" {
   }
 }
 variable "runtime_ready" {
+  type    = bool
+  default = false
+}
+
+variable "paused" {
   type    = bool
   default = false
 }

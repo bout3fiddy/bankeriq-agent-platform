@@ -12,6 +12,41 @@ mock_provider "azurerm" {
 }
 mock_provider "azuread" {}
 
+run "pause_keeps_resources_and_removes_dispatch_capacity" {
+  command = plan
+  module {
+    source = "./modules/runtime"
+  }
+  variables {
+    prefix         = "bankeriq-test"
+    location       = "swedencentral"
+    resource_group = "bankeriq-test"
+    operator_id    = "11111111-1111-1111-1111-111111111111"
+    tenant_id      = "00000000-0000-0000-0000-000000000000"
+    foundry_id = join("", [
+      "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test/",
+      "providers/Microsoft.CognitiveServices/accounts/test"
+    ])
+    image = join("", ["registry/runtime@sha256:",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"])
+    runtime_ready = true
+    paused        = true
+  }
+  assert {
+    condition = (
+      length(azurerm_container_app.runtime) == 3 &&
+      length(data.azapi_resource.pause_target) == 3 &&
+      length(azapi_resource_action.pause) == 3 &&
+      alltrue([for action in azapi_resource_action.pause : action.action == "deactivate"]) &&
+      alltrue([for action in azapi_resource_action.pause : action.when == "apply"]) &&
+      alltrue([for app in azurerm_container_app.runtime : app.template[0].min_replicas == 0]) &&
+      length(azurerm_container_app.runtime["api"].ingress) == 0 &&
+      length(azurerm_container_app_job.migration) == 1
+    )
+    error_message = "Pause must retain apps and migration authority while disabling ingress."
+  }
+}
+
 run "restore_clone_precedes_import_and_cutover" {
   command = plan
   module {

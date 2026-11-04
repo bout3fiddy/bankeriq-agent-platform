@@ -1,0 +1,12 @@
+ContainerAppConsoleLogs_CL
+| where TimeGenerated > ago(6h)
+| extend e = parse_json(Log_s)
+| where tostring(e.event) == "runtime.resources"
+| project event_time = todatetime(e["time"]), role = tostring(e.role),
+    replica = ContainerGroupName_s, pid = toint(e.pid), rss_bytes = tolong(e.rss_bytes),
+    cpu_ms = tolong(e.cpu_ms), tasks = toint(e.tasks), threads = toint(e.threads),
+    pool_size = toint(e.pool_size), pool_available = toint(e.pool_available),
+    pool_waiting = toint(e.pool_waiting), pool_wait_ms = tolong(e.pool_wait_ms),
+    pool_errors = tolong(e.pool_errors)
+| order by event_time desc
+| take 5000
