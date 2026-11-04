@@ -161,13 +161,15 @@ def test_removed_runtime_is_unavailable() -> None:
 def test_nested_sections_render_once_in_declared_order(directory: Path) -> None:
     catalog = load_catalog(directory)
     root = catalog.catalog.defaults.system
-    data = json.loads((directory / "system/1.0.0.json").read_text())
-    data["prompt"].update(id="section.example", kind="section", title="Nested guidance")
+    data = json.loads((directory / f"system/{root.version}.json").read_text())
+    data["prompt"].update(
+        id="section.example", version="1.0.0", kind="section", title="Nested guidance"
+    )
     write(directory / "section.json", data)
     register(directory, "section.json")
     data["prompt"].update(
         id=root.id,
-        version="1.1.0",
+        version="2.0.0",
         kind="system",
         title="New root",
         includes=[{"id": "section.example", "version": "1.0.0"}],
@@ -176,7 +178,7 @@ def test_nested_sections_render_once_in_declared_order(directory: Path) -> None:
     register(directory, "system-new.json")
     from agent_harness.prompts.schema import Reference
 
-    body = load_catalog(directory).compile(Reference(id=root.id, version="1.1.0")).body
+    body = load_catalog(directory).compile(Reference(id=root.id, version="2.0.0")).body
     assert body.count("Nested guidance") == 1
     assert body.startswith("New root\n\nNested guidance\n\n")
     assert body.endswith(catalog.compile(root).body.split("\n\n", 1)[1])
@@ -199,7 +201,7 @@ def test_application_default_and_explicit_compatibility_override() -> None:
 
     settings = load_settings({"MODEL_NAME": "synthetic"})
     assert settings.prompts is not None
-    assert settings.prompts.resolve().version == "bankeriq.system@1.0.0"
+    assert settings.prompts.resolve().version == "bankeriq.system@1.2.0"
     assert settings.model.instructions == settings.prompts.instructions(settings.prompts.resolve())
     explicit = load_settings({"MODEL_NAME": "synthetic", "MODEL_INSTRUCTIONS": "Explicit test"})
     assert explicit.model.instructions == "Explicit test"

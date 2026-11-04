@@ -429,6 +429,44 @@ def test_deletion_and_recovery_fence(
         store.history_page(context)
 
 
+def test_old_generation_rejects_before_waiting_on_a_locked_conversation(
+    store: PostgresStateStore, context: RunContext, dsn: str
+) -> None:
+    with psycopg.connect(dsn) as connection:
+        connection.execute("UPDATE runtime_generation SET recovery_id=%s", (str(uuid4()),))
+
+    current = PostgresStateStore(dsn)
+
+    with psycopg.connect(dsn) as owner:
+        owner.execute(
+            "SELECT 1 FROM conversations WHERE tenant_id=%s AND conversation_id=%s FOR UPDATE",
+            (context.tenant_id, context.conversation_id),
+        )
+
+        # A stale process should identify the recovery conflict without waiting
+        # for unrelated active work's row lock. A valid process must still wait
+        # for that lock, proving batching has not weakened snapshot ownership.
+        with (
+            pytest.raises(StateConflictError, match="recovery generation"),
+            store._connect() as connection,
+        ):
+            connection.execute("SET LOCAL lock_timeout='200ms'")
+            store._head(connection, context)
+
+        with pytest.raises(psycopg.errors.LockNotAvailable), current._connect() as connection:
+            connection.execute("SET LOCAL lock_timeout='200ms'")
+            current._head(connection, context)
+
+    assert (
+        current.load_conversation(
+            tenant_id=context.tenant_id,
+            user_id=context.user_id,
+            conversation_id=context.conversation_id,
+        ).revision
+        == 0
+    )
+
+
 def test_approval_decision_and_pending_rollback(
     store: PostgresStateStore, context: RunContext, dsn: str
 ) -> None:

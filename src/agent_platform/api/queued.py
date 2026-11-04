@@ -4,6 +4,7 @@ import asyncio
 import json
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
+from time import monotonic
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from starlette.applications import Starlette
@@ -17,12 +18,14 @@ from agent_runtime.sessions.service import SessionService
 from agent_runtime.sessions.stream import Cursor, ProgressStream
 from agent_runtime.telemetry import emit
 from agent_runtime.workers.coordinator import QueuedCoordinator
+from agent_runtime.workers.releases import AdmissionOverloaded, AdmissionPaused
 
 
 class Admission(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     request_id: str = Field(min_length=1, max_length=256)
     text: str = Field(min_length=1, max_length=32768)
+    worker_budget: int = Field(default=100, ge=1, le=100)
 
 
 def create_async_app(
@@ -31,6 +34,8 @@ def create_async_app(
     *,
     authenticate: Callable[[Request], Awaitable[RunContext]],
     prepare_input: Callable[[RunContext, str], str],
+    max_streams: int = 64,
+    streams_per_user: int = 8,
 ) -> Starlette:
     """Trusted authentication supplies the complete scoped context for each request.
 
@@ -40,7 +45,13 @@ def create_async_app(
     Enterprise authentication and the browser application remain separate integrations.
     """
 
+    if not 1 <= streams_per_user <= max_streams <= 1024:
+        raise ValueError("invalid streaming connection bounds")
+
+    streams: dict[tuple[str, str], int] = {}
+
     async def admit(request: Request) -> Response:
+        started = monotonic()
         context = await authenticate(request)
         body = bytearray()
 
@@ -53,21 +64,49 @@ def create_async_app(
         try:
             admission = Admission.model_validate_json(body)
             text = await asyncio.to_thread(prepare_input, context, admission.text)
-            run_id = await runtime.admit(context, request_id=admission.request_id, text=text)
+            run_id = await runtime.admit(
+                context,
+                request_id=admission.request_id,
+                text=text,
+                worker_budget=admission.worker_budget,
+            )
         except ValidationError, ValueError:
             emit("admission.rejected", context)
             return JSONResponse({"error": "invalid_input"}, status_code=400)
         except StateConflictError:
             return JSONResponse({"error": "conflict"}, status_code=409)
+        except AdmissionPaused:
+            return JSONResponse(
+                {"error": "admission_paused"}, status_code=503, headers={"Retry-After": "2"}
+            )
+        except AdmissionOverloaded:
+            return JSONResponse(
+                {"error": "admission_capacity"}, status_code=429, headers={"Retry-After": "2"}
+            )
 
         # Acceptance already committed. Cache/logging work cannot revoke that
         # receipt; a reconnect can recover the same request if Redis is down.
         emit("admission.accepted", context)
+        emit(
+            "runtime.span",
+            context,
+            stage="admission",
+            elapsed_ms=round((monotonic() - started) * 1000),
+        )
 
         with suppress(Exception):
             await asyncio.to_thread(sessions.record_activity, context)
 
         return JSONResponse({"accepted": True, "run_id": run_id}, status_code=202)
+
+    async def cancel(request: Request) -> Response:
+        context = await authenticate(request)
+
+        # Ownership comes from the authenticated context and is checked again in
+        # the primary transaction. A repeated cancellation returns the same state;
+        # disconnecting an SSE reader never calls this explicit action.
+        checkpoint = await asyncio.to_thread(runtime.queue.cancel, context)
+        return JSONResponse({"run_id": context.run_id, "status": checkpoint.run.status.value})
 
     async def activity(request: Request) -> Response:
         context = await authenticate(request)
@@ -102,8 +141,33 @@ def create_async_app(
         except ValueError, TypeError, StateConflictError, StateNotFoundError:
             return JSONResponse({"error": "invalid_cursor_or_scope"}, status_code=409)
 
+        scope = (context.tenant_id, context.user_id)
+
+        if sum(streams.values()) >= max_streams or streams.get(scope, 0) >= streams_per_user:
+            return JSONResponse(
+                {"error": "stream_capacity"}, status_code=429, headers={"Retry-After": "1"}
+            )
+
+        streams[scope] = streams.get(scope, 0) + 1
+        emit("stream.opened", context)
+
+        async def frames():
+            try:
+                async for frame in stream.events():
+                    yield frame
+            finally:
+                streams[scope] -= 1
+                emit("stream.closed", context)
+
+                if streams[scope] == 0:
+                    del streams[scope]
+
+        # Limits are per API process; fixed replica limits bound aggregate sockets.
+        # Five-minute reconnects reauthenticate without marking user activity.
         return StreamingResponse(
-            stream.events(), media_type="text/event-stream", headers={"Cache-Control": "no-store"}
+            frames(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
         )
 
     return Starlette(
@@ -113,6 +177,7 @@ def create_async_app(
         },
         routes=[
             Route("/runs", admit, methods=["POST"]),
+            Route("/runs/cancel", cancel, methods=["POST"]),
             Route("/events", progress),
             Route("/activity", activity, methods=["POST"]),
             Route("/history", history),

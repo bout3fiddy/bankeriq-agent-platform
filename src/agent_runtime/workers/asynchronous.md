@@ -69,10 +69,11 @@ closes; the client reconnects with its last delivered durable `Last-Event-ID` cu
 Cursors include recovery/deletion generations. One bounded journal event is fetched per
 poll; client sockets never hold database transactions or worker slots.
 
-Redis stores at most 32 disposable progress entries, with model token fragments bounded
-to 1 KiB. Run admission generations and attempts fence older producers. Tokens and progress
-never drive execution or final acknowledgement. Redis loss rebuilds from PostgreSQL; final
-answers are delivered as saved journal events. Opaque tool-owned report links travel in
+Redis stores at most 32 disposable progress entries, with legacy model-token fields bounded
+to 8 KiB. The optional text publisher keeps one cumulative 32-KiB snapshot per run. Admission
+generations and ownership tokens fence older producers. Final answers use a separate durable
+`final` event, independent of Redis and journal pagination. See the
+[streaming and release guide](../../../docs/concurrent-sessions.md). Opaque report links travel in
 separate delivery metadata and never enter model receipts. The refreshed view includes
 safe child status and unknown-effect flags, allowing recovery even before a group joins.
 

@@ -200,8 +200,12 @@ def select_facts(
                 ]
                 selected.append(fact)
 
-        if not selected and sources:
-            raise ValueError
+        # A completed exchange can contain only disposable examples or 'thanks'.
+        # An empty selection then advances coverage without carrying filler into
+        # every future request. The loop above still restores protected decisions,
+        # constraints and tool states, even when the model selects no candidates.
+        # For example, [] drops an unlabelled greeting but retains 'Use EUR' when
+        # that source is a decision. Original history remains available to retrieval.
 
         if len(selected) > 64 or len(memory_message(tuple(selected)).text.encode()) > 32768:
             raise MemoryBlocked("summary_output_limit")
@@ -249,6 +253,13 @@ def summary_candidates(sources: tuple[MemoryFact, ...]) -> tuple[MemoryFact, ...
                         ("decision", "decision"),
                         ("open question", "open_question"),
                         ("next step", "next_step"),
+                        ("doel", "goal"),
+                        ("voorwaarde", "constraint"),
+                        ("beperking", "constraint"),
+                        ("besluit", "decision"),
+                        ("beslissing", "decision"),
+                        ("open vraag", "open_question"),
+                        ("volgende stap", "next_step"),
                     ):
                         if quote.lstrip("*").lower().startswith(prefix + ":"):
                             label = category
@@ -258,10 +269,13 @@ def summary_candidates(sources: tuple[MemoryFact, ...]) -> tuple[MemoryFact, ...
                     # to retain and costly to reconstruct from a paraphrase. For
                     # example, 'Mara owns logistics; the sensor is nicknamed Finch'
                     # stays source-bound even if the selector prefers an assistant
-                    # recap. These conservative English cues establish no authority
+                    # recap. These declared English/Dutch cues establish no authority
                     # or entity equivalence; the same 64-fact/byte bounds still apply.
                     if label == "fact" and re.search(
-                        r"\b(?:owns|owner|named|nicknamed|nickname|called)\b", quote, re.I
+                        r"\b(?:owns|owner|named|nicknamed|nickname|called|eigenaar|heet|"
+                        r"genaamd|bijnaam|verantwoordelijk)\b",
+                        quote,
+                        re.I,
                     ):
                         label = "identity"
 
@@ -270,7 +284,10 @@ def summary_candidates(sources: tuple[MemoryFact, ...]) -> tuple[MemoryFact, ...
                     # a completed tool action or an approval. Without preserving
                     # it, a later recap could incorrectly revive an old question.
                     if label == "fact" and re.search(
-                        r"\b(?:confirmed|decided|correction|replaces)\b", quote, re.I
+                        r"\b(?:confirmed|decided|correction|replaces|bevestigd|besloten|"
+                        r"correctie|vervangt)\b",
+                        quote,
+                        re.I,
                     ):
                         label = "decision"
 

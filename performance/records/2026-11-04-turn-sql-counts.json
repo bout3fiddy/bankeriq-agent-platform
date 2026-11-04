@@ -1,0 +1,584 @@
+{
+  "profile": "local synthetic SQL statement-count diagnostic",
+  "turns": 2,
+  "model": "immediate synthetic READY",
+  "prompt_resolver": "FixedPromptResolver",
+  "primary": "PostgreSQL 17.11 local",
+  "pool_size": 4,
+  "transport": "loopback",
+  "source_commit": "54440b894deefad6dbfefe70252bfab37013fa84",
+  "source_dirty": true,
+  "correct_turns": 2,
+  "statement_executions_per_turn": 179,
+  "rows": [
+    {
+      "phase": "admit",
+      "caller": "agent_runtime/storage/postgres.py:757",
+      "pipeline_status": "1",
+      "calls": 4
+    },
+    {
+      "phase": "admit",
+      "caller": "agent_runtime/storage/postgres.py:758",
+      "pipeline_status": "1",
+      "calls": 4
+    },
+    {
+      "phase": "admit",
+      "caller": "agent_runtime/workers/releases.py:29",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "admit",
+      "caller": "agent_runtime/workers/releases.py:37",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "admit",
+      "caller": "agent_runtime/storage/postgres.py:193",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "admit",
+      "caller": "agent_runtime/storage/postgres.py:731",
+      "pipeline_status": "0",
+      "calls": 14
+    },
+    {
+      "phase": "admit",
+      "caller": "agent_runtime/storage/postgres.py:791",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "admit",
+      "caller": "agent_runtime/storage/postgres.py:866",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "admit",
+      "caller": "agent_runtime/workers/queue.py:916",
+      "pipeline_status": "0",
+      "calls": 4
+    },
+    {
+      "phase": "admit",
+      "caller": "agent_runtime/workers/queue.py:799",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "admit",
+      "caller": "agent_runtime/workers/queue.py:804",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "admit",
+      "caller": "agent_runtime/workers/queue.py:813",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/storage/postgres.py:739",
+      "pipeline_status": "0",
+      "calls": 4
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:335",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:141",
+      "pipeline_status": "1",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:142",
+      "pipeline_status": "1",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:145",
+      "pipeline_status": "1",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:148",
+      "pipeline_status": "1",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:171",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:204",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/storage/postgres.py:757",
+      "pipeline_status": "1",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/storage/postgres.py:758",
+      "pipeline_status": "1",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/storage/postgres.py:791",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/storage/postgres.py:866",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:916",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:221",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:243",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:273",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:288",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/storage/postgres.py:757",
+      "pipeline_status": "1",
+      "calls": 12
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/storage/postgres.py:758",
+      "pipeline_status": "1",
+      "calls": 12
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:838",
+      "pipeline_status": "1",
+      "calls": 4
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:843",
+      "pipeline_status": "1",
+      "calls": 4
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:848",
+      "pipeline_status": "1",
+      "calls": 4
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:954",
+      "pipeline_status": "0",
+      "calls": 4
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:506",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/storage/postgres.py:791",
+      "pipeline_status": "0",
+      "calls": 6
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/storage/postgres.py:866",
+      "pipeline_status": "0",
+      "calls": 8
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:916",
+      "pipeline_status": "0",
+      "calls": 6
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:881",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:559",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/storage/postgres.py:362",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/storage/postgres.py:396",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/storage/postgres.py:731",
+      "pipeline_status": "0",
+      "calls": 16
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:799",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:804",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:813",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:570",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_prepare",
+      "caller": "agent_runtime/workers/queue.py:581",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/storage/postgres.py:739",
+      "pipeline_status": "0",
+      "calls": 4
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/workers/queue.py:335",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/workers/queue.py:141",
+      "pipeline_status": "1",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/workers/queue.py:142",
+      "pipeline_status": "1",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/workers/queue.py:145",
+      "pipeline_status": "1",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/workers/queue.py:148",
+      "pipeline_status": "1",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/workers/queue.py:171",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/workers/queue.py:204",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/storage/postgres.py:757",
+      "pipeline_status": "1",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/storage/postgres.py:758",
+      "pipeline_status": "1",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/storage/postgres.py:791",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/storage/postgres.py:866",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/workers/queue.py:916",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/workers/queue.py:221",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/workers/queue.py:243",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/workers/queue.py:273",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "claim_model_infer",
+      "caller": "agent_runtime/workers/queue.py:288",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/storage/postgres.py:757",
+      "pipeline_status": "1",
+      "calls": 24
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/storage/postgres.py:758",
+      "pipeline_status": "1",
+      "calls": 24
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/workers/queue.py:838",
+      "pipeline_status": "1",
+      "calls": 8
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/workers/queue.py:843",
+      "pipeline_status": "1",
+      "calls": 8
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/workers/queue.py:848",
+      "pipeline_status": "1",
+      "calls": 8
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/workers/queue.py:954",
+      "pipeline_status": "0",
+      "calls": 4
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/workers/queue.py:506",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/storage/postgres.py:528",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/storage/postgres.py:866",
+      "pipeline_status": "0",
+      "calls": 8
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/memory/storage.py:30",
+      "pipeline_status": "0",
+      "calls": 8
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/memory/recovery.py:107",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/memory/storage.py:54",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/memory/storage.py:66",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/memory/storage.py:72",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/memory/storage.py:95",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/memory/storage.py:197",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/memory/storage.py:202",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/memory/storage.py:122",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/workers/queue.py:916",
+      "pipeline_status": "0",
+      "calls": 4
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/storage/postgres.py:791",
+      "pipeline_status": "0",
+      "calls": 4
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/workers/queue.py:881",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/workers/queue.py:559",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/storage/postgres.py:362",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/storage/postgres.py:396",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/storage/postgres.py:731",
+      "pipeline_status": "0",
+      "calls": 14
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/storage/postgres.py:963",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/workers/queue.py:570",
+      "pipeline_status": "0",
+      "calls": 2
+    },
+    {
+      "phase": "execute_model_infer",
+      "caller": "agent_runtime/workers/queue.py:581",
+      "pipeline_status": "0",
+      "calls": 2
+    }
+  ],
+  "limits": [
+    "Not a latency benchmark; stack tracing adds instrumentation cost.",
+    "Hosted prompt availability checks and HTTP/SSE/Redis are excluded.",
+    "Pipeline submissions are statements, not separate network round trips."
+  ]
+}

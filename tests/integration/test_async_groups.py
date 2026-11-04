@@ -325,7 +325,8 @@ def test_slow_consumer_bounds_and_final_recovery(
     reconnect = ProgressStream(sessions, context, cursor=recovered.cursor)
     reconnect.poll()
     frame = reconnect.buffer.take()
-    assert frame is not None and frame.startswith(b"event: view")
+    assert frame is not None and frame.startswith(b"event: final")
+    assert b"Synthetic total saved" in frame
 
 
 def test_cancel_races_last_settlement(
@@ -642,8 +643,9 @@ def test_tool_budget_and_per_child_crash_limit(
     assert rows(dsn, "SELECT count(*) FROM jobs WHERE group_id IS NOT NULL AND attempt=1") == [(3,)]
 
 
+@pytest.mark.parametrize("budget", [None, 8])
 def test_admission_transport_and_input_policy(
-    store: PostgresStateStore, context: RunContext, sessions: Any
+    store: PostgresStateStore, context: RunContext, sessions: Any, budget: int | None
 ) -> None:
     import httpx2
 
@@ -668,11 +670,25 @@ def test_admission_transport_and_input_policy(
         async with httpx2.AsyncClient(
             transport=httpx2.ASGITransport(app=app), base_url="http://local"
         ) as client:
-            result = await client.post("/runs", json={"request_id": "request", "text": "input"})
+            payload: dict[str, Any] = {"request_id": "request", "text": "input"}
+
+            if budget is not None:
+                payload["worker_budget"] = budget
+
+            result = await client.post("/runs", json=payload)
             assert result.status_code == 202
             assert result.json() == {"accepted": True, "run_id": context.run_id}
-            duplicate = await client.post("/runs", json={"request_id": "request", "text": "input"})
+            duplicate = await client.post("/runs", json=payload)
             assert duplicate.json() == result.json()
+            changed_budget = await client.post("/runs", json={**payload, "worker_budget": 9})
+            assert changed_budget.status_code == 409
+
+            for invalid_budget in (0, 101, True):
+                invalid = await client.post(
+                    "/runs", json={**payload, "worker_budget": invalid_budget}
+                )
+                assert invalid.status_code == 400
+
             bad = await client.post("/runs", json={"request_id": "request", "text": "other"})
             assert bad.status_code == 409
             activity = await client.post("/activity")
@@ -689,8 +705,28 @@ def test_admission_transport_and_input_policy(
 
     asyncio.run(request())
     assert store.load_run(context).run.status == RunStatus.QUEUED
+
+    with store._connect() as connection:
+        saved = connection.execute(
+            "SELECT worker_budget FROM runs WHERE tenant_id=%s AND run_id=%s",
+            (context.tenant_id, context.run_id),
+        ).fetchone()
+
+    assert saved is not None and saved["worker_budget"] == (100 if budget is None else budget)
     item = store.load_run(context).conversation.items[0]
     assert isinstance(item, Message) and item.text == "permitted input"
+
+
+def test_reduced_admission_budget_stops_before_unfunded_inference(store, context, dsn):
+    runtime, handlers = composition(store)
+    asyncio.run(runtime.admit(context, request_id="small", text="calculate", worker_budget=1))
+    step(runtime, handlers, "model_prepare")
+
+    # Preparation consumes the one admitted worker attempt. The next job remains
+    # subject to that same budget and cannot dispatch a provider call or tool.
+    assert runtime.queue.claim("model_infer", handlers) is None
+    assert store.load_run(context).run.status == RunStatus.LIMIT_REACHED
+    assert rows(dsn, "SELECT worker_budget,worker_attempts FROM runs") == [(1, 1)]
 
 
 def test_progress_attempt_generations_and_token_loss(
@@ -716,7 +752,10 @@ def test_sse_stalled_reader_overflows_while_tools_finish(
     runtime, handlers = fanout(store, context)
 
     async def run():
-        stream = ProgressStream(sessions, context, max_events=2, max_bytes=16384, poll_seconds=0.01)
+
+        # Allow the initial reset/saved/view snapshot, then stall this reader
+        # while independent tool and final events exhaust its small buffer.
+        stream = ProgressStream(sessions, context, max_events=4, max_bytes=16384, poll_seconds=0.01)
         reader = stream.events()
         first = await anext(reader)
         assert first
@@ -753,7 +792,7 @@ def test_sse_stalled_reader_overflows_while_tools_finish(
 
         await asyncio.sleep(0.1)
         assert stream.buffer.overflow
-        assert len(stream.buffer.events) <= 2 and stream.buffer.size <= 16384
+        assert len(stream.buffer.events) <= 4 and stream.buffer.size <= 16384
         assert store.load_run(context).run.status == RunStatus.COMPLETED
         assert b"reconnect" in await anext(reader)
         await reader.aclose()

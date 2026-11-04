@@ -103,6 +103,13 @@ It is required by queued startup and enabled in the persistent Azure test deploy
 Automatic headroom checks retain a bounded verbatim tail, preserve explicit source facts,
 compact completed prefixes of long turns and permit one durable context-overflow retry.
 The synchronous in-memory profile remains unchanged.
+The [concurrent-session work](docs/concurrent-sessions.md) adds provisional streaming, a CLI
+reference client, release/admission controls and multilingual memory guidance, tested locally
+and on Azure. All 300 realistic supported-tier turns completed correctly; the overload cohort
+recovered all 100 accepted turns. The live memory suite passed twenty scenarios twice, with
+relevance exceptions retained. The two-hour soak and alert firing/recovery passed on earlier
+revisions. Hosted latency qualification remains incomplete; see the
+[current checkpoint](performance/records/2026-11-04-group12-qualification.md).
 [Azure deployment](build-order/09-completed-azure-runtime-deployment.md) is complete for
 the synthetic Container Apps pilot, with delegated Entra admission, private services,
 worker drain/restart, HA failover, fenced restore and model-throttling evidence.

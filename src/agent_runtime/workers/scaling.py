@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 
+from psycopg.types.json import Jsonb
+
 from agent_runtime.workers.queue import PostgresQueue
 from agent_runtime.workers.state import Handlers
 
@@ -49,6 +51,7 @@ def pressure(queue: PostgresQueue, kind: str, handlers: Handlers) -> QueuePressu
             "JOIN conversations c USING (tenant_id,conversation_id) "
             "JOIN runs r USING (tenant_id,conversation_id,run_id) "
             "WHERE j.operation=%s AND j.operation_version=ANY(%s) AND j.recovery IS NOT NULL "
+            "AND j.recovery->'arguments' @> (%s::jsonb->j.operation_version::text) "
             "AND j.status IN ('ready','retry','reconcile') AND j.due_at<=clock_timestamp() "
             "AND (j.status<>'reconcile' OR j.operation_version=ANY(%s)) "
             "AND (NOT j.effect_pending OR j.status='reconcile' OR "
@@ -65,7 +68,15 @@ def pressure(queue: PostgresQueue, kind: str, handlers: Handlers) -> QueuePressu
             "AND busy.job_id<>j.job_id AND (busy.effect_pending OR "
             "(busy.status='leased' AND busy.lease_expiry>clock_timestamp())))) "
             "ORDER BY j.due_at,j.job_id LIMIT 10000) due",
-            (kind, versions, lookup_versions, idempotent, replay, limits["tenant_concurrency"]),
+            (
+                kind,
+                versions,
+                Jsonb(handlers.requirements(kind)),
+                lookup_versions,
+                idempotent,
+                replay,
+                limits["tenant_concurrency"],
+            ),
         ).fetchone()
         leased = connection.execute(
             "SELECT count(*) AS n FROM jobs WHERE operation=%s AND status='leased' "

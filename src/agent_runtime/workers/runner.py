@@ -4,6 +4,7 @@ from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from threading import Event, Thread
 from time import monotonic
+from typing import Any
 
 import psycopg
 
@@ -17,14 +18,20 @@ from agent_runtime.workers.state import Handlers, policy_permitted, replay_safe
 class Listener:
     """One dedicated autocommit session; payloads are wake hints and never work inputs."""
 
-    def __init__(self, dsn: str) -> None:
+    def __init__(
+        self,
+        dsn: str,
+        *,
+        connect: Callable[..., psycopg.Connection[Any]] = psycopg.connect,
+    ) -> None:
         self.dsn = dsn
-        self.connection: psycopg.Connection | None = None
+        self.connect = connect
+        self.connection: psycopg.Connection[Any] | None = None
 
     def wait(self, seconds: float) -> None:
         try:
             if self.connection is None:
-                self.connection = psycopg.connect(
+                self.connection = self.connect(
                     self.dsn, autocommit=True, target_session_attrs="read-write"
                 )
                 self.connection.execute("LISTEN runtime_jobs")

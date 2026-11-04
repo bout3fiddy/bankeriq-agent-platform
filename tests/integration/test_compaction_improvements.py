@@ -100,6 +100,50 @@ def test_budget_reduces_recent_tail_before_dispatch(store, context):
     assert len(retained) < 2
 
 
+def test_empty_summary_advances_coverage_and_keeps_original_history(store, context, dsn):
+    for number in range(3):
+        old = replace(context, run_id=f"greeting-{number}")
+        checkpoint = store.admit(
+            old,
+            request_id=old.run_id,
+            items=(Message(MessageRole.USER, "Thanks for the example."),),
+        )
+        checkpoint = save(store, checkpoint, RunStatus.RUNNING)
+        save(store, checkpoint, RunStatus.COMPLETED)
+
+    class EmptySummary:
+        calls = 0
+
+        async def complete(self, request):
+            self.calls += 1
+            return ModelReply(answer='{"entries":[],"retirements":[]}')
+
+    parts = prepare(store, context, context_window=6000)
+    selector = EmptySummary()
+    parts[2].summarizer = selector
+    parts[2].keep_recent_turns = 0
+    request = assemble(parts, optional_compaction=True)
+    assert len(request.history) == 2
+    marker, active = request.history
+    assert isinstance(marker, Message) and marker.role == MessageRole.USER
+    assert "through turn 3, journal cursor" in marker.text
+    assert "authorised retrieve_history" in marker.text
+    assert "Thanks for the example." not in marker.text
+    assert active == Message(MessageRole.USER, "Recall our decisions.")
+    assert parts[2].context_budget.fits(request)
+    assert rows(dsn, "SELECT covered_turn,facts FROM semantic_summaries") == [(3, [])]
+    assert assemble(parts) == request
+    assert selector.calls == 1
+    original = store.load_run(context).conversation.items
+    assert (
+        sum(
+            isinstance(item, Message) and item.text == "Thanks for the example."
+            for item in original
+        )
+        == 3
+    )
+
+
 @pytest.mark.parametrize("crosses", [False, True])
 def test_headroom_threshold_includes_output_and_has_hysteresis(store, context, crosses):
     short_history(store, context)

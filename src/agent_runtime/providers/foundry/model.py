@@ -2,12 +2,12 @@
 
 import json
 import math
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable, Mapping
 from time import monotonic
 from typing import cast
 
-from openai import APIError, APIStatusError, AsyncOpenAI, OpenAI, omit
-from openai.types.chat import ChatCompletion, ChatCompletionFunctionToolParam
+from openai import APIError, APIStatusError, AsyncOpenAI, AsyncStream, OpenAI, omit
+from openai.types.chat import ChatCompletion, ChatCompletionChunk, ChatCompletionFunctionToolParam
 from openai.types.shared import ReasoningEffort as SdkReasoningEffort
 
 from agent_harness.coordinator.model import (
@@ -163,7 +163,22 @@ class AsyncFoundryModelClient:
         self._observer = observer
 
     async def complete(self, request: ModelRequest) -> ModelReply:
-        """Translate runtime inputs, call Foundry, then validate its next action."""
+        """Return a full response; synchronous consumers and summaries stay buffered."""
+
+        return await self._complete(request)
+
+    async def stream(
+        self, request: ModelRequest, on_text: Callable[[str], Awaitable[None]]
+    ) -> ModelReply:
+        """Offer provisional text only when the request has no whole-object schema."""
+
+        return await self._complete(request, on_text if request.output_schema is None else None)
+
+    async def _complete(
+        self,
+        request: ModelRequest,
+        on_text: Callable[[str], Awaitable[None]] | None = None,
+    ) -> ModelReply:
 
         # Azure deployment names are chosen by the application, e.g. "coordinator".
         # They do not identify model capabilities. Startup supplies the efforts
@@ -202,6 +217,9 @@ class AsyncFoundryModelClient:
         # store=False opts out of stored completions; Azure retention and logging
         # configuration still require separate review before live use.
         started = monotonic()
+        response: ChatCompletion | None = None
+        status_code = 0
+        response_headers: Mapping[str, str] = {}
 
         try:
             raw = await self._client.chat.completions.with_raw_response.create(
@@ -223,37 +241,49 @@ class AsyncFoundryModelClient:
                 if request.output_schema is not None
                 else omit,
                 store=False,
-                stream=False,
+                stream=on_text is not None,
+                stream_options={"include_usage": True} if on_text is not None else omit,
             )
 
-            response = raw.parse()
+            status_code = raw.status_code
+            response_headers = raw.headers
+
+            if on_text is not None:
+                from agent_runtime.providers.foundry.streaming import collect_stream
+
+                parsed = await collect_stream(
+                    cast(AsyncStream[ChatCompletionChunk], raw.parse()), on_text
+                )
+            else:
+                parsed = cast(ChatCompletion, raw.parse())
 
             # SDK response parsing normally tolerates missing/wrong field types.
             # Validate the external envelope before treating it as typed data.
             # Serialization warnings can quote raw values; validation below
             # still rejects them, with a fixed error message for the caller.
-            response = ChatCompletion.model_validate(
-                response.model_dump(warnings=False), strict=True
-            )
-            observe(
-                self._observer,
-                started,
-                raw.status_code,
-                request.output_schema is not None,
-                raw.headers,
-                response,
-            )
+            response = ChatCompletion.model_validate(parsed.model_dump(warnings=False), strict=True)
         except APIError as error:
-            observe(
-                self._observer,
-                started,
-                error.status_code if isinstance(error, APIStatusError) else 0,
-                request.output_schema is not None,
-                error.response.headers if isinstance(error, APIStatusError) else {},
-            )
+            status_code = error.status_code if isinstance(error, APIStatusError) else 0
+            response_headers = error.response.headers if isinstance(error, APIStatusError) else {}
             raise _failure(error) from None
         except ValueError:
             raise FoundryModelError("invalid Foundry response") from None
+        finally:
+
+            # A disconnected, malformed or cancelled stream still consumed one
+            # provider attempt. Record missing usage explicitly, including HTTP
+            # 200 responses that fail envelope validation, so budget collectors
+            # stop on unknown usage instead of overlooking failed model calls.
+            observe(
+                self._observer,
+                started,
+                status_code,
+                request.output_schema is not None,
+                response_headers,
+                response,
+            )
+
+        assert response is not None
 
         return decode_reply(response)
 

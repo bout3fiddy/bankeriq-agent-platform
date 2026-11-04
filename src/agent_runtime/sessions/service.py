@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Callable
+from time import monotonic
 from typing import Any, Literal
 
 from agent_harness.conversations.messages import Message, MessageRole
@@ -120,8 +121,14 @@ class SessionService:
         no transcript, model prompt, tool payload or credential enters this view.
         """
 
+        started = monotonic()
+
         with self.store._connect() as connection:
             head = self.store._head(connection, context)
+            clock_query_started = monotonic()
+            database_time = connection.execute("SELECT clock_timestamp() AS now").fetchone()
+            clock_query_finished = monotonic()
+            assert database_time is not None
             counts = connection.execute(
                 "SELECT (SELECT count(*) FROM conversation_events "
                 "WHERE tenant_id=%s AND conversation_id=%s) AS journal_events,"
@@ -133,13 +140,52 @@ class SessionService:
                 "WHERE tenant_id=%s AND conversation_id=%s GROUP BY status ORDER BY status",
                 self.store._scope(context),
             ).fetchall()
+            memory = connection.execute(
+                "SELECT count(*) AS summary_versions FROM semantic_summaries "
+                "WHERE tenant_id=%s AND conversation_id=%s",
+                self.store._scope(context),
+            ).fetchone()
+            usage = connection.execute(
+                "SELECT count(*) AS model_calls,COALESCE(sum(input_tokens),0) AS input_tokens,"
+                "COALESCE(sum(elapsed_ms),0) AS model_elapsed_ms,"
+                "COALESCE(sum(output_tokens),0) AS output_tokens,count(*) FILTER "
+                "(WHERE input_tokens IS NULL OR output_tokens IS NULL) AS unknown_usage "
+                "FROM model_usage WHERE tenant_id=%s AND conversation_id=%s",
+                self.store._scope(context),
+            ).fetchone()
+            assert usage is not None
+            usage = {key: int(value) for key, value in usage.items()}
+            expected = connection.execute(
+                "SELECT COALESCE(sum((checkpoint->>'model_steps')::int),0) AS steps "
+                "FROM runs WHERE tenant_id=%s AND conversation_id=%s "
+                "AND status IN ('completed','failed','cancelled','limit_reached')",
+                self.store._scope(context),
+            ).fetchone()
+            assert expected is not None and memory is not None
+            usage["expected_calls_lower_bound"] = (
+                int(expected["steps"]) + memory["summary_versions"]
+            )
 
+        cache = self.cache.inspect(head)
+
+        # The primary timestamp occurs somewhere inside its query round trip.
+        # Report only the known work before and after that interval. A remote
+        # observer can remove those durations from its clock-offset uncertainty
+        # without assuming symmetric network latency or synchronized host clocks.
+        # These passive numeric measurements neither renew activity nor read text.
         return {
+            "database_time": database_time["now"].isoformat(),
+            "database_clock_timing": {
+                "before_seconds": clock_query_started - started,
+                "after_seconds": monotonic() - clock_query_finished,
+            },
             "cursor": head["cursor"],
             "active_run": head["active_run_id"],
             "durable": counts,
             "jobs": jobs,
-            "cache": self.cache.inspect(head),
+            "memory": memory,
+            "usage": usage,
+            "cache": cache,
         }
 
     def publish(
@@ -225,6 +271,7 @@ class SessionService:
     ) -> None:
         if (
             sequence < 1
+            or len(model_tokens.encode()) > 8192
             or attempt < 0
             or status
             not in {
@@ -310,6 +357,97 @@ class SessionService:
             "deliveries": [row["delivery"] for row in deliveries],
             "progress": self.cache.progress(head),
         }
+
+    def stream_snapshot(self, context: RunContext) -> dict[str, Any]:
+        """Read one owned run's terminal answer or currently fenced provisional text.
+
+        Final output comes from the committed journal even after Redis eviction.
+        An old producer may recreate its Redis key after cancellation; comparison
+        with the live job token below makes that text ineligible for publication.
+        No history reconstruction, transcript projection or activity renewal occurs.
+        """
+
+        with self.store._connect() as connection:
+            self.store._generation(connection)
+
+            # One statement supplies a committed snapshot of owner, run, current
+            # producer and final answer. PostgreSQL MVCC keeps these rows consistent
+            # without locking the conversation against admission or settlement.
+            # For example, an uncommitted cancellation leaves the previous snapshot
+            # visible; the next read after commit sees cancelled and rejects its draft.
+            # The shared generation lock still prevents a restore cutover mid-read.
+            row = connection.execute(
+                "SELECT c.tenant_id,c.conversation_id,c.user_id,c.deletion_generation,"
+                "c.deleted,c.cursor,r.status,r.revision,r.terminal_written_at, "
+                "CASE WHEN current_setting('track_commit_timestamp')='on' "
+                "THEN pg_xact_commit_timestamp(r.terminal_xid) END AS committed_at, "
+                "j.job_id,j.ownership_token,j.step,a.answer "
+                "FROM conversations c LEFT JOIN runs r ON r.tenant_id=c.tenant_id "
+                "AND r.conversation_id=c.conversation_id AND r.run_id=%s "
+                "LEFT JOIN LATERAL (SELECT job_id,ownership_token,"
+                "recovery->'arguments'->>'step' AS step FROM jobs "
+                "WHERE tenant_id=r.tenant_id AND conversation_id=r.conversation_id "
+                "AND run_id=r.run_id AND operation='model_infer' AND status='leased' "
+                "AND lease_expiry>clock_timestamp() AND input_revision=r.revision LIMIT 1) j "
+                "ON r.status NOT IN ('completed','failed','cancelled','limit_reached') "
+                "LEFT JOIN LATERAL (SELECT payload->'value'->>'text' AS answer "
+                "FROM conversation_events WHERE tenant_id=r.tenant_id "
+                "AND conversation_id=r.conversation_id AND run_id=r.run_id "
+                "AND payload->>'type'='Message' AND payload->'value'->>'role'='assistant' "
+                "ORDER BY sequence DESC LIMIT 1) a ON r.status='completed' "
+                "WHERE c.tenant_id=%s AND c.conversation_id=%s",
+                (context.run_id, *self.store._scope(context)),
+            ).fetchone()
+
+            if row is None or row["user_id"] != context.user_id or row["deleted"]:
+                raise StateNotFoundError("conversation unavailable")
+
+            if row["status"] is None:
+                raise StateNotFoundError("run unavailable")
+
+            head = {**row, "recovery_id": self.store.recovery_id}
+            result = {
+                "run_id": context.run_id,
+                "status": row["status"],
+                "revision": row["revision"],
+                "recovery_id": head["recovery_id"],
+                "deletion_generation": head["deletion_generation"],
+                "cursor": head["cursor"],
+                "text": None,
+                "final": None,
+            }
+
+            if row["status"] in {"completed", "failed", "cancelled", "limit_reached"}:
+                result["final"] = {
+                    "run_id": context.run_id,
+                    "status": row["status"],
+                    "answer": row["answer"] if row["status"] == "completed" else None,
+                    "cursor": head["cursor"],
+                    "committed_at": row["committed_at"].isoformat()
+                    if row["committed_at"]
+                    else None,
+                    "terminal_written_at": row["terminal_written_at"].isoformat()
+                    if row["terminal_written_at"]
+                    else None,
+                    "provisional": False,
+                }
+                return result
+
+            job = row if row["job_id"] is not None else None
+
+        text = self.cache.text(head, context.run_id) if job is not None else None
+
+        if (
+            isinstance(text, dict)
+            and job is not None
+            and text.get("job_id") == job["job_id"]
+            and text.get("attempt") == str(job["ownership_token"])
+            and text.get("step") == job["step"]
+            and text.get("run_id") == context.run_id
+        ):
+            result["text"] = text
+
+        return result
 
     def project_due(self, policy: ProjectionPolicy | None = None, *, limit: int = 100) -> int:
         contexts = self.history.due(policy or ProjectionPolicy(), limit=limit)

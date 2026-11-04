@@ -7,7 +7,7 @@
     },
     "system": {
       "id": "bankeriq.system",
-      "version": "1.0.0"
+      "version": "1.2.0"
     }
   },
   "documents": [
@@ -64,6 +64,30 @@
       "version": "1.0.0",
       "path": "system/1.0.0.json",
       "sha256": "f51faaa1d11cca19f19e8460eba155024600d38ffd45cb319d9cdcef17d3d6a1"
+    },
+    {
+      "id": "guidelines.memory",
+      "version": "1.0.0",
+      "path": "guidelines/memory/1.0.0.json",
+      "sha256": "4140f67164fa3b141456591e32fe006d3ceed0977c29744a3ac14b8e3891ea62"
+    },
+    {
+      "id": "bankeriq.system",
+      "version": "1.1.0",
+      "path": "system/1.1.0.json",
+      "sha256": "fb4074595c543aa1510e62022087893e668b62dc99973de64c592db28feb078d"
+    },
+    {
+      "id": "guidelines.responses",
+      "version": "1.1.0",
+      "path": "guidelines/responses/1.1.0.json",
+      "sha256": "6665dde5b0ff884ee0565f65d8aa1d3a44df1dc9fb1ff59f7e57c64842e67d47"
+    },
+    {
+      "id": "bankeriq.system",
+      "version": "1.2.0",
+      "path": "system/1.2.0.json",
+      "sha256": "5d64ea9defacd0bf548236d4ed1d77f9f0353969aa654dc4960f998113206ae4"
     }
   ]
 }

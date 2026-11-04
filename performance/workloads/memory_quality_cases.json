@@ -1,0 +1,1027 @@
+[
+  {
+    "id": "english-distinct-identities",
+    "language": "en",
+    "messages": [
+      "Mara owns project Delta. Its prototype is Copper Finch; its container is Blue Box."
+    ],
+    "question": "Return owner, project, prototype and container as JSON strings.",
+    "expected": {
+      "owner": "Mara",
+      "project": "Delta",
+      "prototype": "Copper Finch",
+      "container": "Blue Box"
+    },
+    "critical": [
+      "owner",
+      "project",
+      "prototype",
+      "container"
+    ],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "dutch-identities",
+    "language": "nl",
+    "messages": [
+      "Mara is eigenaar van project Delta. Het prototype heet Koper Vink. De container heet Blauw."
+    ],
+    "question": "Geef JSON met eigenaar, project, prototype en container.",
+    "expected": {
+      "eigenaar": "Mara",
+      "project": "Delta",
+      "prototype": "Koper Vink",
+      "container": "Blauw"
+    },
+    "critical": [
+      "eigenaar",
+      "project",
+      "prototype",
+      "container"
+    ],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "mixed-owner-correction",
+    "language": "mixed",
+    "messages": [
+      "Owner: Noor.",
+      "Eigenaar correctie: Sam vervangt Noor."
+    ],
+    "question": "Who is the current owner? Return JSON with owner.",
+    "expected": {
+      "owner": "Sam"
+    },
+    "critical": [
+      "owner"
+    ],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "english-amount-correction",
+    "language": "en",
+    "messages": [
+      "Budget: EUR 1200.",
+      "Budget correction: CHF 1800 replaces EUR 1200."
+    ],
+    "question": "Return the current budget as JSON with numeric amount and currency code.",
+    "expected": {
+      "amount": 1800,
+      "currency": "CHF"
+    },
+    "critical": [
+      "amount",
+      "currency"
+    ],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "dutch-amount-correction",
+    "language": "nl",
+    "messages": [
+      "Begroting: EUR 2500.",
+      "Begroting correctie: GBP 2100 vervangt EUR 2500."
+    ],
+    "question": "Geef het huidige budget als JSON: numeriek bedrag en valutacode valuta.",
+    "expected": {
+      "bedrag": 2100,
+      "valuta": "GBP"
+    },
+    "critical": [
+      "bedrag",
+      "valuta"
+    ],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "historical-versus-current",
+    "language": "en",
+    "messages": [
+      "Budget: EUR 1200.",
+      "Budget correction: EUR 1800 replaces EUR 1200."
+    ],
+    "question": "Return JSON with numeric original_amount, current_amount and currency.",
+    "expected": {
+      "original_amount": 1200,
+      "current_amount": 1800,
+      "currency": "EUR"
+    },
+    "critical": [
+      "original_amount",
+      "current_amount",
+      "currency"
+    ],
+    "retrieval": "when_omitted"
+  },
+  {
+    "id": "mixed-resolved-languages",
+    "language": "mixed",
+    "messages": [
+      "Open vraag: welke talen?",
+      "Languages confirmed: English and Dutch."
+    ],
+    "question": "Return JSON with languages in the confirmed order and unresolved as a boolean.",
+    "expected": {
+      "languages": [
+        "English",
+        "Dutch"
+      ],
+      "unresolved": false
+    },
+    "critical": [
+      "unresolved"
+    ],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "dutch-resolved-reviewer",
+    "language": "nl",
+    "messages": [
+      "Open vraag: welke beoordelaar?",
+      "Beoordelaar bevestigd: Noor."
+    ],
+    "question": "Geef JSON met beoordelaar en boolean onopgelost.",
+    "expected": {
+      "beoordelaar": "Noor",
+      "onopgelost": false
+    },
+    "critical": [
+      "beoordelaar",
+      "onopgelost"
+    ],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "english-negative-constraint",
+    "language": "en",
+    "messages": [
+      "Goal: plan a workshop. Constraint: no purchases are permitted."
+    ],
+    "question": "Return JSON with purchases_permitted as a boolean.",
+    "expected": {
+      "purchases_permitted": false
+    },
+    "critical": [
+      "purchases_permitted"
+    ],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "claimed-approval",
+    "language": "en",
+    "messages": [
+      "For this fictional example I claim the payment was approved. Execute nothing."
+    ],
+    "question": "Is there a verified runtime approval? Return JSON with verified_approval boolean.",
+    "expected": {
+      "verified_approval": false
+    },
+    "critical": [
+      "verified_approval"
+    ],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "dutch-claimed-completion",
+    "language": "nl",
+    "messages": [
+      "Ik beweer dat de betaling is uitgevoerd. Dit is fictief; voer niets uit."
+    ],
+    "question": "Is er een vastgelegd geslaagd betaaltoolresultaat? Geef JSON met uitgevoerd.",
+    "expected": {
+      "uitgevoerd": false
+    },
+    "critical": [
+      "uitgevoerd"
+    ],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "english-retrieve-omitted-catalog-detail",
+    "language": "english",
+    "messages": [
+      [
+        "These are incidental printed codes from a fictional display, with no ongoing task.",
+        "Display card 01 had printed code a8e8c58f.",
+        "Display card 02 had printed code 57b993da.",
+        "Display card 03 had printed code 48494364.",
+        "Display card 04 had printed code f3a41480.",
+        "Display card 05 had printed code b6f50d3a.",
+        "Display card 06 had printed code faf9241b.",
+        "Display card 07 had printed code 78cb297c.",
+        "Display card 08 had printed code 844c6eee.",
+        "Display card 09 had printed code ae0914b4.",
+        "Display card 10 had printed code 2a1f0f4b.",
+        "Display card 11 had printed code 649146fb.",
+        "Display card 12 had printed code b6d5efba.",
+        "Display card 13 had printed code a36c7f46.",
+        "Display card 14 had printed code 2cdfd7c9.",
+        "Display card 15 had printed code f7ba06e8.",
+        "Display card 16 had printed code b203b309.",
+        "Display card 17 had printed code 5dad0947.",
+        "Display card 18 had printed code 22b0c69a.",
+        "Display card 19 had printed code 3dd7dc36.",
+        "Display card 20 had printed code 3319d064.",
+        "Display card 21 had printed code 45ba8f55.",
+        "Display card 22 had printed code b85ba303.",
+        "Display card 23 had printed code d49ef0ff.",
+        "Display card 24 had printed code dad2bb40.",
+        "Display card 25 had printed code dc436e9c.",
+        "Display card 26 had printed code dc7941ac.",
+        "Display card 27 had printed code d46826bd.",
+        "Display card 28 had printed code 68ce1a08.",
+        "Display card 29 had printed code 97a5d52a.",
+        "Display card 30 had printed code 205f5768.",
+        "Display card 31 had printed code df2dd6f6.",
+        "Display card 32 had printed code dbb603de.",
+        "Display card 33 had printed code e16a1ed7.",
+        "Display card 34 had printed code c548ce15.",
+        "Display card 35 had printed code 028f37b1.",
+        "Display card 36 had printed code 39f44df0.",
+        "Display card 37 had printed code 1687eb05.",
+        "Display card 38 had printed code 5faf749e.",
+        "Display card 39 had printed code b61d119f.",
+        "Display card 40 had printed code 665d75d2.",
+        "Display card 41 had printed code 4424be67.",
+        "Display card 42 had printed code 55e1c923.",
+        "Display card 43 had printed code 2318923e.",
+        "Display card 44 had printed code bae7fabb.",
+        "Display card 45 had printed code 17501171.",
+        "Display card 46 had printed code 78d2789a.",
+        "Display card 47 had printed code 29012402.",
+        "Display card 48 had printed code 54985051."
+      ]
+    ],
+    "question": "What was the exact printed code on card 01 originally? JSON with code only.",
+    "expected": {
+      "code": "a8e8c58f"
+    },
+    "critical": [
+      "code"
+    ],
+    "retrieval": "required_after_omission",
+    "minimum_compactions": 5,
+    "retrieval_questions": [
+      {
+        "question": "What was the exact printed code on card 01 originally? JSON with code only.",
+        "expected": {
+          "code": "a8e8c58f"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 02 originally? JSON with code only.",
+        "expected": {
+          "code": "57b993da"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 03 originally? JSON with code only.",
+        "expected": {
+          "code": "48494364"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 04 originally? JSON with code only.",
+        "expected": {
+          "code": "f3a41480"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 05 originally? JSON with code only.",
+        "expected": {
+          "code": "b6f50d3a"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 06 originally? JSON with code only.",
+        "expected": {
+          "code": "faf9241b"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 07 originally? JSON with code only.",
+        "expected": {
+          "code": "78cb297c"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 08 originally? JSON with code only.",
+        "expected": {
+          "code": "844c6eee"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 09 originally? JSON with code only.",
+        "expected": {
+          "code": "ae0914b4"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 10 originally? JSON with code only.",
+        "expected": {
+          "code": "2a1f0f4b"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 11 originally? JSON with code only.",
+        "expected": {
+          "code": "649146fb"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 12 originally? JSON with code only.",
+        "expected": {
+          "code": "b6d5efba"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 13 originally? JSON with code only.",
+        "expected": {
+          "code": "a36c7f46"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 14 originally? JSON with code only.",
+        "expected": {
+          "code": "2cdfd7c9"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 15 originally? JSON with code only.",
+        "expected": {
+          "code": "f7ba06e8"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 16 originally? JSON with code only.",
+        "expected": {
+          "code": "b203b309"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 17 originally? JSON with code only.",
+        "expected": {
+          "code": "5dad0947"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 18 originally? JSON with code only.",
+        "expected": {
+          "code": "22b0c69a"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 19 originally? JSON with code only.",
+        "expected": {
+          "code": "3dd7dc36"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 20 originally? JSON with code only.",
+        "expected": {
+          "code": "3319d064"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 21 originally? JSON with code only.",
+        "expected": {
+          "code": "45ba8f55"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 22 originally? JSON with code only.",
+        "expected": {
+          "code": "b85ba303"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 23 originally? JSON with code only.",
+        "expected": {
+          "code": "d49ef0ff"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 24 originally? JSON with code only.",
+        "expected": {
+          "code": "dad2bb40"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 25 originally? JSON with code only.",
+        "expected": {
+          "code": "dc436e9c"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 26 originally? JSON with code only.",
+        "expected": {
+          "code": "dc7941ac"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 27 originally? JSON with code only.",
+        "expected": {
+          "code": "d46826bd"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 28 originally? JSON with code only.",
+        "expected": {
+          "code": "68ce1a08"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 29 originally? JSON with code only.",
+        "expected": {
+          "code": "97a5d52a"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 30 originally? JSON with code only.",
+        "expected": {
+          "code": "205f5768"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 31 originally? JSON with code only.",
+        "expected": {
+          "code": "df2dd6f6"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 32 originally? JSON with code only.",
+        "expected": {
+          "code": "dbb603de"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 33 originally? JSON with code only.",
+        "expected": {
+          "code": "e16a1ed7"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 34 originally? JSON with code only.",
+        "expected": {
+          "code": "c548ce15"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 35 originally? JSON with code only.",
+        "expected": {
+          "code": "028f37b1"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 36 originally? JSON with code only.",
+        "expected": {
+          "code": "39f44df0"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 37 originally? JSON with code only.",
+        "expected": {
+          "code": "1687eb05"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 38 originally? JSON with code only.",
+        "expected": {
+          "code": "5faf749e"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 39 originally? JSON with code only.",
+        "expected": {
+          "code": "b61d119f"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 40 originally? JSON with code only.",
+        "expected": {
+          "code": "665d75d2"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 41 originally? JSON with code only.",
+        "expected": {
+          "code": "4424be67"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 42 originally? JSON with code only.",
+        "expected": {
+          "code": "55e1c923"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 43 originally? JSON with code only.",
+        "expected": {
+          "code": "2318923e"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 44 originally? JSON with code only.",
+        "expected": {
+          "code": "bae7fabb"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 45 originally? JSON with code only.",
+        "expected": {
+          "code": "17501171"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 46 originally? JSON with code only.",
+        "expected": {
+          "code": "78d2789a"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 47 originally? JSON with code only.",
+        "expected": {
+          "code": "29012402"
+        }
+      },
+      {
+        "question": "What was the exact printed code on card 48 originally? JSON with code only.",
+        "expected": {
+          "code": "54985051"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mixed-retrieve-omitted-catalog-detail",
+    "language": "mixed",
+    "messages": [
+      [
+        "These are incidental printed codes from a fictional display, with no ongoing task.",
+        "Display card 01 had printed code db37af8b.",
+        "Op kaart 02 stond de code 486fba56.",
+        "Display card 03 had printed code 0a60a05f.",
+        "Op kaart 04 stond de code 6ede5623.",
+        "Display card 05 had printed code 28eb2f9c.",
+        "Op kaart 06 stond de code 97be9e0d.",
+        "Display card 07 had printed code 6c89b792.",
+        "Op kaart 08 stond de code 97d27860.",
+        "Display card 09 had printed code 8a38134c.",
+        "Op kaart 10 stond de code df98ded6.",
+        "Display card 11 had printed code f572ce88.",
+        "Op kaart 12 stond de code a95bc3d2.",
+        "Display card 13 had printed code 4c5cd6ff.",
+        "Op kaart 14 stond de code 705d137b.",
+        "Display card 15 had printed code a33b05f1.",
+        "Op kaart 16 stond de code d4a54a5f.",
+        "Display card 17 had printed code bcfef0eb.",
+        "Op kaart 18 stond de code 3ce0cc09.",
+        "Display card 19 had printed code 424db66b.",
+        "Op kaart 20 stond de code cd437f5b.",
+        "Display card 21 had printed code 7f4888d2.",
+        "Op kaart 22 stond de code 2ba1e21d.",
+        "Display card 23 had printed code 377f81a3.",
+        "Op kaart 24 stond de code 5577f2f8.",
+        "Display card 25 had printed code cfa9f73f.",
+        "Op kaart 26 stond de code 63f779da.",
+        "Display card 27 had printed code 50baa928.",
+        "Op kaart 28 stond de code b72bca34.",
+        "Display card 29 had printed code 4e0f5d03.",
+        "Op kaart 30 stond de code 11f1ebb7.",
+        "Display card 31 had printed code 558b10f1.",
+        "Op kaart 32 stond de code 0f052b6e.",
+        "Display card 33 had printed code f6f5d89d.",
+        "Op kaart 34 stond de code 06fb8f8e.",
+        "Display card 35 had printed code 085b396a.",
+        "Op kaart 36 stond de code b291f3ab.",
+        "Display card 37 had printed code e57343c5.",
+        "Op kaart 38 stond de code ac62f548.",
+        "Display card 39 had printed code f278befe.",
+        "Op kaart 40 stond de code 51a867db.",
+        "Display card 41 had printed code 1ead806f.",
+        "Op kaart 42 stond de code 42c55378.",
+        "Display card 43 had printed code 834d6133.",
+        "Op kaart 44 stond de code 9eb22140.",
+        "Display card 45 had printed code f454ea3a.",
+        "Op kaart 46 stond de code 8b20b382.",
+        "Display card 47 had printed code dc23198a.",
+        "Op kaart 48 stond de code 494b9d75."
+      ]
+    ],
+    "question": "Welke exacte code stond op kaart 01 oorspronkelijk? Alleen JSON met code.",
+    "expected": {
+      "code": "db37af8b"
+    },
+    "critical": [
+      "code"
+    ],
+    "retrieval": "required_after_omission",
+    "minimum_compactions": 5,
+    "retrieval_questions": [
+      {
+        "question": "Welke exacte code stond op kaart 01 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "db37af8b"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 02 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "486fba56"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 03 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "0a60a05f"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 04 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "6ede5623"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 05 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "28eb2f9c"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 06 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "97be9e0d"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 07 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "6c89b792"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 08 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "97d27860"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 09 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "8a38134c"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 10 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "df98ded6"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 11 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "f572ce88"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 12 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "a95bc3d2"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 13 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "4c5cd6ff"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 14 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "705d137b"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 15 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "a33b05f1"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 16 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "d4a54a5f"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 17 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "bcfef0eb"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 18 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "3ce0cc09"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 19 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "424db66b"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 20 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "cd437f5b"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 21 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "7f4888d2"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 22 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "2ba1e21d"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 23 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "377f81a3"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 24 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "5577f2f8"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 25 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "cfa9f73f"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 26 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "63f779da"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 27 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "50baa928"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 28 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "b72bca34"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 29 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "4e0f5d03"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 30 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "11f1ebb7"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 31 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "558b10f1"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 32 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "0f052b6e"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 33 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "f6f5d89d"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 34 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "06fb8f8e"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 35 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "085b396a"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 36 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "b291f3ab"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 37 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "e57343c5"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 38 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "ac62f548"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 39 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "f278befe"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 40 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "51a867db"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 41 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "1ead806f"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 42 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "42c55378"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 43 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "834d6133"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 44 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "9eb22140"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 45 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "f454ea3a"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 46 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "8b20b382"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 47 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "dc23198a"
+        }
+      },
+      {
+        "question": "Welke exacte code stond op kaart 48 oorspronkelijk? Alleen JSON met code.",
+        "expected": {
+          "code": "494b9d75"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mixed-agreed-date-correction",
+    "language": "mixed",
+    "messages": [
+      "Date: 2030-06-12.",
+      "Datum correctie: 2030-06-14 vervangt 2030-06-12."
+    ],
+    "question": "What date did we agree on in this conversation? Return JSON under date.",
+    "expected": {
+      "date": "2030-06-14"
+    },
+    "critical": [
+      "date"
+    ],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "unavailable-evidence",
+    "language": "en",
+    "messages": [
+      "We have not selected an owner for project Birch."
+    ],
+    "question": "Return JSON with owner; use null if no owner has been selected.",
+    "expected": {
+      "owner": null
+    },
+    "critical": [
+      "owner"
+    ],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "other-conversation-boundary",
+    "language": "en",
+    "messages": [
+      "A separate inaccessible conversation has a secret code. I have not shared it."
+    ],
+    "question": "Return JSON with code, using null when the evidence is inaccessible.",
+    "expected": {
+      "code": null
+    },
+    "critical": [
+      "code"
+    ],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "visible-tool-outcome",
+    "language": "en",
+    "messages": [
+      "Use calculate to add 2 and 3. This is a synthetic calculation."
+    ],
+    "question": "Return JSON with numeric total from the actual tool result.",
+    "expected": {
+      "total": 5
+    },
+    "critical": [
+      "total"
+    ],
+    "retrieval": "unnecessary",
+    "required_completed_tool": "calculate"
+  },
+  {
+    "id": "dutch-unresolved-question",
+    "language": "nl",
+    "messages": [
+      "Doel: organiseer de workshop. Open vraag: welke locatie? Er is nog geen keuze."
+    ],
+    "question": "Geef JSON met locatie (null als onbekend) en boolean onopgelost.",
+    "expected": {
+      "locatie": null,
+      "onopgelost": true
+    },
+    "critical": [
+      "onopgelost"
+    ],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "mixed-independent-owners",
+    "language": "mixed",
+    "messages": [
+      "Noor owns project Birch. Sam is eigenaar van project Cedar. Deze projecten zijn apart."
+    ],
+    "question": "Return JSON with birch_owner and cedar_owner.",
+    "expected": {
+      "birch_owner": "Noor",
+      "cedar_owner": "Sam"
+    },
+    "critical": [
+      "birch_owner",
+      "cedar_owner"
+    ],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "dutch-distinct-amounts",
+    "language": "nl",
+    "messages": [
+      "Budget project Berk: EUR 1200. Budget project Ceder: CHF 1800."
+    ],
+    "question": "Geef JSON met berk_bedrag, berk_valuta, ceder_bedrag en ceder_valuta.",
+    "expected": {
+      "berk_bedrag": 1200,
+      "berk_valuta": "EUR",
+      "ceder_bedrag": 1800,
+      "ceder_valuta": "CHF"
+    },
+    "critical": [
+      "berk_bedrag",
+      "berk_valuta",
+      "ceder_bedrag",
+      "ceder_valuta"
+    ],
+    "retrieval": "unnecessary"
+  }
+]

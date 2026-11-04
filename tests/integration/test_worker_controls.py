@@ -24,7 +24,7 @@ from agent_runtime.workers.reasons import FailureReason
 from agent_runtime.workers.runner import Worker
 from agent_runtime.workers.state import Handler, Handlers, Recovery
 
-from .test_postgres import Fault
+from .test_postgres import INPUT, Fault
 from .test_workers import admit, claim, expire, process, rows, wait_file
 from .test_workers import context as context
 from .test_workers import dsn as dsn
@@ -833,7 +833,12 @@ def test_upgrade_preserves_legacy_unknown_retry_without_authorising_replay(
         old_queue = PostgresQueue(old_store)
         old_queue.configure("synthetic", concurrency=2, tenant_concurrency=1)
         unsafe = state.model_copy(update={"idempotent": False})
-        admit(old_queue, context, unsafe)
+
+        # Seed the pre-010 shape through its existing admission/attachment
+        # boundaries. Current queued admission also requires migration 017's
+        # release gate, which intentionally does not exist in this old schema.
+        old_store.admit(context, request_id=context.run_id, items=INPUT)
+        old_queue.attach(context, unsafe)
 
         with psycopg.connect(legacy) as connection:
             connection.execute(

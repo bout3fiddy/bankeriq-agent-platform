@@ -32,6 +32,56 @@ class RedisSessions:
         self._activity_script = self.client.register_script(
             Path(__file__).with_name("activity.lua").read_text()
         )
+        self._text_script = self.client.register_script(
+            Path(__file__).with_name("text.lua").read_text()
+        )
+
+    def text(
+        self, head: dict[str, Any], run_id: str, value: dict[str, Any] | None = None
+    ) -> dict[str, Any] | None:
+        """Keep one bounded text snapshot for this run, independent of history/progress.
+
+        A reader missing sequences 3–9 can replace its draft with snapshot 10.
+        The payload is disposable and expires without SSE reads renewing its TTL.
+        Primary lease checks at publication and delivery decide whether it is current.
+        """
+
+        encoded = json.dumps(value, ensure_ascii=False)
+
+        if len(encoded.encode()) > 40000:
+            raise ValueError("provisional text exceeds its bound")
+
+        key = self.key(head) + f":text:{head['deletion_generation']}:{fingerprint(run_id)}"
+
+        try:
+            raw = self._text_script(
+                keys=[key],
+                args=["write" if value is not None else "read", encoded, self.ttl_seconds],
+            )
+            raw = cast(bytes | str | None, raw)
+            value = json.loads(raw) if raw and len(raw) <= 40000 else None
+
+            if not isinstance(value, dict):
+                return None
+
+            if (
+                value.get("kind") not in {"text", "reset"}
+                or not isinstance(value.get("text"), str)
+                or len(value["text"].encode()) > 32768
+                or value.get("provisional") is not True
+                or any(
+                    not isinstance(value.get(field), str)
+                    or not value[field].isascii()
+                    or not value[field].isdigit()
+                    or not 1 <= len(value[field]) <= 20
+                    for field in ("step", "attempt", "sequence")
+                )
+            ):
+                return None
+
+            return value
+        except RedisError, ValueError, TypeError:
+            return None
 
     def touch(self, head: dict[str, Any], *, minimum_interval: int = 0) -> bool:
         """Extend retention after explicit interaction or an observed live SQL lease.

@@ -1,0 +1,468 @@
+{
+  "recorded_utc": "2026-11-04T17:50:46.824722+00:00",
+  "status": "in-progress",
+  "runtime_revision": "0000012",
+  "image_digest": "sha256:543edf85d8ed885841077771da6ff4efb8ed3f9c320281dbfdae2799d76c8c19",
+  "source_commit": "54440b894deefad6dbfefe70252bfab37013fa84",
+  "source_dirty": true,
+  "verification": {
+    "passed": 719,
+    "skips": 0,
+    "seconds": 141.48,
+    "log": "scratch/group12/verify-workload-recovery-checked.log"
+  },
+  "cohorts": [
+    {
+      "sessions": 1,
+      "workload": "fixed-paragraph-streaming",
+      "statuses": {
+        "completed": 100
+      },
+      "correct_after_recovery": 100,
+      "matched_provider_calls": 101,
+      "provider_statuses": {
+        "200": 101
+      },
+      "summary": {
+        "admission_seconds": {
+          "count": 100,
+          "p50": 0.06821056245826185,
+          "p95": 0.09451887500472367
+        },
+        "first_text_seconds": {
+          "count": 100,
+          "p50": 1.0195287293754518,
+          "p95": 1.5942877079360187
+        },
+        "turn_seconds": {
+          "count": 100,
+          "p50": 1.4148967498913407,
+          "p95": 2.126230999827385
+        },
+        "estimated_overhead_seconds": {
+          "count": 100,
+          "p50": 0.5728102710554377,
+          "p95": 0.8108652909919619,
+          "maximum": 1.1989683751463889
+        },
+        "commit_delivery_lower_seconds": {
+          "count": 0,
+          "p50": null,
+          "p95": null,
+          "maximum": null
+        },
+        "commit_delivery_upper_seconds": {
+          "count": 0,
+          "p50": null,
+          "p95": null,
+          "maximum": null
+        },
+        "terminal_write_delivery_lower_seconds": {
+          "count": 100,
+          "p50": 0.06662268778291036,
+          "p95": 0.09900334790472698,
+          "maximum": 0.13023810642152966
+        },
+        "terminal_write_delivery_upper_seconds": {
+          "count": 100,
+          "p50": 0.10835915335974278,
+          "p95": 0.14404988942897035,
+          "maximum": 0.17449642372685048
+        },
+        "queue_wait_upper_ms": {
+          "model_prepare": {
+            "count": 100,
+            "p50": 69.5,
+            "p95": 139,
+            "maximum": 660
+          },
+          "model_infer": {
+            "count": 100,
+            "p50": 127.0,
+            "p95": 188,
+            "maximum": 399
+          }
+        }
+      },
+      "usage": {
+        "model_calls": 101,
+        "input_tokens": 147157,
+        "output_tokens": 6767
+      },
+      "image_digest": "sha256:543edf85d8ed885841077771da6ff4efb8ed3f9c320281dbfdae2799d76c8c19",
+      "record": "2026-11-04-hosted-wake-tier-1.json"
+    },
+    {
+      "sessions": 2,
+      "workload": "fixed-paragraph-streaming",
+      "statuses": {
+        "completed": 100
+      },
+      "correct_after_recovery": 100,
+      "matched_provider_calls": 101,
+      "provider_statuses": {
+        "200": 101
+      },
+      "summary": {
+        "admission_seconds": {
+          "count": 100,
+          "p50": 0.079444749513641,
+          "p95": 0.10881608305498958
+        },
+        "first_text_seconds": {
+          "count": 100,
+          "p50": 1.0499544999329373,
+          "p95": 1.3023069580085576
+        },
+        "turn_seconds": {
+          "count": 100,
+          "p50": 1.4084981250343844,
+          "p95": 1.9193042921833694
+        },
+        "estimated_overhead_seconds": {
+          "count": 100,
+          "p50": 0.5833230415889994,
+          "p95": 0.6892825409453363,
+          "maximum": 0.7623042921833694
+        },
+        "commit_delivery_lower_seconds": {
+          "count": 0,
+          "p50": null,
+          "p95": null,
+          "maximum": null
+        },
+        "commit_delivery_upper_seconds": {
+          "count": 0,
+          "p50": null,
+          "p95": null,
+          "maximum": null
+        },
+        "terminal_write_delivery_lower_seconds": {
+          "count": 100,
+          "p50": 0.06884371738897244,
+          "p95": 0.10409194143358036,
+          "maximum": 0.11207555645614775
+        },
+        "terminal_write_delivery_upper_seconds": {
+          "count": 100,
+          "p50": 0.12951172472867256,
+          "p95": 0.2296717483895918,
+          "maximum": 0.24370302399711363
+        },
+        "queue_wait_upper_ms": {
+          "model_prepare": {
+            "count": 100,
+            "p50": 86.5,
+            "p95": 156,
+            "maximum": 239
+          },
+          "model_infer": {
+            "count": 100,
+            "p50": 131.0,
+            "p95": 181,
+            "maximum": 199
+          }
+        }
+      },
+      "usage": {
+        "model_calls": 101,
+        "input_tokens": 147157,
+        "output_tokens": 6767
+      },
+      "image_digest": "sha256:543edf85d8ed885841077771da6ff4efb8ed3f9c320281dbfdae2799d76c8c19",
+      "record": "2026-11-04-hosted-wake-tier-2.json"
+    },
+    {
+      "sessions": 5,
+      "workload": "fixed-paragraph-streaming",
+      "statuses": {
+        "completed": 100
+      },
+      "correct_after_recovery": 100,
+      "matched_provider_calls": 101,
+      "provider_statuses": {
+        "200": 101
+      },
+      "summary": {
+        "admission_seconds": {
+          "count": 100,
+          "p50": 0.12190502055454999,
+          "p95": 0.18027549982070923
+        },
+        "first_text_seconds": {
+          "count": 100,
+          "p50": 1.4392035414930433,
+          "p95": 1.7939956248737872
+        },
+        "turn_seconds": {
+          "count": 100,
+          "p50": 1.8122361460700631,
+          "p95": 2.212527999887243
+        },
+        "estimated_overhead_seconds": {
+          "count": 100,
+          "p50": 0.9610205625146628,
+          "p95": 1.2093332080524415,
+          "maximum": 1.4705270408894866
+        },
+        "commit_delivery_lower_seconds": {
+          "count": 0,
+          "p50": null,
+          "p95": null,
+          "maximum": null
+        },
+        "commit_delivery_upper_seconds": {
+          "count": 0,
+          "p50": null,
+          "p95": null,
+          "maximum": null
+        },
+        "terminal_write_delivery_lower_seconds": {
+          "count": 100,
+          "p50": 0.07013201238078182,
+          "p95": 0.10500514724753884,
+          "maximum": 0.1486481908159476
+        },
+        "terminal_write_delivery_upper_seconds": {
+          "count": 100,
+          "p50": 0.2073735481399126,
+          "p95": 0.3512132646410464,
+          "maximum": 0.5916584225742554
+        },
+        "queue_wait_upper_ms": {
+          "model_prepare": {
+            "count": 100,
+            "p50": 172.5,
+            "p95": 330,
+            "maximum": 565
+          },
+          "model_infer": {
+            "count": 100,
+            "p50": 210.5,
+            "p95": 296,
+            "maximum": 579
+          }
+        }
+      },
+      "usage": {
+        "model_calls": 101,
+        "input_tokens": 147157,
+        "output_tokens": 6767
+      },
+      "image_digest": "sha256:543edf85d8ed885841077771da6ff4efb8ed3f9c320281dbfdae2799d76c8c19",
+      "record": "2026-11-04-hosted-wake-tier-5.json"
+    },
+    {
+      "sessions": 10,
+      "workload": "fixed-paragraph-streaming",
+      "statuses": {
+        "completed": 80,
+        "accepted": 20
+      },
+      "correct_after_recovery": 100,
+      "matched_provider_calls": 101,
+      "provider_statuses": {
+        "200": 101
+      },
+      "summary": {
+        "admission_seconds": {
+          "count": 80,
+          "p50": 0.2981526250950992,
+          "p95": 0.3454820830374956
+        },
+        "first_text_seconds": {
+          "count": 80,
+          "p50": 2.0366918959189206,
+          "p95": 3.15129950013943
+        },
+        "turn_seconds": {
+          "count": 80,
+          "p50": 2.5368169581051916,
+          "p95": 3.5792646249756217
+        },
+        "estimated_overhead_seconds": {
+          "count": 80,
+          "p50": 1.4330703958943487,
+          "p95": 2.5788216250762344,
+          "maximum": 2.9706787910535932
+        },
+        "commit_delivery_lower_seconds": {
+          "count": 0,
+          "p50": null,
+          "p95": null,
+          "maximum": null
+        },
+        "commit_delivery_upper_seconds": {
+          "count": 0,
+          "p50": null,
+          "p95": null,
+          "maximum": null
+        },
+        "terminal_write_delivery_lower_seconds": {
+          "count": 80,
+          "p50": 0.07624107176070538,
+          "p95": 0.10652868789384229,
+          "maximum": 0.12105482686547475
+        },
+        "terminal_write_delivery_upper_seconds": {
+          "count": 80,
+          "p50": 0.23623380208482558,
+          "p95": 0.2938638549812822,
+          "maximum": 0.32832776181930967
+        },
+        "queue_wait_upper_ms": {
+          "model_prepare": {
+            "count": 100,
+            "p50": 301.0,
+            "p95": 692,
+            "maximum": 739
+          },
+          "model_infer": {
+            "count": 100,
+            "p50": 580.5,
+            "p95": 1418,
+            "maximum": 1715
+          }
+        }
+      },
+      "usage": {
+        "model_calls": 101,
+        "input_tokens": 147157,
+        "output_tokens": 6767
+      },
+      "image_digest": "sha256:543edf85d8ed885841077771da6ff4efb8ed3f9c320281dbfdae2799d76c8c19",
+      "record": "2026-11-04-hosted-wake-tier-10.json"
+    },
+    {
+      "sessions": 5,
+      "workload": "two-token-control",
+      "statuses": {
+        "completed": 100
+      },
+      "correct_after_recovery": 100,
+      "matched_provider_calls": 101,
+      "provider_statuses": {
+        "200": 101
+      },
+      "summary": {
+        "admission_seconds": {
+          "count": 100,
+          "p50": 0.12427118746563792,
+          "p95": 0.1924182497896254
+        },
+        "first_text_seconds": {
+          "count": 100,
+          "p50": 1.289586687576957,
+          "p95": 1.4594017500057817
+        },
+        "turn_seconds": {
+          "count": 100,
+          "p50": 1.4050083119655028,
+          "p95": 1.6155980420298874
+        },
+        "estimated_overhead_seconds": {
+          "count": 100,
+          "p50": 0.9388067499026655,
+          "p95": 1.1651058329381048,
+          "maximum": 1.2411394999586045
+        },
+        "commit_delivery_lower_seconds": {
+          "count": 0,
+          "p50": null,
+          "p95": null,
+          "maximum": null
+        },
+        "commit_delivery_upper_seconds": {
+          "count": 0,
+          "p50": null,
+          "p95": null,
+          "maximum": null
+        },
+        "terminal_write_delivery_lower_seconds": {
+          "count": 100,
+          "p50": 0.07317840799305486,
+          "p95": 0.10220827761168039,
+          "maximum": 0.1432629613982499
+        },
+        "terminal_write_delivery_upper_seconds": {
+          "count": 100,
+          "p50": 0.21361561820549468,
+          "p95": 0.2520925127728333,
+          "maximum": 0.2814434330812219
+        },
+        "queue_wait_upper_ms": {
+          "model_prepare": {
+            "count": 100,
+            "p50": 150.0,
+            "p95": 290,
+            "maximum": 357
+          },
+          "model_infer": {
+            "count": 100,
+            "p50": 198.0,
+            "p95": 288,
+            "maximum": 326
+          }
+        }
+      },
+      "usage": {
+        "model_calls": 101,
+        "input_tokens": 140592,
+        "output_tokens": 202
+      },
+      "image_digest": "sha256:543edf85d8ed885841077771da6ff4efb8ed3f9c320281dbfdae2799d76c8c19",
+      "record": "2026-11-04-hosted-wake-control-5.json"
+    }
+  ],
+  "campaign_caps": {
+    "model_calls": 2500,
+    "input_tokens": 7000000,
+    "output_tokens": 450000
+  },
+  "campaign_charged": {
+    "model_calls": 2243,
+    "input_tokens": 5524353,
+    "output_tokens": 97406
+  },
+  "campaign_remaining": {
+    "model_calls": 257,
+    "input_tokens": 1475647,
+    "output_tokens": 352594
+  },
+  "unknown_usage_reservations_retained": [
+    {
+      "run": "1d49f1e5-2c24-406d-ac02-48af773d704d",
+      "attempt": 1,
+      "model_calls_already_counted": 1,
+      "input_tokens": 8192,
+      "output_tokens": 512,
+      "reason": "provider stream read timeout; no usage frame; original run recovered"
+    },
+    {
+      "campaign": "quality-full",
+      "case": "mixed-omitted-original-name",
+      "repetition": 0,
+      "model_calls_already_counted": 1,
+      "input_tokens": 3433,
+      "output_tokens": 512,
+      "reason": "private exec relay reset; no provider usage observation"
+    },
+    {
+      "campaign": "quality-v9",
+      "case": "dutch-resolved-reviewer",
+      "repetition": 0,
+      "model_calls_already_counted": 1,
+      "input_tokens": 3344,
+      "output_tokens": 1024,
+      "reason": "private exec relay reset; no provider usage observation"
+    }
+  ],
+  "active_allocation": null,
+  "new_inference_campaigns_running": 0,
+  "remaining_gates": [
+    "PERF-002 application overhead at all supported tiers.",
+    "PERF-005 realistic first-text latency at one and five sessions.",
+    "PERF-004 final-delivery qualification at two and five sessions.",
+    "Current-image endurance remains separate from earlier two-hour evidence."
+  ]
+}

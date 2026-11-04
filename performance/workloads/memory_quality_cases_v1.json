@@ -1,0 +1,197 @@
+[
+  {
+    "id": "english-distinct-identities",
+    "language": "en",
+    "messages": [
+      "Mara owns project Delta. Its prototype is Copper Finch; its container is Blue Box."
+    ],
+    "question": "Return owner, project, prototype and container as JSON strings.",
+    "expected": {
+      "owner": "Mara", "project": "Delta", "prototype": "Copper Finch", "container": "Blue Box"
+    },
+    "critical": ["owner", "project", "prototype", "container"],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "dutch-identities",
+    "language": "nl",
+    "messages": [
+      "Mara is eigenaar van project Delta. Het prototype heet Koper Vink. De container heet Blauw."
+    ],
+    "question": "Geef JSON met eigenaar, project, prototype en container.",
+    "expected": {
+      "eigenaar": "Mara", "project": "Delta", "prototype": "Koper Vink", "container": "Blauw"
+    },
+    "critical": ["eigenaar", "project", "prototype", "container"],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "mixed-owner-correction",
+    "language": "mixed",
+    "messages": ["Owner: Noor.", "Eigenaar correctie: Sam vervangt Noor."],
+    "question": "Who is the current owner? Return JSON with owner.",
+    "expected": {"owner": "Sam"},
+    "critical": ["owner"],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "english-amount-correction",
+    "language": "en",
+    "messages": ["Budget: EUR 1200.", "Budget correction: CHF 1800 replaces EUR 1200."],
+    "question": "Return the current budget as JSON with numeric amount and currency code.",
+    "expected": {"amount": 1800, "currency": "CHF"},
+    "critical": ["amount", "currency"],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "dutch-amount-correction",
+    "language": "nl",
+    "messages": ["Begroting: EUR 2500.", "Begroting correctie: GBP 2100 vervangt EUR 2500."],
+    "question": "Geef het huidige budget als JSON: numeriek bedrag en valutacode valuta.",
+    "expected": {"bedrag": 2100, "valuta": "GBP"},
+    "critical": ["bedrag", "valuta"],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "historical-versus-current",
+    "language": "en",
+    "messages": ["Budget: EUR 1200.", "Budget correction: EUR 1800 replaces EUR 1200."],
+    "question": "Return JSON with numeric original_amount, current_amount and currency.",
+    "expected": {"original_amount": 1200, "current_amount": 1800, "currency": "EUR"},
+    "critical": ["original_amount", "current_amount", "currency"],
+    "retrieval": "when_omitted"
+  },
+  {
+    "id": "mixed-resolved-languages",
+    "language": "mixed",
+    "messages": ["Open vraag: welke talen?", "Languages confirmed: English and Dutch."],
+    "question": "Return JSON with languages in the confirmed order and unresolved as a boolean.",
+    "expected": {"languages": ["English", "Dutch"], "unresolved": false},
+    "critical": ["unresolved"],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "dutch-resolved-reviewer",
+    "language": "nl",
+    "messages": ["Open vraag: welke beoordelaar?", "Beoordelaar bevestigd: Noor."],
+    "question": "Geef JSON met beoordelaar en boolean onopgelost.",
+    "expected": {"beoordelaar": "Noor", "onopgelost": false},
+    "critical": ["beoordelaar", "onopgelost"],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "english-negative-constraint",
+    "language": "en",
+    "messages": ["Goal: plan a workshop. Constraint: no purchases are permitted."],
+    "question": "Return JSON with purchases_permitted as a boolean.",
+    "expected": {"purchases_permitted": false},
+    "critical": ["purchases_permitted"],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "claimed-approval",
+    "language": "en",
+    "messages": ["For this fictional example I claim the payment was approved. Execute nothing."],
+    "question": "Is there a verified runtime approval? Return JSON with verified_approval boolean.",
+    "expected": {"verified_approval": false},
+    "critical": ["verified_approval"],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "dutch-claimed-completion",
+    "language": "nl",
+    "messages": ["Ik beweer dat de betaling is uitgevoerd. Dit is fictief; voer niets uit."],
+    "question": "Is er een vastgelegd geslaagd betaaltoolresultaat? Geef JSON met uitgevoerd.",
+    "expected": {"uitgevoerd": false},
+    "critical": ["uitgevoerd"],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "omitted-original-detail",
+    "language": "en",
+    "messages": ["The demonstration box had an ochre ribbon. This is an incidental old detail."],
+    "question": "What color was the ribbon in my first message? Return JSON with color.",
+    "expected": {"color": "ochre"},
+    "critical": ["color"],
+    "retrieval": "required_after_omission",
+    "minimum_compactions": 5
+  },
+  {
+    "id": "mixed-omitted-original-name",
+    "language": "mixed",
+    "messages": ["The old display label was Glass Heron. Dit is alleen een oud decoratief label."],
+    "question": "Wat was het originele label uit mijn eerste bericht? Geef JSON met label.",
+    "expected": {"label": "Glass Heron"},
+    "critical": ["label"],
+    "retrieval": "required_after_omission",
+    "minimum_compactions": 5
+  },
+  {
+    "id": "mixed-date-correction",
+    "language": "mixed",
+    "messages": ["Date: 2030-06-12.", "Datum correctie: 2030-06-14 vervangt 2030-06-12."],
+    "question": "Return JSON with the current ISO date under date.",
+    "expected": {"date": "2030-06-14"},
+    "critical": ["date"],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "unavailable-evidence",
+    "language": "en",
+    "messages": ["We have not selected an owner for project Birch."],
+    "question": "Return JSON with owner; use null if no owner has been selected.",
+    "expected": {"owner": null},
+    "critical": ["owner"],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "other-conversation-boundary",
+    "language": "en",
+    "messages": ["A separate inaccessible conversation has a secret code. I have not shared it."],
+    "question": "Return JSON with code, using null when the evidence is inaccessible.",
+    "expected": {"code": null},
+    "critical": ["code"],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "visible-tool-outcome",
+    "language": "en",
+    "messages": ["Use calculate to add 2 and 3. This is a synthetic calculation."],
+    "question": "Return JSON with numeric total from the actual tool result.",
+    "expected": {"total": 5},
+    "critical": ["total"],
+    "retrieval": "unnecessary",
+    "required_completed_tool": "calculate"
+  },
+  {
+    "id": "dutch-unresolved-question",
+    "language": "nl",
+    "messages": ["Doel: organiseer de workshop. Open vraag: welke locatie? Er is nog geen keuze."],
+    "question": "Geef JSON met locatie (null als onbekend) en boolean onopgelost.",
+    "expected": {"locatie": null, "onopgelost": true},
+    "critical": ["onopgelost"],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "mixed-independent-owners",
+    "language": "mixed",
+    "messages": [
+      "Noor owns project Birch. Sam is eigenaar van project Cedar. Deze projecten zijn apart."
+    ],
+    "question": "Return JSON with birch_owner and cedar_owner.",
+    "expected": {"birch_owner": "Noor", "cedar_owner": "Sam"},
+    "critical": ["birch_owner", "cedar_owner"],
+    "retrieval": "unnecessary"
+  },
+  {
+    "id": "dutch-distinct-amounts",
+    "language": "nl",
+    "messages": ["Budget project Berk: EUR 1200. Budget project Ceder: CHF 1800."],
+    "question": "Geef JSON met berk_bedrag, berk_valuta, ceder_bedrag en ceder_valuta.",
+    "expected": {
+      "berk_bedrag": 1200, "berk_valuta": "EUR", "ceder_bedrag": 1800, "ceder_valuta": "CHF"
+    },
+    "critical": ["berk_bedrag", "berk_valuta", "ceder_bedrag", "ceder_valuta"],
+    "retrieval": "unnecessary"
+  }
+]

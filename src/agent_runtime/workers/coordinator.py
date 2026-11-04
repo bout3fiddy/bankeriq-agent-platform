@@ -7,7 +7,11 @@ from time import monotonic
 
 from agent_harness.conversations.messages import Message, MessageRole
 from agent_harness.coordinator.control import RunLimits
-from agent_harness.coordinator.model import AsyncModelClient, ModelContextOverflow
+from agent_harness.coordinator.model import (
+    AsyncModelClient,
+    ModelContextOverflow,
+    StreamingModelClient,
+)
 from agent_harness.coordinator.reply_validation import is_valid_reply
 from agent_harness.coordinator.runner import Coordinator
 from agent_harness.memory.semantic import MemoryBlocked
@@ -19,6 +23,7 @@ from agent_harness.tools.gateway import ToolGateway
 from agent_harness.tools.results import PendingToolCall, WaitReason
 from agent_runtime.memory.recovery import ContextRecovery
 from agent_runtime.memory.service import SemanticMemory
+from agent_runtime.sessions.publication import TextPublication
 from agent_runtime.storage.history import encoded_size
 from agent_runtime.telemetry import emit
 from agent_runtime.workers.groups import OrchestrationQueue
@@ -55,6 +60,8 @@ class QueuedCoordinator:
         self.bind = bind
         self.fail_fast = fail_fast
         self.memory = memory
+        self.streaming: StreamingModelClient | None = None
+        self.publication: TextPublication | None = None
 
     def initial(self, context: RunContext, *, budget: int = 100) -> Recovery:
         return Recovery(
@@ -64,16 +71,21 @@ class QueuedCoordinator:
             run_budget=budget,
         )
 
-    async def admit(self, context: RunContext, *, request_id: str, text: str) -> str:
+    async def admit(
+        self, context: RunContext, *, request_id: str, text: str, worker_budget: int = 100
+    ) -> str:
 
         # The API receives the accepted identity only after PostgreSQL commits.
         # Its short admission transaction never waits for inference or tool I/O.
+        # A caller may select a smaller existing run budget, such as eight worker
+        # attempts for a short experiment. Admission pins it in the recovery state;
+        # duplicate requests and children cannot replace it with a larger allowance.
         checkpoint = await asyncio.to_thread(
             self.queue.admit,
             context,
             request_id=request_id,
             items=(Message(MessageRole.USER, text),),
-            state=self.initial(context),
+            state=self.initial(context, budget=worker_budget),
         )
         return checkpoint.run.context.run_id
 
@@ -86,6 +98,7 @@ class QueuedCoordinator:
                     self._async_required,
                     idempotent=True,
                     async_execute_with_lease=self.infer_leased,
+                    required_arguments={"memory_profile": self.memory.profile},
                 ),
                 ("tool", 1): Handler(
                     lambda c, s: self.gateway.can_dispatch(
@@ -189,7 +202,11 @@ class QueuedCoordinator:
                         fence=fence,
                     )
 
-                reply = await self.model.complete(request)
+                if self.streaming is not None and self.publication is not None:
+                    reply = await self.publication.complete(self.streaming, request, lease)
+                else:
+                    reply = await self.model.complete(request)
+
                 break
             except ModelContextOverflow:
                 await asyncio.to_thread(

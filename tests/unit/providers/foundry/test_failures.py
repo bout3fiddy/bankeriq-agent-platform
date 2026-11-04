@@ -135,4 +135,7 @@ def test_malformed_usage_cannot_put_provider_strings_into_numeric_telemetry():
                 await model.complete(REQUEST)
 
     asyncio.run(run())
-    assert not records
+    assert len(records) == 1
+    assert records[0].input_tokens is None
+    assert records[0].output_tokens is None
+    assert "PRIVATE_MARKER" not in repr(records)

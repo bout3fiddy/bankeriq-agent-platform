@@ -84,7 +84,7 @@ class SemanticMemory:
         # requires a new prepared step, never an unnoticed retry substitution.
         return fingerprint(
             [
-                "structured-memory-v7-guarded-assertions",
+                "structured-memory-v10-empty-coverage-awareness",
                 SUMMARY_INSTRUCTIONS,
                 SUMMARY_SCHEMA,
                 self.summary_budget.profile,

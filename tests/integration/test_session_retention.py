@@ -134,7 +134,12 @@ def test_explicit_activity_extends_retention_but_background_reads_do_not(
     while time.monotonic() < deadline:
         sessions.read(context)
         sessions.publish(context, sessions.history.view(context))
-        sessions.inspect(context)
+        inspected_at = time.monotonic()
+        observation = sessions.inspect(context)
+        inspection_seconds = time.monotonic() - inspected_at
+        timing = observation["database_clock_timing"]
+        assert timing["before_seconds"] >= 0 and timing["after_seconds"] >= 0
+        assert timing["before_seconds"] + timing["after_seconds"] <= inspection_seconds
         time.sleep(0.1)
 
     assert not sessions.cache.client.exists(view_key)

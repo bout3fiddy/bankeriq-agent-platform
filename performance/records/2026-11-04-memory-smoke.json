@@ -1,0 +1,142 @@
+{
+  "profile": "live Foundry model, isolated local PostgreSQL state, private exec relay",
+  "case": "english-amount-correction",
+  "repetitions": 2,
+  "critical_pass": true,
+  "usage": {
+    "model_calls": 7,
+    "input_tokens": 24430,
+    "output_tokens": 155,
+    "stopped": false
+  },
+  "samples": [
+    {
+      "repetition": 0,
+      "critical_pass": true,
+      "retrieval_calls": 0,
+      "summary_calls": [
+        {
+          "seconds": 2.5557927500922233,
+          "observation": {
+            "elapsed_ms": 2556,
+            "status_code": 200,
+            "summary": true,
+            "input_tokens": 4765,
+            "output_tokens": 33,
+            "token_limit": 50000,
+            "tokens_remaining": 45235
+          }
+        }
+      ],
+      "publications": [
+        {
+          "version": 1,
+          "seconds": 0.0064647498074918985,
+          "source_cursor": 20,
+          "covered_turn_before": 0,
+          "previous_version": 0,
+          "policy_key": "c628d590263b51a09c308550199adb3b025d665cd3ce301100ffff75f06a7053"
+        }
+      ]
+    },
+    {
+      "repetition": 1,
+      "critical_pass": true,
+      "retrieval_calls": 0,
+      "summary_calls": [
+        {
+          "seconds": 1.1625608748290688,
+          "observation": {
+            "elapsed_ms": 1162,
+            "status_code": 200,
+            "summary": true,
+            "input_tokens": 4765,
+            "output_tokens": 41,
+            "token_limit": 50000,
+            "tokens_remaining": 37486
+          }
+        },
+        {
+          "seconds": 2.424195166910067,
+          "observation": {
+            "elapsed_ms": 2424,
+            "status_code": 200,
+            "summary": true,
+            "input_tokens": 2686,
+            "output_tokens": 33,
+            "token_limit": 50000,
+            "tokens_remaining": 35817
+          }
+        }
+      ],
+      "publications": [
+        {
+          "version": 1,
+          "seconds": 0.012086791917681694,
+          "source_cursor": 20,
+          "covered_turn_before": 0,
+          "previous_version": 0,
+          "policy_key": "c628d590263b51a09c308550199adb3b025d665cd3ce301100ffff75f06a7053"
+        },
+        {
+          "version": 2,
+          "seconds": 0.013466333970427513,
+          "source_cursor": 20,
+          "covered_turn_before": 4,
+          "previous_version": 1,
+          "policy_key": "c628d590263b51a09c308550199adb3b025d665cd3ce301100ffff75f06a7053"
+        }
+      ]
+    }
+  ],
+  "synthetic_negative_control": {
+    "live_model_calls": 0,
+    "purpose": "Reject a guessed correct answer when omitted evidence was never retrieved.",
+    "cases": [
+      {
+        "case": "omitted-original-detail",
+        "repetition": 0,
+        "compactions": 5,
+        "critical_answer_correct": true,
+        "source_was_omitted": true,
+        "retrieval_calls": 0,
+        "accepted": false
+      },
+      {
+        "case": "omitted-original-detail",
+        "repetition": 1,
+        "compactions": 5,
+        "critical_answer_correct": true,
+        "source_was_omitted": true,
+        "retrieval_calls": 0,
+        "accepted": false
+      }
+    ]
+  },
+  "synthetic_wrong_page_control": {
+    "live_model_calls": 0,
+    "purpose": "Reject correct guessed answers after retrieving an unrelated page.",
+    "cases": [
+      {
+        "case": "omitted-original-detail",
+        "repetition": 0,
+        "compactions": 5,
+        "critical_answer_correct": true,
+        "source_was_omitted": true,
+        "retrieval_calls": 1,
+        "retrieved_expected_source": false,
+        "accepted": false
+      },
+      {
+        "case": "omitted-original-detail",
+        "repetition": 1,
+        "compactions": 5,
+        "critical_answer_correct": true,
+        "source_was_omitted": true,
+        "retrieval_calls": 1,
+        "retrieved_expected_source": false,
+        "accepted": false
+      }
+    ]
+  }
+}

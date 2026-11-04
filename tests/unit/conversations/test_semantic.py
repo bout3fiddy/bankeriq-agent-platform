@@ -40,6 +40,26 @@ def test_exact_provenance_and_execution_truth() -> None:
     assert memory_message(selected).role == MessageRole.USER
 
 
+def test_empty_selection_drops_disposable_history_but_preserves_protected_state() -> None:
+    from agent_harness.memory.retirement import select_memory
+    from agent_harness.memory.semantic import summary_candidates
+
+    greeting = MemoryFact(1, 1, "user", "Thanks for that example.")
+    empty = '{"entries":[],"retirements":[]}'
+    assert select_memory(empty, summary_candidates((greeting,)), (greeting,)).facts == ()
+
+    sources = (
+        greeting,
+        MemoryFact(3, 2, "user", "Decision: use EUR."),
+        MemoryFact(5, 3, "user", "Constraint: do not purchase anything."),
+        MemoryFact(7, 4, "tool_failed", "Payment failed."),
+    )
+    result = select_memory(empty, summary_candidates(sources), sources)
+    assert {fact.source for fact in result.facts} == {3, 5, 7}
+    assert result.facts[-1].kind == "tool_failed"
+    assert all(fact.label != "completed_action" for fact in result.facts)
+
+
 @pytest.mark.parametrize(
     "entry",
     [

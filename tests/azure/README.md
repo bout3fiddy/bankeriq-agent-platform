@@ -148,8 +148,10 @@ Private Foundry is reachable through `exec_transport`, which keeps one authentic
 connection to the existing coordinator. Its ephemeral Python helper owns the managed-identity
 SDK client and writes no files. A local owner-only Unix socket forwards bounded synthetic
 requests; credentials stay in their respective processes. The helper exits on relay shutdown
-or after 20 minutes. This transport is confined to validation code. Requests have no artificial
-pacing; actual provider rejection status and bounded retry headers reach the normal worker.
+or after 20 minutes by default. A paced full quality suite can select `--lifetime-seconds 3600`;
+the local relay closes before that one-hour helper deadline. This transport is confined to
+validation code. It adds no request pacing; actual provider rejection status and bounded retry
+headers reach the normal worker. Individual workload harnesses declare their own arrival cadence.
 Recorded turn/model timings include the relay and fresh local worker startup; use the
 performance folder's normal API procedure for hosted latency measurements.
 

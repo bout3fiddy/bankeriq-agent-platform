@@ -42,12 +42,17 @@ from agent_platform.identity.entra import (
     synthetic_input,
 )
 from agent_platform.prompt_files.loader import load_catalog
+from agent_runtime.hosting.access import Principal
 from agent_runtime.memory.retrieval import HistoryRetrieval
 from agent_runtime.memory.service import SemanticMemory
 from agent_runtime.memory.storage import SemanticStore
+from agent_runtime.monitoring import ProcessMonitor
+from agent_runtime.providers.concurrency import LimitedAsyncModelClient
 from agent_runtime.providers.foundry.model import AsyncFoundryModelClient
 from agent_runtime.providers.foundry.tokens import FoundryTokenCounter
+from agent_runtime.providers.usage import UsageWriter
 from agent_runtime.sessions.cache import RedisSessions
+from agent_runtime.sessions.publication import TextPublication
 from agent_runtime.sessions.service import SessionService
 from agent_runtime.storage.connections import PrimaryConnections
 from agent_runtime.storage.postgres import CommitUnknownError, PostgresStateStore
@@ -55,6 +60,8 @@ from agent_runtime.storage.prompts import PostgresPromptResolver
 from agent_runtime.telemetry import ACTIVE_RUN, configure, emit
 from agent_runtime.workers.asynchronous import AsyncWorker
 from agent_runtime.workers.coordinator import QueuedCoordinator
+from agent_runtime.workers.releases import ReleaseControls
+from agent_runtime.workers.runner import Listener
 from agent_runtime.workers.state import Handlers
 from tests.azure.migration import initialise
 from tests.validation.tools import (
@@ -256,6 +263,42 @@ async def api(runtime, sessions, tenant, users):
     async def health(request):
         return JSONResponse({"ready": True})
 
+    controls = ReleaseControls(
+        runtime.queue.store,
+        authorize=lambda principal: principal.tenant_id == tenant and principal.user_id in users,
+    )
+
+    async def release_control(request):
+        identity = await user(request)
+        principal = Principal(identity.tenant_id, identity.user_id)
+
+        if request.method == "GET":
+            return JSONResponse(await asyncio.to_thread(controls.inspect, principal))
+
+        from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+        class Decision(BaseModel):
+            model_config = ConfigDict(extra="forbid", strict=True)
+            request_id: str = Field(min_length=1, max_length=200)
+            open: bool
+            expected_revision: int = Field(ge=0)
+
+        data = bytearray()
+
+        async for chunk in request.stream():
+            data.extend(chunk)
+
+            if len(data) > 4096:
+                raise HTTPException(413, "release request too large")
+
+        try:
+            decision = Decision.model_validate_json(data)
+        except ValidationError:
+            raise HTTPException(400, "invalid release request") from None
+
+        revision = await asyncio.to_thread(controls.change, principal, **decision.model_dump())
+        return JSONResponse({"revision": revision})
+
     app.routes.extend(
         [
             Route("/conversations", conversation, methods=["POST"]),
@@ -263,6 +306,7 @@ async def api(runtime, sessions, tenant, users):
             Route("/inspect", inspect),
             Route("/reports/synthetic", report),
             Route("/health", health),
+            Route("/operator/release", release_control, methods=["GET", "POST"]),
         ]
     )
     await uvicorn.Server(
@@ -314,12 +358,28 @@ async def main():
             return
 
         store = PostgresStateStore(dsn, connections=connections)
+
+        if role not in ("api", "coordinator", "tool"):
+            raise ValueError("unsupported runtime role")
+
+        await stack.enter_async_context(
+            ProcessMonitor(role, connections, store=store if role == "coordinator" else None)
+        )
         prompts = PostgresPromptResolver(
             dsn, PromptScope("bankeriq", "pilot"), catalog=load_catalog(), connections=connections
         )
         model = NoModel()
 
         if role == "coordinator":
+            usage_writer = await stack.enter_async_context(UsageWriter(store))
+
+            def observe_usage(record):
+                observe_model(record)
+                context = ACTIVE_RUN.get()
+
+                if context is not None:
+                    usage_writer.offer(context, record)
+
             async_credential = await stack.enter_async_context(
                 AsyncCredential(client_id=os.environ["AZURE_CLIENT_ID"])
             )
@@ -338,7 +398,7 @@ async def main():
                 client,
                 deployment="coordinator",
                 max_completion_tokens=2048,
-                observer=observe_model,
+                observer=observe_usage,
             )
 
         tool_delay = float(os.environ.get("PILOT_TOOL_DELAY_SECONDS", "0"))
@@ -346,7 +406,15 @@ async def main():
         if not 0 <= tool_delay <= 45:
             raise ValueError("synthetic tool delay must be between zero and 45 seconds")
 
-        runtime, handlers = composition(store, prompts, model, Access(tenant, users), tool_delay)
+        access = Access(tenant, users)
+        runtime, handlers = composition(
+            store,
+            prompts,
+            model,
+            access,
+            tool_delay,
+            summarizer=LimitedAsyncModelClient(model, concurrency=2),
+        )
         sessions = None
 
         if role in ("api", "coordinator"):
@@ -372,14 +440,19 @@ async def main():
             stack.callback(cache.close)
             sessions = SessionService(store, cache)
 
+            if isinstance(model, AsyncFoundryModelClient):
+                runtime.streaming = model
+                runtime.publication = TextPublication(
+                    sessions,
+                    runtime.queue,
+                    allow=lambda context: bool(access.permissions_for(context)),
+                )
+
         if role == "api":
             assert sessions is not None
             emit("runtime.ready")
             await api(runtime, sessions, tenant, users)
             return
-
-        if role not in ("coordinator", "tool"):
-            raise ValueError("unsupported runtime role")
 
         stop = asyncio.Event()
 
@@ -412,11 +485,17 @@ async def main():
                 runtime.queue,
                 handlers,
                 queue_name=kind,
-                concurrency=2,
+
+                # Five preparation slots let independent sessions overlap their
+                # database waits before inference. The delayed-primary benchmark
+                # improved five-session bursts at the same four-connection pool
+                # bound; hosted qualification remains an explicit release gate.
+                concurrency=5 if kind in {"model_prepare", "model_infer"} else 2,
                 lease_seconds=15,
                 poll_seconds=0.25,
+                listener=Listener(dsn, connect=connections.connection_type.connect),
                 process_limit=6,
-                connection_budget=56,
+                connection_budget=80,
                 api_reserve=8,
             ).run_async(stop)
             for kind in kinds

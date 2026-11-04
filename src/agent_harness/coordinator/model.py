@@ -1,6 +1,6 @@
 """Provider-independent requests and replies for one model step."""
 
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Protocol
@@ -123,3 +123,18 @@ class AsyncModelClient(Protocol):
     """
 
     async def complete(self, request: ModelRequest) -> ModelReply: ...
+
+
+class StreamingModelClient(Protocol):
+    """Return a complete validated reply while offering provisional text to a caller.
+
+    For example, stream(request, on_text) may await on_text("The total ") and
+    on_text("is five.") before returning ModelReply(answer="The total is five.").
+    The callback is supplied by trusted application composition, which enforces
+    publication policy and bounds. Tool arguments never enter this callback.
+    Only the returned reply can authorize tool admission or durable completion.
+    """
+
+    async def stream(
+        self, request: ModelRequest, on_text: Callable[[str], Awaitable[None]]
+    ) -> ModelReply: ...

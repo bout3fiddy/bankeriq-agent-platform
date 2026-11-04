@@ -9,7 +9,7 @@ import psycopg
 from agent_harness.coordinator.model import ModelRateLimited
 from agent_harness.storage.interface import StateConflictError
 from agent_runtime.storage.postgres import CommitUnknownError
-from agent_runtime.telemetry import ACTIVE_RUN, emit
+from agent_runtime.telemetry import ACTIVE_ATTEMPT, ACTIVE_JOB, ACTIVE_RUN, emit
 from agent_runtime.workers.queue import ApprovalExpiredError, Lease
 from agent_runtime.workers.reasons import FailureReason
 from agent_runtime.workers.runner import Worker
@@ -27,6 +27,7 @@ class AsyncWorker(Worker):
 
     async def run_async(self, stop: asyncio.Event) -> None:
         pending: set[asyncio.Task[None]] = set()
+        notification: asyncio.Task[None] | None = None
 
         try:
             while not stop.is_set():
@@ -60,17 +61,67 @@ class AsyncWorker(Worker):
                         pending.add(asyncio.create_task(self.execute_async(lease)))
                         continue
 
-                with suppress(TimeoutError):
-                    await asyncio.wait_for(stop.wait(), self.poll_seconds)
+                if self.listener is not None:
+
+                    # With both slots full, completion can free one before the
+                    # notification wait returns. Wake on either event so job three
+                    # can claim that slot immediately. Keep one listener task alive
+                    # across iterations: cancelling to_thread() would leave its
+                    # blocking wait running and could overlap another socket read.
+                    if notification is None:
+                        notification = asyncio.create_task(
+                            asyncio.to_thread(self.listener.wait, self.poll_seconds)
+                        )
+
+                    await asyncio.wait(
+                        pending | {notification}, return_when=asyncio.FIRST_COMPLETED
+                    )
+
+                    if notification.done():
+                        notification.result()
+                        notification = None
+                elif pending:
+
+                    # Poll-only workers also reuse a released slot without waiting
+                    # for the next scan deadline. Idle chats still own no task.
+                    await asyncio.wait(
+                        pending,
+                        timeout=self.poll_seconds,
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                else:
+                    with suppress(TimeoutError):
+                        await asyncio.wait_for(stop.wait(), self.poll_seconds)
         finally:
-            if pending:
-                await asyncio.gather(*pending)
+            try:
+                if pending:
+                    await asyncio.gather(*pending)
+            finally:
+
+                # Drain the single blocking wait before closing its connection.
+                # No listener thread survives an orderly worker shutdown, even if
+                # an execution task failed while its notification was outstanding.
+                try:
+                    if notification is not None:
+                        await notification
+                finally:
+                    if self.listener is not None:
+                        await asyncio.to_thread(self.listener.close)
 
     async def execute_async(self, lease: Lease) -> None:
         lost = asyncio.Event()
         started = monotonic()
         context_token = ACTIVE_RUN.set(lease.context)
-        emit("worker.claimed", lease.context, queue=self.queue_name, attempt=lease.attempt)
+        job_token = ACTIVE_JOB.set(lease.job_id)
+        attempt_token = ACTIVE_ATTEMPT.set(lease.attempt)
+        emit(
+            "worker.claimed",
+            lease.context,
+            queue=self.queue_name,
+            attempt=lease.attempt,
+            queue_wait_ms=lease.queue_wait_ms,
+            queue_wait_upper_ms=lease.queue_wait_upper_ms,
+        )
 
         async def heartbeat() -> None:
             while True:
@@ -170,7 +221,14 @@ class AsyncWorker(Worker):
                     return
 
             if not lost.is_set():
+                settlement_started = monotonic()
                 await asyncio.to_thread(self.queue.settle, lease, outcome)
+                emit(
+                    "runtime.span",
+                    lease.context,
+                    stage="settlement",
+                    elapsed_ms=round((monotonic() - settlement_started) * 1000),
+                )
                 emit(
                     "worker.settled",
                     lease.context,
@@ -184,6 +242,8 @@ class AsyncWorker(Worker):
             return
         finally:
             ACTIVE_RUN.reset(context_token)
+            ACTIVE_JOB.reset(job_token)
+            ACTIVE_ATTEMPT.reset(attempt_token)
             renewal.cancel()
 
             with suppress(asyncio.CancelledError):

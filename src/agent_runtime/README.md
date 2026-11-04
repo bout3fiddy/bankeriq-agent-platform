@@ -19,6 +19,7 @@ application prompts and tool bindings. Runtime code has no platform-package depe
 - `prompts/files.py`: bounded file loading from an explicit directory; the platform selects
   its assets and passes the resulting catalog into PostgreSQL prompt services.
 - `telemetry.py`: allowlisted lifecycle/measurement events without message or tool payloads.
+- `monitoring.py`: passive process resources and due-queue ages; one sampler per application.
 
 Provider calls happen outside retried database transactions. Settlement preserves ownership,
 budget, prompt-manifest and recovery-generation checks. Restricted output and user delivery

@@ -136,6 +136,16 @@ class SemanticStore:
             # Never clip a call/result pair to fit a storage read. A 201st event
             # is a sentinel: the caller gets a fixed reason and dispatch stops.
             for turn in turns[:16]:
+                if turn["run_id"] == context.run_id:
+
+                    # The active turn already has the same prepared cursor and
+                    # partial-summary boundary, with its size and evidence flags
+                    # checked above. Reuse those rows while the conversation lock
+                    # prevents event, approval or dispatch-state changes. For a
+                    # fresh first turn this avoids reading its three sources twice.
+                    turn.update(active)
+                    continue
+
                 events = connection.execute(
                     "SELECT sequence,payload FROM conversation_events WHERE tenant_id=%s "
                     "AND conversation_id=%s AND run_id=%s "

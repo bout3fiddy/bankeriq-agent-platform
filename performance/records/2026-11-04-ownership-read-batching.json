@@ -1,0 +1,772 @@
+{
+  "profile": "real local PostgreSQL, injected TCP delay, synthetic model, balanced order",
+  "source_unchanged": true,
+  "rows": [
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 0,
+      "variant": "baseline",
+      "seconds": 0.0700432921294123
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 0,
+      "variant": "pipelined_owned",
+      "seconds": 0.04907350009307265
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 1,
+      "variant": "baseline",
+      "seconds": 0.04790104110725224
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 1,
+      "variant": "pipelined_owned",
+      "seconds": 0.04362529097124934
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 2,
+      "variant": "baseline",
+      "seconds": 0.04462375002913177
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 2,
+      "variant": "pipelined_owned",
+      "seconds": 0.044279250083491206
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 3,
+      "variant": "pipelined_owned",
+      "seconds": 0.041268917033448815
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 3,
+      "variant": "baseline",
+      "seconds": 0.04546283301897347
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 4,
+      "variant": "baseline",
+      "seconds": 0.04339241702109575
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 4,
+      "variant": "pipelined_owned",
+      "seconds": 0.04170995811000466
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 5,
+      "variant": "pipelined_owned",
+      "seconds": 0.04157787491567433
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 5,
+      "variant": "baseline",
+      "seconds": 0.05757854180410504
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 6,
+      "variant": "baseline",
+      "seconds": 0.04250174993649125
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 6,
+      "variant": "pipelined_owned",
+      "seconds": 0.04310266696847975
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 7,
+      "variant": "baseline",
+      "seconds": 0.04133162507787347
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 7,
+      "variant": "pipelined_owned",
+      "seconds": 0.04679416702128947
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 8,
+      "variant": "baseline",
+      "seconds": 0.043704708805307746
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 8,
+      "variant": "pipelined_owned",
+      "seconds": 0.04047545790672302
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 9,
+      "variant": "baseline",
+      "seconds": 0.04342687502503395
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 9,
+      "variant": "pipelined_owned",
+      "seconds": 0.05017041717655957
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 10,
+      "variant": "pipelined_owned",
+      "seconds": 0.04690158297307789
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 10,
+      "variant": "baseline",
+      "seconds": 0.0468448749743402
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 11,
+      "variant": "pipelined_owned",
+      "seconds": 0.043647042009979486
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 11,
+      "variant": "baseline",
+      "seconds": 0.0458227910567075
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 12,
+      "variant": "pipelined_owned",
+      "seconds": 0.04273866699077189
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 12,
+      "variant": "baseline",
+      "seconds": 0.043944125063717365
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 13,
+      "variant": "baseline",
+      "seconds": 0.04262666613794863
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 13,
+      "variant": "pipelined_owned",
+      "seconds": 0.041145000141113997
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 14,
+      "variant": "baseline",
+      "seconds": 0.04572500009089708
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 14,
+      "variant": "pipelined_owned",
+      "seconds": 0.04587016603909433
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 15,
+      "variant": "pipelined_owned",
+      "seconds": 0.04392787511460483
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 15,
+      "variant": "baseline",
+      "seconds": 0.044836082961410284
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 16,
+      "variant": "baseline",
+      "seconds": 0.04616258409805596
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 16,
+      "variant": "pipelined_owned",
+      "seconds": 0.04208758403547108
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 17,
+      "variant": "pipelined_owned",
+      "seconds": 0.04355950001627207
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 17,
+      "variant": "baseline",
+      "seconds": 0.04219816694967449
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 18,
+      "variant": "pipelined_owned",
+      "seconds": 0.0508609579410404
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 18,
+      "variant": "baseline",
+      "seconds": 0.04589174990542233
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 19,
+      "variant": "pipelined_owned",
+      "seconds": 0.04398412490263581
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 19,
+      "variant": "baseline",
+      "seconds": 0.045396832982078195
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 20,
+      "variant": "pipelined_owned",
+      "seconds": 0.04075374989770353
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 20,
+      "variant": "baseline",
+      "seconds": 0.044089374830946326
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 21,
+      "variant": "baseline",
+      "seconds": 0.04566145897842944
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 21,
+      "variant": "pipelined_owned",
+      "seconds": 0.042758499970659614
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 22,
+      "variant": "baseline",
+      "seconds": 0.04786112508736551
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 22,
+      "variant": "pipelined_owned",
+      "seconds": 0.042049708077684045
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 23,
+      "variant": "pipelined_owned",
+      "seconds": 0.04619358293712139
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 23,
+      "variant": "baseline",
+      "seconds": 0.04202912515029311
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 24,
+      "variant": "pipelined_owned",
+      "seconds": 0.04389912495389581
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 24,
+      "variant": "baseline",
+      "seconds": 0.04357020813040435
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 25,
+      "variant": "pipelined_owned",
+      "seconds": 0.045265750028193
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 25,
+      "variant": "baseline",
+      "seconds": 0.04502120800316334
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 26,
+      "variant": "pipelined_owned",
+      "seconds": 0.04314316716045141
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 26,
+      "variant": "baseline",
+      "seconds": 0.04292279202491045
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 27,
+      "variant": "pipelined_owned",
+      "seconds": 0.04557608300819993
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 27,
+      "variant": "baseline",
+      "seconds": 0.042451207991689444
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 28,
+      "variant": "baseline",
+      "seconds": 0.043398499954491854
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 28,
+      "variant": "pipelined_owned",
+      "seconds": 0.04228483303450048
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 29,
+      "variant": "baseline",
+      "seconds": 0.04239004198461771
+    },
+    {
+      "delay_each_direction_seconds": 0.0,
+      "pair": 29,
+      "variant": "pipelined_owned",
+      "seconds": 0.04271999979391694
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 0,
+      "variant": "pipelined_owned",
+      "seconds": 1.2426475000102073
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 0,
+      "variant": "baseline",
+      "seconds": 1.3537931249011308
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 1,
+      "variant": "baseline",
+      "seconds": 1.3396129589527845
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 1,
+      "variant": "pipelined_owned",
+      "seconds": 1.2865698328241706
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 2,
+      "variant": "pipelined_owned",
+      "seconds": 1.2982337919529527
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 2,
+      "variant": "baseline",
+      "seconds": 1.3626037079375237
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 3,
+      "variant": "baseline",
+      "seconds": 1.3442919591907412
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 3,
+      "variant": "pipelined_owned",
+      "seconds": 1.2531124171800911
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 4,
+      "variant": "pipelined_owned",
+      "seconds": 1.232792458962649
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 4,
+      "variant": "baseline",
+      "seconds": 1.2999845421873033
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 5,
+      "variant": "pipelined_owned",
+      "seconds": 1.3343395420815796
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 5,
+      "variant": "baseline",
+      "seconds": 1.3363737920299172
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 6,
+      "variant": "pipelined_owned",
+      "seconds": 1.275161291938275
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 6,
+      "variant": "baseline",
+      "seconds": 1.371490083867684
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 7,
+      "variant": "pipelined_owned",
+      "seconds": 1.2667340841144323
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 7,
+      "variant": "baseline",
+      "seconds": 1.3190988330170512
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 8,
+      "variant": "baseline",
+      "seconds": 1.3874781250488013
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 8,
+      "variant": "pipelined_owned",
+      "seconds": 1.3331903330981731
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 9,
+      "variant": "baseline",
+      "seconds": 1.3455704590305686
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 9,
+      "variant": "pipelined_owned",
+      "seconds": 1.3046522079966962
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 10,
+      "variant": "baseline",
+      "seconds": 1.3929375419393182
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 10,
+      "variant": "pipelined_owned",
+      "seconds": 1.2252617080230266
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 11,
+      "variant": "baseline",
+      "seconds": 1.2260226248763502
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 11,
+      "variant": "pipelined_owned",
+      "seconds": 1.2545540840364993
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 12,
+      "variant": "baseline",
+      "seconds": 1.2798698749393225
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 12,
+      "variant": "pipelined_owned",
+      "seconds": 1.2702079170849174
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 13,
+      "variant": "pipelined_owned",
+      "seconds": 1.30854379106313
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 13,
+      "variant": "baseline",
+      "seconds": 1.3636102909222245
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 14,
+      "variant": "pipelined_owned",
+      "seconds": 1.2424876671284437
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 14,
+      "variant": "baseline",
+      "seconds": 1.3029612079262733
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 15,
+      "variant": "pipelined_owned",
+      "seconds": 1.2352582919411361
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 15,
+      "variant": "baseline",
+      "seconds": 1.3078584170434624
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 16,
+      "variant": "baseline",
+      "seconds": 1.3787189580034465
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 16,
+      "variant": "pipelined_owned",
+      "seconds": 1.2703187910374254
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 17,
+      "variant": "baseline",
+      "seconds": 1.358679125085473
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 17,
+      "variant": "pipelined_owned",
+      "seconds": 1.3103152920957655
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 18,
+      "variant": "baseline",
+      "seconds": 1.3229715840425342
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 18,
+      "variant": "pipelined_owned",
+      "seconds": 1.2788285829592496
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 19,
+      "variant": "baseline",
+      "seconds": 1.3863417080137879
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 19,
+      "variant": "pipelined_owned",
+      "seconds": 1.3170093749649823
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 20,
+      "variant": "baseline",
+      "seconds": 1.3106779588852078
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 20,
+      "variant": "pipelined_owned",
+      "seconds": 1.2738627078942955
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 21,
+      "variant": "pipelined_owned",
+      "seconds": 1.3078918338287622
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 21,
+      "variant": "baseline",
+      "seconds": 1.3794296660926193
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 22,
+      "variant": "baseline",
+      "seconds": 1.3477639169432223
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 22,
+      "variant": "pipelined_owned",
+      "seconds": 1.3865581669379026
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 23,
+      "variant": "pipelined_owned",
+      "seconds": 1.3445562911219895
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 23,
+      "variant": "baseline",
+      "seconds": 1.3697373340837657
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 24,
+      "variant": "baseline",
+      "seconds": 1.3926235421095043
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 24,
+      "variant": "pipelined_owned",
+      "seconds": 1.350192500045523
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 25,
+      "variant": "baseline",
+      "seconds": 1.351274749962613
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 25,
+      "variant": "pipelined_owned",
+      "seconds": 1.2652354999445379
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 26,
+      "variant": "baseline",
+      "seconds": 1.3156688332092017
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 26,
+      "variant": "pipelined_owned",
+      "seconds": 1.2646890000905842
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 27,
+      "variant": "pipelined_owned",
+      "seconds": 1.2760243341326714
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 27,
+      "variant": "baseline",
+      "seconds": 1.383093958022073
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 28,
+      "variant": "pipelined_owned",
+      "seconds": 1.242369791958481
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 28,
+      "variant": "baseline",
+      "seconds": 1.3901482080109417
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 29,
+      "variant": "baseline",
+      "seconds": 1.326001208042726
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "pair": 29,
+      "variant": "pipelined_owned",
+      "seconds": 1.284809208009392
+    }
+  ],
+  "source_commit": "54440b894deefad6dbfefe70252bfab37013fa84",
+  "source_dirty": true,
+  "postgres": "17.11",
+  "python": "3.14.8",
+  "psycopg": "3.3.6",
+  "warmups_per_variant_per_condition": 2,
+  "measured_per_variant_per_condition": 30,
+  "random_seed": 12,
+  "correct_turns": 128,
+  "all_completed_correctly": true,
+  "scope": "local synthetic model; no HTTP, Redis, SSE or live inference",
+  "deployed": false,
+  "source_hashes": [
+    {
+      "path": "scratch/group12/probe-pipelined-owned.py",
+      "sha256": "5e27b249817d974568646174dfaf427202b41952b9f00e1f94ad79b4489102d4"
+    },
+    {
+      "path": "scratch/group12/queue-before-owned-batching.py",
+      "sha256": "9d2eaf2a1067c8a1fd9bac3520b4b34b8f66d41a4da6d0f37273fd011bd8bbb1"
+    },
+    {
+      "path": "scratch/group12/queue-owned-batching-prototype.py",
+      "sha256": "9d8627d5fb08cfed70e6a0c729d4caf6422118ab006ffc94c3020f16041313c0"
+    }
+  ],
+  "summary": [
+    {
+      "delay_each_direction_seconds": 0,
+      "medians": {
+        "baseline": 0.04435656243003905,
+        "pipelined_owned": 0.043592395493760705
+      },
+      "median_paired_saving_seconds": 0.0010109373833984137,
+      "improved_pairs": 17
+    },
+    {
+      "delay_each_direction_seconds": 0.002,
+      "medians": {
+        "baseline": 1.3495193334529176,
+        "pipelined_owned": 1.2755928130354732
+      },
+      "median_paired_saving_seconds": 0.05467714590486139,
+      "improved_pairs": 28
+    }
+  ]
+}

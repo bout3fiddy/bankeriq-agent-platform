@@ -54,6 +54,15 @@ question. Retirement requires later source chronology, an explicit replacement/r
 a shared subject/value and a permitted source kind. Trusted code records both source excerpts
 and gives the validated replacement precedence. Ambiguous prose remains together for retrieval.
 Unsupported semantic retirement suggestions leave the protected fact active and are not published.
+An empty selection is valid for disposable history after protected facts and tool states are
+restored. It advances durable coverage and retains the original journal for scoped retrieval.
+The selector is instructed to omit hypothetical filler and past one-turn response instructions;
+semantic relevance still requires live review. Profile v10 also retains a bounded coverage marker
+when the selected fact list is empty. It identifies the omitted turn/cursor boundary and records
+that original history may still contain requested detail. Both final assembly and compaction
+planning count that marker. It grants no access, and scoped retrieval remains subject to current
+policy. This fixes v9's loss of history awareness after an empty selection; live recall still
+requires model-quality validation.
 Malformed identifiers and output shapes still fail validation. Prior versions and all original
 sources remain available; omission never retires a fact.
 A narrative overview is not enabled: exact source excerpts provide stronger attribution, while

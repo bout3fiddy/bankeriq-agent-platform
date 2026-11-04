@@ -1,5 +1,6 @@
 """Real-primary worker recovery, fencing and independent-process acceptance gates."""
 
+import asyncio
 import json
 import os
 import subprocess
@@ -20,6 +21,7 @@ from agent_harness.runs.state import RunStatus
 from agent_harness.storage.codec import plain
 from agent_harness.storage.interface import StateConflictError, StateNotFoundError
 from agent_runtime.storage.postgres import PostgresStateStore
+from agent_runtime.workers.asynchronous import AsyncWorker
 from agent_runtime.workers.queue import Lease, PostgresQueue
 from agent_runtime.workers.runner import Listener, Worker
 from agent_runtime.workers.state import Completion, Handler, Handlers, Recovery
@@ -59,6 +61,117 @@ def claim(queue: PostgresQueue, handlers: Handlers, seconds: float = 5) -> Lease
     lease = queue.claim("synthetic", handlers, seconds=seconds)
     assert lease is not None
     return lease
+
+
+def test_async_completion_reuses_slot_while_one_listener_wait_remains(
+    queue: PostgresQueue, context: RunContext, state: Recovery
+) -> None:
+    admit(queue, context, state)
+    other = replace(context, conversation_id="other", run_id="other")
+    queue.store.create_conversation(
+        tenant_id=other.tenant_id, user_id=other.user_id, conversation_id=other.conversation_id
+    )
+    admit(queue, other, state.model_copy(update={"operation_id": "other"}))
+    listening, release = Event(), Event()
+
+    class HeldListener(Listener):
+        active = 0
+        peak = 0
+        closed = False
+
+        def wait(self, seconds: float) -> None:
+            self.active += 1
+            self.peak = max(self.peak, self.active)
+            listening.set()
+            release.wait(10)
+            self.active -= 1
+
+        def close(self) -> None:
+            assert self.active == 0
+            self.closed = True
+
+    listener = HeldListener("synthetic; no network connection is opened")
+
+    async def exercise() -> None:
+        completed: list[str] = []
+        stop, done = asyncio.Event(), asyncio.Event()
+
+        async def execute(current: RunContext, recovery: Recovery) -> Completion:
+
+            # Force the first execution to finish while its scheduler is waiting
+            # for a notification. Job two must run before that wait is released.
+            assert await asyncio.to_thread(listening.wait, 5)
+            completed.append(current.run_id)
+
+            if len(completed) == 2:
+                stop.set()
+                done.set()
+
+            return Completion(
+                RunStatus.RUNNING,
+                next_task=Recovery(
+                    kind="later",
+                    operation_id=f"later:{current.run_id}",
+                    run_budget=recovery.run_budget,
+                ),
+            )
+
+        registrations = Handlers(
+            {("synthetic", 1): Handler(lambda c, s: True, complete, async_execute=execute)}
+        )
+        worker = AsyncWorker(
+            queue, registrations, queue_name="synthetic", concurrency=1, listener=listener
+        )
+        task = asyncio.create_task(worker.run_async(stop))
+
+        try:
+            await asyncio.wait_for(done.wait(), 5)
+            assert set(completed) == {context.run_id, other.run_id}
+            assert listener.active == listener.peak == 1
+        finally:
+            stop.set()
+            release.set()
+            await asyncio.wait_for(task, 5)
+
+    asyncio.run(exercise())
+    assert listener.closed and listener.active == 0
+    assert queue.store.load_run(context).run.revision == 1
+    assert queue.store.load_run(other).run.revision == 1
+
+
+@pytest.mark.parametrize("lost_ack", [False, True])
+def test_claim_wait_bound_includes_acknowledgement_and_keeps_recovered_sample_unknown(
+    store, context, queue, state, handlers, lost_ack
+):
+    admit(queue, context, state)
+    commits = 0
+
+    def acknowledge(phase):
+        nonlocal commits
+
+        if phase != "after_commit":
+            return
+
+        commits += 1
+
+        # The first commit scans expired work; the second commits this claim.
+        # Delayed acknowledgement belongs to queue latency. A lost response is
+        # resolved by the same owner and cannot manufacture a new timing sample.
+        if commits == 2:
+            time.sleep(0.05)
+
+            if lost_ack:
+                raise psycopg.OperationalError("synthetic claim acknowledgement lost")
+
+    store._fault = acknowledge
+    lease = claim(queue, handlers)
+    assert lease.attempt == 1
+
+    if lost_ack:
+        assert lease.queue_wait_ms is None and lease.queue_wait_upper_ms is None
+    else:
+        assert lease.queue_wait_ms is not None and lease.queue_wait_upper_ms is not None
+        assert lease.queue_wait_upper_ms - lease.queue_wait_ms >= 50
 
 
 def expire(dsn: str, lease: Lease) -> None:
@@ -551,6 +664,66 @@ def test_expiry_during_settlement_rolls_everything_back(
     assert rows(dsn, "SELECT count(*) FROM transitions") == [(0,)]
     recovered = claim(queue, handlers)
     assert recovered.token == 2
+
+
+def test_ownership_checks_expiry_after_waiting_for_job_lock(
+    queue: PostgresQueue,
+    context: RunContext,
+    state: Recovery,
+    handlers: Handlers,
+    dsn: str,
+) -> None:
+    admit(queue, context, state)
+    lease = claim(queue, handlers, seconds=30)
+    connected = Event()
+    worker_pid: list[int] = []
+
+    def check_ownership() -> None:
+        with queue.store._connect() as connection:
+            worker_pid.append(connection.info.backend_pid)
+            connected.set()
+            queue._owned(connection, lease)
+
+    # Hold the job row while the other connection submits its ordered ownership
+    # reads. A real PostgreSQL lock wait proves that the later expiry statement
+    # has not executed yet, even though the client queued it in the same pipeline.
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        with psycopg.connect(dsn) as blocker:
+            blocker.execute(
+                "SELECT 1 FROM jobs WHERE tenant_id=%s AND job_id=%s FOR UPDATE",
+                (context.tenant_id, lease.job_id),
+            )
+            pending = executor.submit(check_ownership)
+            assert connected.wait(5)
+            deadline = time.monotonic() + 5
+
+            with psycopg.connect(dsn, autocommit=True) as observer:
+                while time.monotonic() < deadline:
+                    waiting = observer.execute(
+                        "SELECT wait_event_type FROM pg_stat_activity WHERE pid=%s",
+                        (worker_pid[0],),
+                    ).fetchone()
+
+                    if waiting == ("Lock",):
+                        break
+
+                    time.sleep(0.01)
+                else:
+                    pytest.fail("ownership query did not wait for the held job lock")
+
+            # Simulate expiry during that wait. The resumed owner must reject the
+            # now-expired lease before any output or checkpoint mutation is allowed.
+            blocker.execute(
+                "UPDATE jobs SET lease_expiry=clock_timestamp()-interval '1 second' "
+                "WHERE tenant_id=%s AND job_id=%s",
+                (context.tenant_id, lease.job_id),
+            )
+
+        with pytest.raises(StateConflictError, match="expired or stale lease"):
+            pending.result(timeout=5)
+
+    assert rows(dsn, "SELECT count(*) FROM transitions") == [(0,)]
+    assert queue.store.load_run(context).run.revision == lease.checkpoint.run.revision
 
 
 def test_attempt_and_run_budgets_and_approval_expiry(

@@ -10,6 +10,10 @@ identity, input policy, prompts and tool bindings. The browser client belongs in
   and client lifetimes remain explicit application responsibilities.
 - `api/queued.py`: authenticated admission, history, activity and SSE routes. The API
   returns after durable acceptance; model/tool execution runs through workers.
+  Admission can reduce its pinned worker-attempt allowance with `worker_budget` (1–100);
+  omitting it preserves the 100-attempt default. Duplicate requests cannot alter that allowance.
+- `client/`: bounded CLI streaming, stale-attempt rejection and durable reconnect for
+  the existing operator login. See [concurrent sessions](../../docs/concurrent-sessions.md).
 - `identity/entra.py`: delegated Entra token checks and current synthetic/operator input
   policies. Workforce onboarding remains planned; operator authentication is implemented.
 - `azure/connections.py`: application-managed Azure credentials and connection setup.

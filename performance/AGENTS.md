@@ -85,8 +85,10 @@ az containerapp logs show -g "$performance_group" -n '<observed-app-name>' \
 
 Keep that console export local until its contents are reviewed. These commands query Azure
 and session metadata; they do not create a conversation, renew activity or submit a model call.
-The applications currently emit lifecycle logs; Application Insights tracing and metrics
-are not yet implemented. Full client timings exist only in captured CLI output.
+The group-12 revision-8 image emits correlated job/attempt spans, eligible streamed text and
+passive process/queue samples. Application Insights tracing is not implemented. Verify the
+deployed digest before interpreting those fields. Client
+timings require capture rather than reconstruction from ingestion timestamps.
 
 ## Collect a fresh authorised sample
 
@@ -114,8 +116,9 @@ nonterminal status; check status explicitly. Review
 the response and expected tool behavior locally before removing payloads from the retained
 record. Preserve failed/timeout counts. Current `model.request` events report actual token usage,
 numeric provider duration, HTTP status
-and effective quota. Older releases lack those fields. First-token timing remains unavailable
-while the adapter uses `stream=False`. Separate summary calls from coordinator calls.
+and effective quota. Older releases lack those fields. The streaming reference client records
+first visible text in `first_text_seconds`; the older polling CLI cannot measure it. Separate
+summary calls from coordinator calls, and identify the client and image used in each record.
 
 ## Attribute latency correctly
 
@@ -133,9 +136,15 @@ while the adapter uses `stream=False`. Separate summary calls from coordinator c
 - Client admission time overlaps these server intervals. Never add it to a complete
   server timeline. Preserve clock-alignment assumptions for cross-process timestamps;
   prefer monotonic durations within a process.
+- Inspection's optional database_clock_timing reports monotonic work before and after
+  the primary timestamp query. The client subtracts those known durations from its
+  clock-offset uncertainty, retaining network/query uncertainty. Older images retain
+  the whole round-trip interval. Invalid server durations fail measurement setup.
+  Keep the observed offset interval and server durations with each attempt; do not
+  substitute midpoint estimates for conservative delivery bounds.
 - Failed attempts, retries, parallel tool spans and restarts need explicit matching by
-  run, job/attempt and stage. Current logs omit job IDs, so do not invent attribution
-  when simultaneous same-queue attempts are ambiguous.
+  run, job/attempt and stage. Historical logs omit job IDs; newer group-12 source emits them.
+  Do not invent attribution when simultaneous same-queue attempts are ambiguous.
 
 The [initial record](records/2026-11-03-azure-pilot.json) retains one unambiguous serial
 timeline and its limits. Other existing local measurements are available through
@@ -209,3 +218,81 @@ This probe's output includes reviewed synthetic excerpts for local quality revie
 allowlisted numeric metadata, case identity and correctness counts into performance records;
 application transcripts belong in the explicitly requested build-order evidence. Keep the
 20-sample summary speed/correctness gate separate from qualified latency percentiles.
+
+## Memory quality suite
+
+`workloads/memory_quality_cases.json` defines twenty English, Dutch and mixed-language
+scenarios. The runner repeats each twice, using isolated local PostgreSQL history and the
+live model through the private relay. It requires local state, explicit campaign allocations
+and a fresh output path. The two long cases require five actual compactions; the tool case
+executes the synthetic calculation through the normal durable queue.
+
+Use a fresh relay per case (`--case <fixture-id>`) for long evaluations. The operator exec
+channel reset twice during longer suites; each unknown call retained its full reservation.
+The relay now rotates after two minutes between completed requests and logs channel-open times.
+New records retain remote SDK duration and operator-channel setup separately from the full
+adapter round trip. Earlier absent timing remains unmeasured; never subtract an estimated
+reconnect delay. Read the [timing boundaries](../tests/quality/README.md#timing-boundaries).
+Its twenty-minute default helper deadline remains bounded; the explicit one-hour option can
+cover a full suite but does not guarantee connection survival. Supply the observed coordinator
+resource ID using the Azure harness guide.
+The runner defaults to ten seconds between provider dispatches; pacing is outside generation
+timing and does not exist in the application runtime. Keep other model experiments stopped.
+The v10 campaign declares seven seconds between starts. The 139-call prior batch averaged
+4,948 reserved input/output tokens per call, placing that fixture mix near 42,411 tokens/min
+before connection setup. This estimate is a workload choice, not quota enforcement or a latency
+claim; real rejection/unknown usage still stops the evaluator. Retain its actual dispatch setting.
+The supplemental `workloads/memory_retrieval_cases.json` supplies capacity-driven omission cases;
+select it using `--cases-file`. Read the [fixture rationale](../tests/quality/README.md) and retain
+the selected question and fixture digest. A correctly remembered detail cannot qualify retrieval.
+
+```sh
+uv run python -m performance.workloads.memory_quality \
+  --socket /tmp/agent-group12-quality.sock --output scratch/memory-quality-new.json \
+  --budget-calls 250 --budget-input-tokens 750000 --budget-output-tokens 30000 \
+  --dispatch-interval 10
+```
+
+Those allocations are an example, not new spending authority. Reconcile them against remaining
+campaign usage before execution. Unknown usage keeps its reservation and stops later calls.
+Preserve failed cases. The exit gate requires both repetitions, every critical fact, required
+retrieval after actual omission, and at least 95% of other facts. Separately review the retained
+synthetic source selections and summaries for relevance, stale facts and action-state fidelity;
+exact answer matching cannot replace that review. Export only numeric allowlisted evidence.
+
+## Mixed ordinary and compaction workload
+
+The [mixed runner](../tests/mixed/README.md) prepares a finite paired-arrival experiment at
+ten turns/minute. It separately records ordinary turns and memory turns with zero/one/multiple
+actual publications. Its full per-run attempt reservations require a separately allocated
+budget. The [hosted record](records/2026-11-04-hosted-mixed.md) includes 101 one-compaction turns,
+actual provider overlap, all scheduled arrivals and matched publication timings. Local
+accounting tests and hosted measurements remain distinct evidence.
+
+## Finite concurrency campaign accounting
+
+The current hosted workload accepts `--worker-budget 8`, selecting the existing durable run
+attempt budget. Normal application admissions still default to 100. Every summary and context
+recovery call consumes that same allowance. Reserve the expected ordinary cohort plus every
+in-flight run's entire remaining allowance before starting; unknown outcomes keep the full
+reservation. The campaign ledger is local and includes earlier unknown-usage reservations.
+
+For 100 measured turns, one warmup, five concurrent sessions and 75 output tokens per expected
+answer, the conservative allocation is 141 calls, 509,480 input and 48,535 output tokens:
+
+```sh
+uv run python -m performance.workloads.concurrent_answers \
+  --config scratch/authorised-client.json --output scratch/fresh-five-session.json \
+  --stop scratch/STOP-fresh-five-session --sessions 5 --count 100 --worker-budget 8 \
+  --tenant '<authorised-tenant-id>' --user '<authorised-operator-id>' \
+  --image-digest '<verified-current-digest>' --max-output-tokens 75 \
+  --budget-input-tokens 509480 --budget-output-tokens 48535
+```
+
+These bounds need allocation from an already authorised campaign; this example grants none.
+Run one inference campaign at a time and charge its reconciled usage before starting another.
+The harness holds a client slot through accepted subscription-rejection recovery. It retries
+only read-only subscriptions for the original run, preserves the rejection, and excludes recovery
+from successful first-pass latency samples. Uncertain admission acknowledgement or unresolved
+usage stops future arrivals. Do not release reservations merely because the client disconnected.
+The [regression tests](../tests/unit/azure/test_workload_recovery.py) cover both boundaries.

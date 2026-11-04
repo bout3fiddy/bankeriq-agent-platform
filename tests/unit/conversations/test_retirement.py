@@ -40,6 +40,49 @@ def test_repeated_explicit_corrections_bound_active_memory_and_link_sources():
 
 
 @pytest.mark.parametrize(
+    "old,new,relation",
+    [
+        ("Begroting: EUR 1200.", "Budget correctie: CHF 1800.", "supersedes"),
+        ("Welke talen?", "Languages confirmed: English and Dutch.", "resolves"),
+        ("Which reviewer?", "Beoordelaar bevestigd: Noor.", "resolves"),
+    ],
+)
+def test_declared_dutch_and_mixed_language_subjects_keep_exact_sources(old, new, relation):
+    facts = (
+        MemoryFact(1, 1, "user", old, "decision" if relation == "supersedes" else "open_question"),
+        MemoryFact(2, 2, "user", new),
+    )
+    result = choose(facts, relation)
+    assert len(result.facts) == 1 and result.facts[0].text == new
+    assert result.facts[0].kind == "user"
+    previous = result.retirements[0]["previous"]
+    assert isinstance(previous, dict)
+    assert previous["text"] == old
+
+
+def test_dutch_identity_and_explicit_constraints_survive_selection_omission():
+    from agent_harness.memory.semantic import summary_candidates
+
+    sources = (
+        MemoryFact(
+            1,
+            1,
+            "user",
+            "Doel: plan de workshop. Mara is eigenaar. Het prototype heet Koper Vink. "
+            "Voorwaarde: geen aankopen. Open vraag: welke datum?",
+        ),
+    )
+    result = select_memory('{"entries":[],"retirements":[]}', summary_candidates(sources), sources)
+    assert {fact.label for fact in result.facts} == {
+        "goal",
+        "identity",
+        "constraint",
+        "open_question",
+    }
+    assert all(fact.kind == "user" and fact.source == 1 for fact in result.facts)
+
+
+@pytest.mark.parametrize(
     "new",
     [
         MemoryFact(2, 2, "user", "The payment completed."),

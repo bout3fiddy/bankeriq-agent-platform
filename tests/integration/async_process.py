@@ -51,14 +51,20 @@ class AsyncModel:
         )
 
 
-def composition(store: PostgresStateStore, *, fail_fast: bool = False, tenant_concurrency: int = 4):
+def composition(
+    store: PostgresStateStore,
+    *,
+    fail_fast: bool = False,
+    tenant_concurrency: int = 4,
+    concurrency: int = 4,
+):
     prompts = FixedPromptResolver(
         "Batch independent calls. Wait for inputs before dependent calls."
     )
     queue = OrchestrationQueue(store, prompts)
 
     for kind in ("model_prepare", "model_infer", "tool"):
-        queue.configure(kind, concurrency=4, tenant_concurrency=tenant_concurrency)
+        queue.configure(kind, concurrency=concurrency, tenant_concurrency=tenant_concurrency)
 
     registry = ToolRegistry((CALCULATE,))
     access = FakeAccess()

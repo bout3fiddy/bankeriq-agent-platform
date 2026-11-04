@@ -14,7 +14,9 @@ import json
 import signal
 import zlib
 from contextlib import AsyncExitStack
+from datetime import UTC, datetime
 from pathlib import Path
+from time import monotonic
 from urllib.parse import urlencode
 
 import aiohttp
@@ -45,32 +47,42 @@ with ManagedIdentityCredential(client_id=os.environ["AZURE_CLIENT_ID"]) as crede
                 break
             try:
                 request=json.loads(zlib.decompress(base64.b64decode(raw)))
+                started=time.perf_counter()
                 response=client.chat.completions.with_raw_response.create(**request)
                 result={"status":response.status_code,"body":response.parse().model_dump(),
                         "headers":{k:v for k,v in response.headers.items()
                                    if k.startswith("x-ratelimit-") or k.startswith("retry-after")}}
+                result["headers"]["x-test-provider-seconds"]=str(time.perf_counter()-started)
                 print("RESULT="+base64.b64encode(json.dumps(result).encode()).decode(),flush=True)
             except APIStatusError as error:
                 result={"status":error.status_code,
                         "body":{"error":{"code":error.code,"message":"Provider rejected request"}},
                         "headers":{k:v for k,v in error.response.headers.items()
                                    if k.startswith("x-ratelimit-") or k.startswith("retry-after")}}
+                result["headers"]["x-test-provider-seconds"]=str(time.perf_counter()-started)
                 print("RESULT="+base64.b64encode(json.dumps(result).encode()).decode(),flush=True)
             except Exception as error:
                 print("FAILURE="+type(error).__name__,flush=True)
-time.sleep(1)
+print("BYE",flush=True)
 raise SystemExit
 """
 
 
 class ExecTransport(httpx2.AsyncBaseTransport):
-    def __init__(self, credential, resource_id):
+    def __init__(self, credential, resource_id, *, lifetime_seconds=1200):
+        if lifetime_seconds not in (1200, 3600):
+            raise ValueError("relay lifetime must be twenty minutes or one hour")
+
         self.credential = credential
         self.resource_id = resource_id
+        self.lifetime_seconds = lifetime_seconds
         self.stack = AsyncExitStack()
         self.socket = None
         self.buffer = ""
         self.lock = asyncio.Lock()
+        self.connected_at = 0.0
+        self.failed = False
+        self.phase = "idle"
 
     async def connect(self):
         token = await self.credential.get_token("https://management.azure.com/.default")
@@ -111,12 +123,15 @@ class ExecTransport(httpx2.AsyncBaseTransport):
         )
         await self.socket.send_str('\x00\x04{"Width":200,"Height":50}')
         await self.until(">>> ")
+        helper = HELPER.replace("signal.alarm(1200)", f"signal.alarm({self.lifetime_seconds})")
         bootstrap = (
-            b'exec(__import__("base64").b64decode("' + base64.b64encode(HELPER.encode()) + b'"))\n'
+            b'exec(__import__("base64").b64decode("' + base64.b64encode(helper.encode()) + b'"))\n'
         )
         await self.send(bootstrap)
         await self.until("READY\n")
         self.buffer = ""
+        self.connected_at = monotonic()
+        print("private inference channel opened", datetime.now(UTC).isoformat(), flush=True)
 
     async def send(self, value):
         assert self.socket is not None
@@ -152,18 +167,49 @@ class ExecTransport(httpx2.AsyncBaseTransport):
             raise ValueError("exec relay only accepts a chat completion")
 
         async with self.lock:
+            if self.failed:
+                raise RuntimeError("private inference relay requires usage reconciliation")
+
+            setup_started = monotonic()
+            opened_channel = self.socket is None
+
+            # The operator exec channel can expire during a long quality suite.
+            # Rotate after two minutes, only between fully received responses.
+            # A request that loses its response is never replayed: its caller
+            # retains the usage reservation and must reconcile before a new run.
+            if self.socket is not None and monotonic() - self.connected_at >= 120:
+                opened_channel = True
+                await self.aclose()
+
             if self.socket is None:
+                self.phase = "connect"
                 await self.connect()
 
+            setup_seconds = monotonic() - setup_started if opened_channel else 0.0
             body = await request.aread()
             payload = base64.b64encode(zlib.compress(body)) + b"\n"
             self.buffer = ""
-            await self.send(payload)
-            await self.until("\n")
+
+            try:
+                self.phase = "send"
+                await self.send(payload)
+                self.phase = "receive"
+                await self.until("\n")
+            except Exception:
+                self.failed = True
+                raise
+
             line = self.buffer.strip()
 
             if line.startswith("RESULT="):
                 result = json.loads(base64.b64decode(line.removeprefix("RESULT=")))
+
+                # Keep operator-channel setup separate from the remote SDK call.
+                # For example, a nine-second reconnect plus a one-second response
+                # still retains its ten-second end-to-end measurement. These test
+                # headers add measured boundaries; they never subtract an estimate.
+                result["headers"]["x-test-channel-setup-seconds"] = str(setup_seconds)
+                result["headers"]["x-test-channel-opened"] = str(int(opened_channel))
                 return httpx2.Response(
                     result["status"],
                     json=result["body"],
@@ -177,14 +223,27 @@ class ExecTransport(httpx2.AsyncBaseTransport):
     async def aclose(self):
         if self.socket is not None:
             with contextlib.suppress(Exception):
+                self.buffer = ""
                 await self.send(b"QUIT\n")
 
+                # Let the helper acknowledge client/credential closure before
+                # dropping its terminal. Immediate disconnect can strand an exec
+                # process until its alarm. A broken channel gets at most five
+                # seconds here; its unknown provider usage remains unresolved.
+                async with asyncio.timeout(5):
+                    await self.until("BYE\n")
+
+                print("private inference channel closed", datetime.now(UTC).isoformat(), flush=True)
+
         await self.stack.aclose()
+        self.stack = AsyncExitStack()
+        self.socket = None
 
 
 class LocalRelayTransport(httpx2.AsyncBaseTransport):
-    def __init__(self, socket_path):
+    def __init__(self, socket_path, *, observer=None):
         self.socket_path = socket_path
+        self.observer = observer
 
     async def handle_async_request(self, request):
         body = await request.aread()
@@ -203,10 +262,28 @@ class LocalRelayTransport(httpx2.AsyncBaseTransport):
                 raise ValueError("local inference response exceeds bound")
 
             response = json.loads(await reader.readexactly(size))
+            headers = response.get("headers", {})
+
+            # Each callback belongs to this exact received response. Older helpers
+            # have no remote timing, represented as None rather than reconstructed
+            # from the total. Only numeric metadata crosses this optional boundary.
+            if self.observer is not None:
+                self.observer(
+                    {
+                        "provider_seconds": float(headers["x-test-provider-seconds"])
+                        if "x-test-provider-seconds" in headers
+                        else None,
+                        "channel_setup_seconds": float(headers["x-test-channel-setup-seconds"])
+                        if "x-test-channel-setup-seconds" in headers
+                        else None,
+                        "channel_opened": headers.get("x-test-channel-opened") == "1",
+                    }
+                )
+
             return httpx2.Response(
                 response["status"],
                 json=response["body"],
-                headers=response.get("headers", {}),
+                headers=headers,
                 request=request,
             )
         finally:
@@ -214,7 +291,7 @@ class LocalRelayTransport(httpx2.AsyncBaseTransport):
             await writer.wait_closed()
 
 
-async def serve(path: Path, resource_id: str):
+async def serve(path: Path, resource_id: str, *, lifetime_seconds: int = 1200):
     if path.exists():
         raise ValueError("relay socket already exists")
 
@@ -222,7 +299,7 @@ async def serve(path: Path, resource_id: str):
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop.set)
 
     async with AzureCliCredential() as credential:
-        transport = ExecTransport(credential, resource_id)
+        transport = ExecTransport(credential, resource_id, lifetime_seconds=lifetime_seconds)
 
         async def handle(reader, writer):
             try:
@@ -247,6 +324,8 @@ async def serve(path: Path, resource_id: str):
                 print(
                     "relay request failed:",
                     str(error) if isinstance(error, RuntimeError) else type(error).__name__,
+                    "phase:",
+                    transport.phase,
                     flush=True,
                 )
                 result = {"status": 503, "body": {"error": type(error).__name__}}
@@ -267,7 +346,11 @@ async def serve(path: Path, resource_id: str):
 
             async with server:
                 with contextlib.suppress(TimeoutError):
-                    await asyncio.wait_for(stop.wait(), 1150)
+
+                    # Paced quality suites can exceed twenty minutes. The explicit
+                    # one-hour option still expires locally before the helper's
+                    # alarm; SIGTERM/normal shutdown sends QUIT immediately.
+                    await asyncio.wait_for(stop.wait(), lifetime_seconds - 50)
         finally:
             await transport.aclose()
             path.unlink(missing_ok=True)
@@ -277,5 +360,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--socket", type=Path, required=True)
     parser.add_argument("--resource-id", required=True)
+    parser.add_argument("--lifetime-seconds", type=int, choices=[1200, 3600], default=1200)
     arguments = parser.parse_args()
-    asyncio.run(serve(arguments.socket, arguments.resource_id))
+    asyncio.run(
+        serve(
+            arguments.socket,
+            arguments.resource_id,
+            lifetime_seconds=arguments.lifetime_seconds,
+        )
+    )

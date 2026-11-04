@@ -1,0 +1,30 @@
+{
+  "prompt": {
+    "schema_version": 1,
+    "id": "bankeriq.system",
+    "version": "1.2.0",
+    "kind": "system",
+    "title": "Agent platform system guidance",
+    "description": "Source-aware recall and current response-format guidance.",
+    "owner": "Agent platform maintainers",
+    "change_summary": "Use response guidance 1.1.0 while preserving earlier pinned versions.",
+    "includes": [
+      {
+        "id": "system.role",
+        "version": "1.0.0"
+      },
+      {
+        "id": "guidelines.evidence",
+        "version": "1.0.0"
+      },
+      {
+        "id": "guidelines.responses",
+        "version": "1.1.0"
+      },
+      {
+        "id": "guidelines.memory",
+        "version": "1.0.0"
+      }
+    ]
+  }
+}

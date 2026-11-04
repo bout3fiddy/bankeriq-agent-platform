@@ -1,6 +1,8 @@
 """Primary-only leases and atomic settlement over the existing journal/job records."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from math import ceil
+from time import monotonic
 from typing import Any
 from uuid import uuid4
 
@@ -10,9 +12,10 @@ from agent_harness.conversations.conversation import ConversationItem
 from agent_harness.runs.context import RunContext
 from agent_harness.runs.state import TERMINAL_STATUSES, RunStatus
 from agent_harness.storage.codec import fingerprint, plain
-from agent_harness.storage.interface import Checkpoint, StateConflictError
+from agent_harness.storage.interface import Checkpoint, StateConflictError, StateNotFoundError
 from agent_runtime.storage.postgres import Database, PostgresStateStore
 from agent_runtime.workers.reasons import FailureReason
+from agent_runtime.workers.releases import check_admission
 from agent_runtime.workers.state import Completion, Handler, Handlers, Recovery, replay_safe
 
 
@@ -26,6 +29,8 @@ class Lease:
     state: Recovery
     attempt: int
     effect_pending: bool = False
+    queue_wait_ms: int | None = None
+    queue_wait_upper_ms: int | None = None
 
 
 class ApprovalExpiredError(StateConflictError):
@@ -76,6 +81,8 @@ class PostgresQueue:
         change = self.store.admission_change(context, request_id=request_id, items=items)
 
         def transaction(connection: Database) -> Checkpoint:
+            self.store._head(connection, context)
+            check_admission(connection, context, request_id)
             checkpoint = change(connection)
 
             # A retry after progression still identifies the original admission
@@ -115,42 +122,58 @@ class PostgresQueue:
             return None
 
         owner = str(uuid4())
+        sampled_at: float | None = None
 
         def transaction(connection: Database) -> Lease | None:
+            nonlocal sampled_at
+
             self.store._generation(connection)
 
             # A single short admission lock makes queue and tenant counts exact
             # across processes. It is never held during execution or settlement.
             # SKIP LOCKED below prevents one busy conversation blocking the scan.
-            connection.execute("SELECT pg_advisory_xact_lock(720322)")
-            limits = connection.execute(
-                "SELECT * FROM worker_limits WHERE queue=%s", (queue,)
-            ).fetchone()
+            # These reads all depend on the admission lock, and none depends on
+            # another read's result. Submit them together in their original order.
+            # For example, concurrent workers still serialize their capacity check
+            # before either leases a job, but avoid four separate network exchanges.
+            # A recovered ownership ID is checked before using the capacity count.
+            with connection.pipeline():
+                connection.execute("SELECT pg_advisory_xact_lock(720322)")
+                limits_cursor = connection.execute(
+                    "SELECT * FROM worker_limits WHERE queue=%s", (queue,)
+                )
+                previous_cursor = connection.execute(
+                    "SELECT * FROM jobs WHERE lease_owner=%s", (owner,)
+                )
+                count_cursor = connection.execute(
+                    "SELECT count(*) AS n FROM jobs WHERE operation=%s AND status='leased' "
+                    "AND lease_expiry>clock_timestamp()",
+                    (queue,),
+                )
+
+            limits = limits_cursor.fetchone()
 
             if limits is None:
                 raise ValueError("queue limits must be configured before claiming")
 
-            previous = connection.execute(
-                "SELECT * FROM jobs WHERE lease_owner=%s", (owner,)
-            ).fetchone()
+            previous = previous_cursor.fetchone()
 
             if previous:
                 return self._recover_claim(connection, previous)
 
-            count = connection.execute(
-                "SELECT count(*) AS n FROM jobs WHERE operation=%s AND status='leased' "
-                "AND lease_expiry>clock_timestamp()",
-                (queue,),
-            ).fetchone()
+            count = count_cursor.fetchone()
             assert count is not None
 
             if count["n"] >= limits["concurrency"]:
                 return None
 
+            sampled_at = monotonic()
             candidates = connection.execute(
-                "SELECT j.*, c.user_id FROM jobs j JOIN conversations c USING "
+                "SELECT j.*, c.user_id,extract(epoch FROM (clock_timestamp()-j.due_at))*1000 "
+                "AS queue_wait_ms FROM jobs j JOIN conversations c USING "
                 "(tenant_id,conversation_id) JOIN runs r USING (tenant_id,conversation_id,run_id) "
                 "WHERE j.operation=%s AND j.operation_version=ANY(%s) "
+                "AND j.recovery->'arguments' @> (%s::jsonb->j.operation_version::text) "
                 "AND j.recovery IS NOT NULL AND NOT c.deleted "
                 "AND (SELECT count(*) FROM jobs busy WHERE busy.tenant_id=j.tenant_id "
                 "AND busy.operation=j.operation AND busy.status='leased' "
@@ -163,7 +186,12 @@ class PostgresQueue:
                 "AND busy.job_id<>j.job_id AND (busy.effect_pending OR "
                 "(busy.status='leased' AND busy.lease_expiry>clock_timestamp())))) "
                 "ORDER BY j.due_at,j.job_id LIMIT 64 FOR UPDATE OF c SKIP LOCKED",
-                (queue, versions, limits["tenant_concurrency"]),
+                (
+                    queue,
+                    versions,
+                    Jsonb(handlers.requirements(queue)),
+                    limits["tenant_concurrency"],
+                ),
             ).fetchall()
 
             for candidate in candidates:
@@ -273,11 +301,31 @@ class PostgresQueue:
                     state,
                     row["attempt"] + 1,
                     row["effect_pending"],
+                    queue_wait_ms=max(0, round(candidate["queue_wait_ms"])),
                 )
 
             return None
 
-        return self.store._retry(transaction)
+        lease = self.store._retry(transaction)
+
+        if lease is not None and lease.queue_wait_ms is not None:
+            assert sampled_at is not None
+
+            # Candidate age precedes ownership writes and commit acknowledgement.
+            # Add the entire interval from before that SELECT through the returned
+            # commit, producing a conservative due-to-claim upper bound. For
+            # example, age 100 ms plus a 40-ms SELECT/claim interval bounds the
+            # actual wait by 141 ms, including one ms for rounded source age.
+            # This can include capacity/resource/ordering waits before eligibility.
+            # A recovered unknown-ack claim has no sample and remains unmeasured.
+            lease = replace(
+                lease,
+                queue_wait_upper_ms=(
+                    lease.queue_wait_ms + ceil((monotonic() - sampled_at) * 1000) + 1
+                ),
+            )
+
+        return lease
 
     def recover_expired(self, queue: str) -> None:
         """Account for lost processes even when this deployment lacks their handler."""
@@ -779,14 +827,53 @@ class PostgresQueue:
         return job_id
 
     def _owned(self, connection: Database, lease: Lease) -> dict[str, Any]:
-        head = self.store._head(connection, lease.context)
-        checkpoint = self.store._load(connection, lease.context, head)
+        self.store._head(connection, lease.context)
 
-        if checkpoint.run.revision != lease.checkpoint.run.revision:
+        # Run, job and expiry reads have known scoped inputs. Submit all three
+        # in order while retaining their distinct statement snapshots and locks.
+        # The expiry read executes after the job lock is acquired: if a renewal
+        # or cancellation blocks that lock, time spent waiting cannot extend the
+        # lease. Results are checked before this method permits any mutation.
+        with connection.pipeline():
+            current_cursor = connection.execute(
+                "SELECT revision FROM runs WHERE tenant_id=%s AND conversation_id=%s "
+                "AND run_id=%s FOR UPDATE",
+                self.store._key(lease.context),
+            )
+            job_cursor = connection.execute(
+                "SELECT * FROM jobs WHERE tenant_id=%s AND conversation_id=%s AND run_id=%s "
+                "AND job_id=%s FOR UPDATE",
+                (*self.store._key(lease.context), lease.job_id),
+            )
+            fence_cursor = connection.execute(
+                "SELECT 1 FROM jobs WHERE tenant_id=%s AND conversation_id=%s AND job_id=%s "
+                "AND lease_owner=%s AND ownership_token=%s AND status='leased' "
+                "AND lease_expiry>clock_timestamp()",
+                self._identity(lease),
+            )
+
+        # Ownership needs the current run revision rather than historical text.
+        # Revision 4 rejects a lease prepared at revision 3; a missing scoped job
+        # cannot be replaced by a job from another run or tenant. The final result
+        # also verifies the original lease timeline and database-time ownership.
+        current = current_cursor.fetchone()
+
+        if current is None:
+            raise StateNotFoundError("run unavailable")
+
+        if current["revision"] != lease.checkpoint.run.revision:
             raise StateConflictError("run advanced beyond lease checkpoint")
 
-        row = self._row(connection, lease.context, lease.job_id)
-        self._fence(connection, lease)
+        row = job_cursor.fetchone()
+
+        if row is None:
+            raise StateConflictError("job unavailable in this run")
+
+        self._timeline(lease)
+
+        if fence_cursor.fetchone() is None:
+            raise StateConflictError("expired or stale lease")
+
         return row
 
     def _fence(self, connection: Database, lease: Lease) -> None:

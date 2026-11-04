@@ -6,12 +6,22 @@ latency goal uses these targets for assessment; historical results retain their 
 
 ## Workload envelope
 
-Evaluate one and two concurrent active conversations as separate cohorts, using the
+Evaluate one, two and five concurrent active conversations as separate cohorts, using the
 same deployment, fixed representative prompt/history size and non-sensitive fixtures.
 The short-answer cohort has no tools or approval waits and at most 100 output tokens.
 Record model/version, actual token counts, replicas, queue limits and cache state.
 Record first-use requests separately from steady-state requests; preserve both results.
 Long answers, tool workflows, failures and recovery require separately named workloads.
+
+Group 12 qualifies five active conversations; ten is a separately reported overload tier.
+Use 100 measured short-answer turns per tier at 20 offered turns/minute, batches of 1/2/5,
+at most 1,800 encoded input tokens and 50–100 output tokens. Preserve scheduled arrivals,
+warmups and failures. The historical two-token control retains its own cohort and results.
+Ordinary qualifying turns must all finish correctly without rejection or provider throttling.
+Eligible queue wait targets are p95 <= 500 ms and maximum <= 2 seconds within this envelope.
+Mixed tool/memory workloads run separately at ten offered turns/minute. Ordinary turns keep
+PERF-003 during other sessions' compaction; a warm turn needing one compaction targets p95
+<= 15 seconds, with summary generation <= 10 seconds. Report cold rebuilds separately.
 
 ## Targets and measurement boundaries
 
@@ -39,8 +49,8 @@ Long answers, tool workflows, failures and recovery require separately named wor
   interval ending at cache.miss excludes reconstruction and response transport; it is
   not this complete measurement.
 - PERF-005 measures the client's first visible model text, excluding an acknowledgement,
-  heartbeat or status event. The current provider adapter uses stream=False and the CLI
-  displays a completed answer, so this requirement is not currently measurable.
+  heartbeat or status event. The new local adapter/reference client records this boundary;
+  qualification against the hosted image remains pending.
 
 ## Qualification and reporting
 
@@ -69,7 +79,9 @@ open SSE connections must remain passive for conversation inactivity accounting.
 
 Production load, availability objectives, storage capacity, autoscaling, per-tool budgets
 and alert thresholds need separate evidence. The live pilot's one-to-two-hour idle experiment
-remains a separate endurance check. Broader tracing, metrics and alerting are proposed work.
+has a separate [two-hour endurance record](records/2026-11-04-hosted-soak.md). Its process-resource
+qualification remains incomplete. Four [Azure Monitor alerts](queries/README.md) have executed
+firing/recovery evidence; distributed tracing and production paging remain future work.
 
 Output length affects generation time. Pair latency with input/output token counts and
 separate first-token latency from complete-answer latency; see [Azure's latency guide][latency].

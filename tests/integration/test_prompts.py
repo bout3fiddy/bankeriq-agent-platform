@@ -600,7 +600,8 @@ def test_json_publication_sources_and_recovery(
         )
         == digest
     )
-    version = "bankeriq.system@1.0.0"
+    selected = catalog.catalog.defaults.system
+    version = f"{selected.id}@{selected.version}"
     activate(admin, version, 0)
     reader = PostgresPromptResolver(dsn, scope, catalog=load_catalog())
     manifest = reader.resolve()

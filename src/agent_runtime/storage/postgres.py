@@ -748,15 +748,34 @@ class PostgresStateStore:
         # Even a multi-statement read takes the head lock. For example, loading
         # revision 7 and then reading events must not race a writer committing
         # revision 8 halfway through the load under READ COMMITTED isolation.
-        self._generation(connection)
-        row = connection.execute(
-            "SELECT tenant_id, conversation_id, user_id, revision, admission_sequence, "
-            "cursor, active_run_id, deletion_generation, deleted, "
-            "extract(epoch FROM (now() - last_activity))::double precision AS idle_seconds "
-            "FROM conversations "
-            "WHERE tenant_id = %s AND conversation_id = %s FOR UPDATE",
-            self._scope(context),
-        ).fetchone()
+        # Send both reads in one exchange. PostgreSQL executes them in order, so
+        # the shared generation lock still precedes the conversation lock. For
+        # example, a valid reader loads revision 7 while a competing writer waits;
+        # it cannot observe that writer's revision 8 halfway through history loading.
+        # No result or write is exposed before both responses have been checked.
+        with connection.pipeline():
+            generation = connection.execute("SELECT recovery_id FROM runtime_generation FOR SHARE")
+            head = connection.execute(
+                "SELECT tenant_id, conversation_id, user_id, revision, admission_sequence, "
+                "cursor, active_run_id, deletion_generation, deleted, "
+                "extract(epoch FROM (now() - last_activity))::double precision AS idle_seconds "
+                "FROM conversations "
+                "WHERE tenant_id = %s AND conversation_id = %s "
+                "AND EXISTS (SELECT 1 FROM runtime_generation WHERE recovery_id=%s) FOR UPDATE",
+                (*self._scope(context), self.recovery_id),
+            )
+
+        # A restored database must reject an old process even when its target
+        # conversation is locked. The second statement's generation predicate
+        # avoids waiting on that row for an already-invalid timeline. The first
+        # response determines the error; no old reader can accept a missing head
+        # as a valid recovery outcome. The enclosing transaction releases both locks.
+        current_generation = generation.fetchone()
+
+        if current_generation is None or current_generation["recovery_id"] != self.recovery_id:
+            raise StateConflictError("database recovery generation changed")
+
+        row = head.fetchone()
 
         if (
             row is None

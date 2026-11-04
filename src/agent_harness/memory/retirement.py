@@ -142,16 +142,54 @@ def _explicit(old: MemoryFact, new: MemoryFact, relation: object) -> bool:
     if relation == "supersedes":
         allowed = old.label in ("goal", "constraint", "decision", "next_step", "identity")
         allowed = allowed and new.kind == "user"
-        cue = r"\b(replace\w*|instead|supersed\w*|correction|revis\w*|no longer)\b"
+        cue = (
+            r"\b(replace\w*|instead|supersed\w*|correction|revis\w*|no longer|"
+            r"vervang\w*|in plaats|correctie|herzien\w*|niet langer)\b"
+        )
     elif relation == "resolves":
         allowed = old.label == "open_question"
-        cue = r"\b(answer\w*|resolv\w*|confirmed|decided)\b"
+        cue = r"\b(answer\w*|resolv\w*|confirmed|decided|antwoord\w*|opgelost|bevestigd|besloten)\b"
     else:
         return False
 
-    noise = {"question", "decision", "which", "what", "when", "will", "that", "this", "have"}
+    noise = {
+        "question",
+        "decision",
+        "which",
+        "what",
+        "when",
+        "will",
+        "that",
+        "this",
+        "have",
+        "vraag",
+        "besluit",
+        "welke",
+        "wanneer",
+        "deze",
+        "wordt",
+        "zijn",
+        "voor",
+        "open",
+    }
+
+    # Only reviewed subject aliases bridge these two languages. They establish
+    # no equivalence between people/projects and never change the source quote.
+    # For example, 'Welke talen?' and 'Languages confirmed: English' share a
+    # subject, while 'Payment confirmed' still cannot resolve the language question.
+    aliases = {
+        "begroting": "budget",
+        "talen": "languages",
+        "taal": "language",
+        "beoordelaar": "reviewer",
+        "valuta": "currency",
+        "datum": "date",
+        "locatie": "venue",
+        "bijnaam": "nickname",
+        "eigenaar": "owner",
+    }
 
     def words(text):
-        return set(re.findall(r"\w{4,}", text.lower())) - noise
+        return {aliases.get(word, word) for word in re.findall(r"\w{4,}", text.lower())} - noise
 
     return bool(allowed and re.search(cue, new.text, re.I) and words(old.text) & words(new.text))

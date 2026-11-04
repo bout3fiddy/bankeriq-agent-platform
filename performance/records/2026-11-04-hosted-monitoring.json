@@ -1,0 +1,62 @@
+{
+  "profile": "controlled synthetic telemetry through Container Apps and Azure Monitor",
+  "image_digest": "sha256:6140fa844b4d4cd4f220d8358f5f21ec280b37b5a2a20abe8a05ec03d280a45c",
+  "region": "swedencentral",
+  "fixture": "group12-alert-validation-20261104T134201Z",
+  "injected_at": "2026-11-04T13:42:01.456005+00:00",
+  "event_count": 8,
+  "model_calls": 0,
+  "evaluation_seconds": 300,
+  "window_seconds": 300,
+  "action_groups": [],
+  "delivery": "Azure Monitor alert instances",
+  "passed": true,
+  "rules": [
+    {
+      "name": "bankeriq-live-415eb635-telemetry",
+      "alert_id": "dad2847c-4632-56eb-f3b7-6dcc4edd0033",
+      "severity": "Sev1",
+      "fired_at": "2026-11-04T13:45:33.5384734Z",
+      "resolved_observed_at": "2026-11-04T14:02:20.493551+00:00",
+      "last_modified_at": "2026-11-04T14:01:34.026768Z",
+      "condition": "Resolved",
+      "firing_delay_seconds": 212.082468
+    },
+    {
+      "name": "bankeriq-live-415eb635-provider",
+      "alert_id": "8dd70589-fad1-5a69-e464-3690dc940033",
+      "severity": "Sev2",
+      "fired_at": "2026-11-04T13:45:32.7350282Z",
+      "resolved_observed_at": "2026-11-04T14:02:20.493551+00:00",
+      "last_modified_at": "2026-11-04T14:01:33.0227684Z",
+      "condition": "Resolved",
+      "firing_delay_seconds": 211.279023
+    },
+    {
+      "name": "bankeriq-live-415eb635-queue",
+      "alert_id": "6db6d1b2-643f-e5e9-95ef-bc6629dd0033",
+      "severity": "Sev2",
+      "fired_at": "2026-11-04T13:45:16.0490833Z",
+      "resolved_observed_at": "2026-11-04T14:02:20.493551+00:00",
+      "last_modified_at": "2026-11-04T14:01:16.0971661Z",
+      "condition": "Resolved",
+      "firing_delay_seconds": 194.593078
+    },
+    {
+      "name": "bankeriq-live-415eb635-streaming",
+      "alert_id": "66fa3967-138c-a9c5-aa75-77f1eced0033",
+      "severity": "Sev2",
+      "fired_at": "2026-11-04T13:43:49.3036554Z",
+      "resolved_observed_at": "2026-11-04T14:02:20.493551+00:00",
+      "last_modified_at": "2026-11-04T13:59:48.5611466Z",
+      "condition": "Resolved",
+      "firing_delay_seconds": 107.84765
+    }
+  ],
+  "limits": [
+    "Synthetic telemetry fixtures exercise the collection/evaluation/portal path.",
+    "No provider outage, real stuck job, external email or webhook was induced.",
+    "List responses transiently omitted instances; empty lists did not count as resolution.",
+    "Explicit Resolved instances prove recovery; modification times are not exact recovery times."
+  ]
+}

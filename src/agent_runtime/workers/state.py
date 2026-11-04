@@ -1,7 +1,7 @@
 """Versioned recovery envelope and trusted compatible handler registrations."""
 
 from collections.abc import Awaitable, Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -120,6 +120,17 @@ class Handler:
         Callable[[RunContext, Recovery, Lease], Awaitable[Completion]] | None
     ) = None
 
+    # Match static composition keys before claiming or charging an attempt.
+    # For example, {"memory_profile": "v8-hash"} leaves a saved v7 inference
+    # available for its compatible worker instead of failing it during rollout.
+    # These are trusted registration values, independent of runtime permission checks.
+    required_arguments: Mapping[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "required_arguments", MappingProxyType(dict(self.required_arguments))
+        )
+
 
 class Handlers:
     def __init__(self, entries: Mapping[tuple[str, int], Handler]) -> None:
@@ -127,9 +138,23 @@ class Handlers:
 
     def resolve(self, state: Recovery) -> Handler:
         try:
-            return self.entries[state.kind, state.version]
+            handler = self.entries[state.kind, state.version]
         except KeyError:
             raise ValueError("missing compatible recovery handler") from None
+
+        if any(
+            state.arguments.get(key) != value for key, value in handler.required_arguments.items()
+        ):
+            raise ValueError("incompatible recovery profile")
+
+        return handler
+
+    def requirements(self, kind: str) -> dict[str, dict[str, str]]:
+        return {
+            str(version): dict(handler.required_arguments)
+            for (name, version), handler in self.entries.items()
+            if name == kind
+        }
 
 
 def replay_safe(state: Recovery, handler: Handler) -> bool:

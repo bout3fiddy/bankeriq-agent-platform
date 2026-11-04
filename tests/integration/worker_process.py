@@ -26,7 +26,7 @@ def complete(context: RunContext, state: Recovery) -> Completion:
         next_task=Recovery(
             kind=state.kind,
             operation_id=state.operation_id + "-next",
-            arguments={"finish": True},
+            arguments={**state.arguments, "finish": True},
             idempotent=True,
             run_budget=state.run_budget,
         ),
@@ -43,6 +43,18 @@ def main() -> None:
     queue = PostgresQueue(PostgresStateStore(os.environ["BANKERIQ_TEST_POSTGRES_DSN"]))
     kind = sys.argv[2]
     handlers = Handlers({(kind, 1): Handler(lambda c, s: True, complete, idempotent=True)})
+
+    if mode == "profile":
+        handlers = Handlers(
+            {
+                (kind, 1): Handler(
+                    lambda c, s: True,
+                    complete,
+                    idempotent=True,
+                    required_arguments={"profile": sys.argv[3]},
+                )
+            }
+        )
 
     if mode == "reconcile-run":
 
